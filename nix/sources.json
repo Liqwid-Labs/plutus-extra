@@ -17,10 +17,10 @@
         "homepage": "",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "4826d60ba2724b0e9f56438ae0394424e32efc6a",
-        "sha256": "17idhkwq59rv0mdb6dkvly6f5n2qq767i1bsriij8dv21asnd3x6",
+        "rev": "6d1a044fc9ff3cc96fca5fa3ba9c158522bbf2a5",
+        "sha256": "07a3nyrj3pwl017ig0rbn5rbmbf14gl3vqggvkyrdby01726p5fg",
         "type": "tarball",
-        "url": "https://github.com/NixOS/nixpkgs/archive/4826d60ba2724b0e9f56438ae0394424e32efc6a.tar.gz",
+        "url": "https://github.com/NixOS/nixpkgs/archive/6d1a044fc9ff3cc96fca5fa3ba9c158522bbf2a5.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "nixpkgs-2009": {
@@ -42,22 +42,10 @@
         "homepage": "",
         "owner": "input-output-hk",
         "repo": "plutus",
-        "rev": "5cdd2c3d708bf4c33514681dee096da6463273b7",
-        "sha256": "0j6614dhrd5gxigcpghsd014nwcp57rz489h9d207zxgdmcvhha1",
+        "rev": "4a62150acbeeadd9024ccda0cbff36bbef14aedf",
+        "sha256": "1jhmx0g9km532823bpaqrwvc0rq79713i4wj44aml0iwz1i14imw",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/plutus/archive/5cdd2c3d708bf4c33514681dee096da6463273b7.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "plutus-latest": {
-        "branch": "master",
-        "description": "The Plutus language implementation and tools",
-        "homepage": "",
-        "owner": "input-output-hk",
-        "repo": "plutus",
-        "rev": "0eb44d34b11ab0ea50e1d8e4ffb4d1004785442a",
-        "sha256": "1dqbkl8z5l5bxb351ysbrwn9snpdwngbllnd5hvi9vdfi6hydndd",
-        "type": "tarball",
-        "url": "https://github.com/input-output-hk/plutus/archive/0eb44d34b11ab0ea50e1d8e4ffb4d1004785442a.tar.gz",
+        "url": "https://github.com/input-output-hk/plutus/archive/4a62150acbeeadd9024ccda0cbff36bbef14aedf.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
