@@ -1,0 +1,4 @@
+- ignore: {name: "Use <$>"}
+- warn: {name: Use explicit module import list}
+- warn: {name: Use module export list}
+- ignore: {name: "Use newtype instead of data"}

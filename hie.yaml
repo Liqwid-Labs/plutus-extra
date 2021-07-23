@@ -1,0 +1,6 @@
+cradle:
+  cabal:
+    - path: "./src"
+      component: "lib:plutus-extra"
+    - path: "./test"
+      component: "test:plutus-extra-test"
