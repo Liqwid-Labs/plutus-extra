@@ -1,0 +1,125 @@
+cabal-version:      2.4
+name:               plutus-extra
+version:            0.1.0.0
+extra-source-files: CHANGELOG.md
+
+common lang
+  default-language: Haskell2010
+  default-extensions:
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveFunctor
+    DeriveGeneric
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    DuplicateRecordFields
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    GeneralizedNewtypeDeriving
+    HexFloatLiterals
+    InstanceSigs
+    ImportQualifiedPost
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NoImplicitPrelude
+    NumericUnderscores
+    OverloadedStrings
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeApplications
+    TypeOperators
+    TypeSynonymInstances
+    UndecidableInstances
+
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns -Wredundant-constraints
+    -Wmissing-export-lists -Werror -Wincomplete-record-updates
+    -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+    -fobject-code -fno-strictness -fplugin=RecordDotPreprocessor
+    
+common deps
+  build-depends:
+    , base                     >=4.9 && <5
+    , aeson
+    , bytestring
+    , containers
+    , deepseq
+    , freer-extras
+    , lens
+    , playground-common
+    , plutus-core
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-tx
+    , plutus-tx-plugin
+    , plutus-pab
+    , prettyprinter
+    , record-dot-preprocessor
+    , record-hasfield
+    , template-haskell
+    , text
+    , th-abstraction
+    , th-lift-instances
+
+common test-deps
+  import:        deps
+  build-depends:
+    , QuickCheck
+    , quickcheck-instances
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+
+library
+  import:           lang
+  import:           deps
+  exposed-modules:
+    Plutus.V1.Ledger.Contexts.Extra
+    Plutus.V1.Ledger.Extra
+    Plutus.V1.Ledger.Value.Extra
+    PlutusTx.AssocMap.Extra
+    PlutusTx.Bifunctor
+    PlutusTx.Bimap
+    PlutusTx.Data.Extra
+    PlutusTx.Either.Extra
+    PlutusTx.Error.Extra
+    PlutusTx.Foldable.Extra
+    PlutusTx.IsCoexistingData
+    PlutusTx.List.Extra
+    PlutusTx.Maybe.Extra
+    PlutusTx.NonEmpty
+    PlutusTx.PointFree.Extra
+    PlutusTx.Set
+    PlutusTx.Tuple.Extra
+    PlutusTx.UniqueMap
+  build-depends:
+  hs-source-dirs:   src
+
+test-suite plutus-extra-test
+  import:           lang
+  import:           deps
+  import:           test-deps
+  type:             exitcode-stdio-1.0
+  main-is:          Spec.hs
+  other-modules:
+    Suites.Bimap
+    Suites.Set
+  build-depends:    plutus-extra
+  hs-source-dirs:   test
+
+test-suite is-data-tagged
+  import:           lang
+  import:           deps
+  import:           test-deps
+  type:             exitcode-stdio-1.0
+  main-is:          Main.hs
+  build-depends:    plutus-extra
+  hs-source-dirs:   test/is-data-tagged
