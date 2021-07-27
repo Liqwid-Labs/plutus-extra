@@ -44,7 +44,7 @@ giveTo ::
   forall (w :: Type).
   Wallet ->
   Ledger.Value ->
-  Contract w Builtin.BlockchainActions Contract.ContractError ()
+  Contract w Builtin.EmptySchema Contract.ContractError ()
 giveTo wallet value = do
   ownPK <- Contract.mapError fromCurrencyError (Ledger.pubKeyHash <$> Contract.ownPubKey)
   let pubKeyHash = Ledger.pubKeyHash $ Wallet.walletPubKey wallet
@@ -56,10 +56,10 @@ initCurrency ::
   Ledger.TokenName ->
   Integer ->
   Wallet ->
-  Contract (OutputBus.OutputBus Ledger.AssetClass) Builtin.BlockchainActions Contract.ContractError ()
+  Contract (OutputBus.OutputBus Ledger.AssetClass) Builtin.EmptySchema Contract.ContractError ()
 initCurrency tokenName forgedAmount receivingWallet = do
   ownPK <- Contract.mapError fromCurrencyError (Ledger.pubKeyHash <$> Contract.ownPubKey)
-  cur <- Contract.mapError fromCurrencyError $ Currency.forgeContract ownPK [(tokenName, forgedAmount)]
+  cur <- Contract.mapError fromCurrencyError $ Currency.mintContract ownPK [(tokenName, forgedAmount)]
   let currencySymbol = Currency.currencySymbol cur
       assetClass = Value.assetClass currencySymbol tokenName
 
