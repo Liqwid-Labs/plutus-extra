@@ -48,6 +48,7 @@ common deps
   build-depends:
     , base                     >=4.9 && <5
     , aeson
+    , ansi-terminal
     , bytestring
     , containers
     , deepseq
@@ -58,12 +59,14 @@ common deps
     , plutus-contract
     , plutus-ledger
     , plutus-ledger-api
+    , plutus-pab
     , plutus-tx
     , plutus-tx-plugin
-    , plutus-pab
+    , plutus-use-cases
     , prettyprinter
     , record-dot-preprocessor
     , record-hasfield
+    , row-types
     , template-haskell
     , text
     , th-abstraction
@@ -82,6 +85,9 @@ library
   import:           lang
   import:           deps
   exposed-modules:
+    Plutus.PAB.CurrencyForge
+    Plutus.PAB.OutputBus
+    Plutus.PAB.PrettyLogger
     Plutus.V1.Ledger.Contexts.Extra
     Plutus.V1.Ledger.Extra
     Plutus.V1.Ledger.Value.Extra
