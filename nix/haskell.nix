@@ -74,8 +74,8 @@ in pkgs.haskell-nix.cabalProject rec {
     = "1v2laq04piyj511b2m77hxjh9l1yd6k9kc7g6bjala4w3zdwa4ni";
 
     # input-output-hk/cardano-ledger-specs
-    "https://github.com/input-output-hk/cardano-ledger-specs"."a3ef848542961079b7cd53d599e5385198a3035c"
-    = "02iwn2lcfcfvrnvcqnx586ncdnma23vdqvicxgr4f39vcacalzpd";
+    "https://github.com/input-output-hk/cardano-ledger-specs"."6b0fca7a73c317f3af7c14dd4dc38178cc78a6c8"
+    = "0570g723ac8wf0zha37nsh4n0809rqqfx4j9i80hqkq18cysrglr";
 
     # input-output-hk/cardano-prelude
     "https://github.com/input-output-hk/cardano-prelude"."fd773f7a58412131512b9f694ab95653ac430852"
@@ -90,12 +90,12 @@ in pkgs.haskell-nix.cabalProject rec {
     = "1fdc0a02ipa385dnwa6r6jyc8jlg537i12hflfglkhjs2b7i92gs";
 
     # input-output-hk/ouroboros-network
-    "https://github.com/input-output-hk/ouroboros-network"."e50613562d6d4a0f933741fcf590b0f69a1eda67"
-    = "0i192ksa69lpzjhzmhd2h1mramkvvikw04pqws18h5dly55f4z3k";
+    "https://github.com/input-output-hk/ouroboros-network"."e338f2cf8e1078fbda9555dd2b169c6737ef6774"
+    = "12x81hpjyw2cpkazfalz6bw2wgr6ax7bnmlxl2rlfakkvsjfgaqd";
 
     # input-output-hk/cardano-node
-    "https://github.com/input-output-hk/cardano-node.git"."b3cabae6b3bf30a0b1b4e78bc4b67282dabad0a6"
-    = "1csmji1bgi45wgrw7kqy19s4bbbpa78kjg3bz7mbiwb8vjgg9kvq";
+    "https://github.com/input-output-hk/cardano-node.git"."f3ef4ed72894499160f2330b91572a159005c148"
+    = "1mp8ih6kmq4j354mgjgrxlssv7jbk5zz1j3nyqg43ascql4d0fvq";
 
     # input-output-hk/Win32-network
     "https://github.com/input-output-hk/Win32-network"."94153b676617f8f33abe8d8182c37377d2784bd1"

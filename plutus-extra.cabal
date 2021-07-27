@@ -52,6 +52,7 @@ common deps
     , bytestring
     , containers
     , deepseq
+    , flat
     , freer-extras
     , lens
     , playground-common
@@ -67,6 +68,7 @@ common deps
     , record-dot-preprocessor
     , record-hasfield
     , row-types
+    , serialise
     , template-haskell
     , text
     , th-abstraction
@@ -121,11 +123,11 @@ test-suite plutus-extra-test
   build-depends:    plutus-extra
   hs-source-dirs:   test
 
-test-suite is-data-tagged
-  import:           lang
-  import:           deps
-  import:           test-deps
-  type:             exitcode-stdio-1.0
-  main-is:          Main.hs
-  build-depends:    plutus-extra
-  hs-source-dirs:   test/is-data-tagged
+-- test-suite is-data-tagged
+--   import:           lang
+--   import:           deps
+--   import:           test-deps
+--   type:             exitcode-stdio-1.0
+--   main-is:          Main.hs
+--   build-depends:    plutus-extra
+--   hs-source-dirs:   test/is-data-tagged

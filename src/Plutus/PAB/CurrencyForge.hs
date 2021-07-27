@@ -8,7 +8,6 @@ import Prelude
 --------------------------------------------------------------------------------
 
 import Data.Kind (Type)
-import Data.Text qualified as Text
 
 --------------------------------------------------------------------------------
 
@@ -16,7 +15,6 @@ import Ledger.Constraints qualified as Constraints
 import Plutus.Contract qualified as Contract
 import Plutus.Contract.State (Contract)
 import Plutus.Contracts.Currency qualified as Currency
-import Plutus.Contracts.PubKey (PubKeyError)
 import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
 import Plutus.V1.Ledger.Crypto qualified as Ledger
 import Plutus.V1.Ledger.Tx qualified as Tx
@@ -33,11 +31,7 @@ import Plutus.PAB.OutputBus qualified as OutputBus (OutputBus, sendBus)
 
 fromCurrencyError :: Currency.CurrencyError -> Contract.ContractError
 fromCurrencyError = \case
-  (Currency.CurPubKeyError e) -> toContractError e
   (Currency.CurContractError e) -> e
-  where
-    toContractError :: PubKeyError -> Contract.ContractError
-    toContractError = Contract.OtherError . Text.pack . show
 
 -- | Send value to a wallet acting as a public key.
 giveTo ::

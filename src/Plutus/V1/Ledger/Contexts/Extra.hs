@@ -78,7 +78,7 @@ getOutputDatum ::
   Maybe a
 getOutputDatum txInfo datumHash =
   Contexts.findDatum datumHash txInfo
-    >>= (Scripts.getDatum >>> PlutusTx.fromData @a)
+    >>= (Scripts.getDatum >>> PlutusTx.fromBuiltinData @a)
 
 --------------------------------------------------------------------------------
 
@@ -114,7 +114,7 @@ findDatumAt
           , txOutDatumHash = Just dhash
           }
           | scriptHash == script =
-            Contexts.findDatum dhash txInfo >>= (PlutusTx.fromData @datum . Scripts.getDatum)
+            Contexts.findDatum dhash txInfo >>= (PlutusTx.fromBuiltinData @datum . Scripts.getDatum)
       findDatum _ = Nothing
 
 -- | Find the given datum type from the outputs at the address
@@ -171,7 +171,7 @@ allDatumsAt
           , txOutDatumHash = Just dhash
           }
           | scriptHash == script =
-            Contexts.findDatum dhash txInfo >>= (PlutusTx.fromData @datum . Scripts.getDatum)
+            Contexts.findDatum dhash txInfo >>= (PlutusTx.fromBuiltinData @datum . Scripts.getDatum)
       findDatum _ = Nothing
 
 -- | Find all the Datums of a given type at the output of a script

@@ -11,21 +11,20 @@ import Data.Kind (Type)
 
 --------------------------------------------------------------------------------
 
-import PlutusTx.Builtins qualified as PlutusTx
-import PlutusTx.Prelude (Either (Left, Right), Maybe (Just, Nothing), traceError)
+import PlutusTx.Prelude (BuiltinString, Either (Left, Right), Maybe (Just, Nothing), traceError)
 
 --------------------------------------------------------------------------------
 
 {-# INLINEABLE eitherError #-}
 
 -- | Throw a PlutusTx runtime error from a `Left`
-eitherError :: forall (a :: Type). Either PlutusTx.String a -> a
+eitherError :: forall (a :: Type). Either BuiltinString a -> a
 eitherError (Left err) = traceError err
 eitherError (Right r) = r
 
 {-# INLINEABLE maybeError #-}
 
 -- | Throw a PlutusTx runtime error from a `Nothing`, using the provided error message
-maybeError :: forall (a :: Type). PlutusTx.String -> Maybe a -> a
+maybeError :: forall (a :: Type). BuiltinString -> Maybe a -> a
 maybeError err Nothing = traceError err
 maybeError _ (Just x) = x
