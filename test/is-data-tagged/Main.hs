@@ -3,8 +3,8 @@
 module Main (main) where
 
 import GHC.Generics qualified as GHC
-import PlutusTx.IsCoexistingData (makeCoexistingIsData)
 import PlutusTx.Data qualified as Data
+import PlutusTx.IsCoexistingData (makeCoexistingIsData)
 import PlutusTx.IsData.Class (IsData (fromData, toData))
 import PlutusTx.Prelude
 import Test.QuickCheck (Property, forAllShrink, (===))
