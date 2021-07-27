@@ -30,7 +30,8 @@ import Data.Aeson (FromJSON, ToJSON)
 
 --------------------------------------------------------------------------------
 
-import PlutusTx qualified (makeIsDataIndexed, makeLift)
+import PlutusTx qualified (makeLift)
+import PlutusTx.IsData.Class (IsData (fromBuiltinData, toBuiltinData, unsafeFromBuiltinData))
 import PlutusTx.Prelude hiding (null, toList)
 
 --------------------------------------------------------------------------------
@@ -56,6 +57,14 @@ newtype Bimap (a :: Type) (b :: Type) = Bimap {unBimap :: Set (a, b)}
   deriving stock (Prelude.Show, Prelude.Eq, Generic)
   deriving newtype (ToJSON, FromJSON)
 
+instance (Ord a, Ord b, IsData a, IsData b) => IsData (Bimap a b) where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData = toBuiltinData . unBimap
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = fmap Bimap . fromBuiltinData
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData = Bimap . unsafeFromBuiltinData
+
 -- | Lookup the right-side elements by searching for a left-side key
 {-# INLINEABLE lookup #-}
 lookup :: forall (a :: Type) (b :: Type). Eq a => a -> Bimap a b -> [b]
@@ -73,7 +82,7 @@ size = Set.size . unBimap
 
 -- | An empty Bimap
 {-# INLINEABLE empty #-}
-empty :: forall (a :: Type) (b :: Type). (Eq a, Eq b) => Bimap a b
+empty :: forall (a :: Type) (b :: Type). (Ord a, Ord b) => Bimap a b
 empty = Bimap Set.empty
 
 -- | Check if the Bimap is empty
@@ -82,7 +91,7 @@ null :: forall (a :: Type) (b :: Type). Bimap a b -> Bool
 null = Set.null . unBimap
 
 {-# INLINEABLE fromList #-}
-fromList :: forall (a :: Type) (b :: Type). (Eq a, Eq b) => [(a, b)] -> Bimap a b
+fromList :: forall (a :: Type) (b :: Type). (Ord a, Ord b) => [(a, b)] -> Bimap a b
 fromList = Bimap . Set.fromList
 
 {-# INLINEABLE toList #-}
@@ -91,12 +100,11 @@ toList = Set.toList . unBimap
 
 -- | Insert a pair into the bimap
 {-# INLINEABLE insert #-}
-insert :: forall (a :: Type) (b :: Type). (Eq a, Eq b) => a -> b -> Bimap a b -> Bimap a b
+insert :: forall (a :: Type) (b :: Type). (Ord a, Ord b) => a -> b -> Bimap a b -> Bimap a b
 insert a b = Bimap . Set.insert (a, b) . unBimap
 
 {-# INLINEABLE deleteL #-}
-deleteL :: forall (a :: Type) (b :: Type). (Eq a, Eq b) => a -> Bimap a b -> Bimap a b
-deleteL a = Bimap . Set.fromList . filter ((/= a) . fst) . Set.toList . unBimap
+deleteL :: forall (a :: Type) (b :: Type). Eq a => a -> Bimap a b -> Bimap a b
+deleteL a = Bimap . Set.filter ((/= a) . fst) . unBimap
 
 PlutusTx.makeLift ''Bimap
-PlutusTx.makeIsDataIndexed ''Bimap [('Bimap, 0)]
