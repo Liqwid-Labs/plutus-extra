@@ -3,7 +3,7 @@ with import ./nix { };
 
   # Select packages who's dependencies should be added to the shell env
   packages = ps: [ ];
-  
+
   # Select packages which should be added to the shell env, with their dependencies
   # Should try and get the extra cardano dependencies in here...
   additional = ps:
@@ -40,7 +40,6 @@ with import ./nix { };
 
       # hls doesn't support preprocessors yet so this has to exist in PATH
       haskellPackages.record-dot-preprocessor
-
 
       # Graphviz Diagrams for documentation
       graphviz

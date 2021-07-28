@@ -93,10 +93,14 @@ instance (JSON.FromJSON v, JSON.FromJSON k, Eq k) => JSON.FromJSON (Map k v) whe
   parseJSON v = fromList Haskell.<$> JSON.parseJSON v
 
 {-# INLINEABLE fromList #-}
+
+-- | Create a `Map` from a list of key and value pairs.
 fromList :: forall (k :: Type) (v :: Type). (Eq k) => [(k, v)] -> Map k v
 fromList l = Map (nubBy (\(x, _) (y, _) -> x == y) l)
 
 {-# INLINEABLE toList #-}
+
+-- | Convert the `Map` to a list of key and value pairs.
 toList :: forall (k :: Type) (v :: Type). Map k v -> [(k, v)]
 toList (Map l) = l
 
@@ -117,10 +121,14 @@ member :: forall (k :: Type) (v :: Type). (Eq k) => k -> Map k v -> Bool
 member k m = isJust (lookup k m)
 
 {-# INLINEABLE insert #-}
+
+-- | Insert a new key and value in a `Map`.
 insert :: forall (k :: Type) (v :: Type). Eq k => k -> v -> Map k v -> Map k v
 insert k v m = unionWith (\_ b -> b) m (fromList [(k, v)])
 
 {-# INLINEABLE delete #-}
+
+-- | Remove a key and value from a `Map` for given key.
 delete :: forall (k :: Type) (v :: Type). (Eq k) => k -> Map k v -> Map k v
 delete key (Map ls) = Map (go ls)
   where

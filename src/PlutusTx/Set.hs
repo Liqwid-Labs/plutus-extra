@@ -41,6 +41,7 @@ import PlutusTx.Prelude qualified
 
 --------------------------------------------------------------------------------
 
+-- | A set of unique values @a@.
 newtype Set (a :: Type) = Set {unSet :: [a]}
   deriving stock (Prelude.Eq, Prelude.Show, Generic)
   deriving newtype (ToJSON)
@@ -74,14 +75,20 @@ instance (Ord a, IsData a) => IsData (Set a) where
   unsafeFromBuiltinData = fromList . unsafeFromBuiltinData
 
 {-# INLINEABLE empty #-}
+
+-- | Construct a empty set
 empty :: forall (a :: Type). Ord a => Set a
 empty = fromList []
 
 {-# INLINEABLE singleton #-}
+
+-- | Construct a singleton set from a single element.
 singleton :: forall (a :: Type). Ord a => a -> Set a
 singleton = fromList . (: [])
 
 {-# INLINEABLE insert #-}
+
+-- | Insert an element in a set.
 insert :: forall (a :: Type). Ord a => a -> Set a -> Set a
 insert n = Set . go . unSet
   where
@@ -93,18 +100,26 @@ insert n = Set . go . unSet
       GT -> x : go xs
 
 {-# INLINEABLE toList #-}
+
+-- | Convert the set to a list of elements.
 toList :: forall (a :: Type). Set a -> [a]
 toList = unSet
 
 {-# INLINEABLE fromList #-}
+
+-- | Create a set from a list of elements.
 fromList :: forall (a :: Type). Ord a => [a] -> Set a
 fromList = foldr insert (Set [])
 
 {-# INLINEABLE null #-}
+
+-- | Is the set empty?
 null :: forall (a :: Type). Set a -> Bool
 null = PlutusTx.Prelude.null . unSet
 
 {-# INLINEABLE member #-}
+
+-- | Is the element in the set?
 member :: forall (a :: Type). Ord a => a -> Set a -> Bool
 member n = go . unSet
   where
@@ -116,14 +131,20 @@ member n = go . unSet
       GT -> go xs
 
 {-# INLINEABLE size #-}
+
+-- | The number of elements in the set.
 size :: forall (a :: Type). Set a -> Integer
 size = length . toList
 
 {-# INLINEABLE all #-}
+
+-- | Do all elements in the set satisfy the predicate?
 all :: forall (a :: Type). (a -> Bool) -> Set a -> Bool
 all predicate = PlutusTx.Prelude.all predicate . toList
 
 {-# INLINEABLE delete #-}
+
+-- | Remove an element from the set.
 delete :: forall (a :: Type). Ord a => a -> Set a -> Set a
 delete n = Set . go . unSet
   where
@@ -135,17 +156,22 @@ delete n = Set . go . unSet
       GT -> x : go xs
 
 {-# INLINEABLE filter #-}
+
+-- | Filter all elements that satisfy the predicate.
 filter :: forall (a :: Type). (a -> Bool) -> Set a -> Set a
 filter f = Set . PlutusTx.Prelude.filter f . unSet
+
+{-# INLINEABLE map #-}
 
 {- | The resulting set can be less than the initial size
 if f maps two or more different keys to the same new key.
 -}
-{-# INLINEABLE map #-}
 map :: forall (a :: Type) (b :: Type). Ord b => (a -> b) -> Set a -> Set b
 map f = fromList . PlutusTx.Prelude.map f . unSet
 
 {-# INLINEABLE union #-}
+
+-- | The union of two sets.
 union :: forall (a :: Type). Ord a => Set a -> Set a -> Set a
 union x y = foldr insert x (toList y)
 

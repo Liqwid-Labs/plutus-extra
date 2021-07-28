@@ -91,10 +91,14 @@ null :: forall (a :: Type) (b :: Type). Bimap a b -> Bool
 null = Set.null . unBimap
 
 {-# INLINEABLE fromList #-}
+
+-- | Create a `Bimap` from a list of pairs.
 fromList :: forall (a :: Type) (b :: Type). (Ord a, Ord b) => [(a, b)] -> Bimap a b
 fromList = Bimap . Set.fromList
 
 {-# INLINEABLE toList #-}
+
+-- | Convert the `Bimap` to a list of pairs.
 toList :: forall (a :: Type) (b :: Type). Bimap a b -> [(a, b)]
 toList = Set.toList . unBimap
 
@@ -104,6 +108,8 @@ insert :: forall (a :: Type) (b :: Type). (Ord a, Ord b) => a -> b -> Bimap a b 
 insert a b = Bimap . Set.insert (a, b) . unBimap
 
 {-# INLINEABLE deleteL #-}
+
+-- | Delete all pairs that have a specific left-side element.
 deleteL :: forall (a :: Type) (b :: Type). Eq a => a -> Bimap a b -> Bimap a b
 deleteL a = Bimap . Set.filter ((/= a) . fst) . unBimap
 

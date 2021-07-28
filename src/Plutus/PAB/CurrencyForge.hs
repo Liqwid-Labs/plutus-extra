@@ -46,6 +46,7 @@ giveTo wallet value = do
     tx <- Contract.submitTx $ Constraints.mustPayToPubKey pubKeyHash value
     Contract.awaitTxConfirmed $ Tx.txId tx
 
+-- | Mint currency and give to a specific wallet
 initCurrency ::
   Ledger.TokenName ->
   Integer ->
