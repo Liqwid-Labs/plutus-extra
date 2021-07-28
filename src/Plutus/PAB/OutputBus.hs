@@ -2,7 +2,7 @@
 
 module Plutus.PAB.OutputBus (
   OutputBus (getOutputBus),
-  sendBus
+  sendBus,
 ) where
 
 --------------------------------------------------------------------------------
