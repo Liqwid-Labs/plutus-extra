@@ -28,6 +28,7 @@ module PlutusTx.NonEmpty (
   init,
   last,
   take,
+  filter,
   nub,
   nubBy,
 
@@ -49,10 +50,11 @@ import Prelude (Show, show)
 --------------------------------------------------------------------------------
 
 import PlutusTx (makeLift)
-import PlutusTx.IsData.Class (IsData, fromData, toData)
+import PlutusTx.Builtins qualified as Builtins
+import PlutusTx.IsData.Class (IsData, fromBuiltinData, toBuiltinData, unsafeFromBuiltinData)
 import PlutusTx.List.Extra qualified as PlutusTx (unzip3, zip3)
-import PlutusTx.Prelude hiding (head, nub, nubBy, reverse, tail, take, toList, zip)
-import PlutusTx.Prelude qualified as PlutusTx (nubBy, reverse, take, zip)
+import PlutusTx.Prelude hiding (filter, head, nub, nubBy, reverse, tail, take, toList, zip)
+import PlutusTx.Prelude qualified as PlutusTx (filter, nubBy, reverse, take, zip)
 
 --------------------------------------------------------------------------------
 
@@ -126,10 +128,14 @@ instance Traversable NonEmpty where
   traverse f ~(a :| as) = liftA2 (:|) (f a) (traverse f as)
 
 instance IsData a => IsData (NonEmpty a) where
-  {-# INLINEABLE toData #-}
-  toData = toData . toList
-  {-# INLINEABLE fromData #-}
-  fromData = maybe Nothing nonEmpty . fromData
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData = toBuiltinData . toList
+  {-# INLINEABLE fromBuiltinData #-}
+  fromBuiltinData = maybe Nothing nonEmpty . fromBuiltinData
+  {-# INLINEABLE unsafeFromBuiltinData #-}
+  unsafeFromBuiltinData d = case unsafeFromBuiltinData d of
+    (a : as) -> a :| as
+    _ -> Builtins.error ()
 
 {-# INLINEABLE toList #-}
 
@@ -298,6 +304,18 @@ Index outside the NonEmpty list
 take :: forall (a :: Type). Integer -> NonEmpty a -> [a]
 take n = PlutusTx.take n . toList
 
+{-# INLINEABLE filter #-}
+
+{- | @'filter' p xs@ removes any elements from @xs@ that do not satisfy @p@.
+
+==== __Examples__
+
+>>> filter (> 3) (1 :| [2,3,5,2,4]) :: [Integer]
+[5,4]
+-}
+filter :: forall (a :: Type). (a -> Bool) -> NonEmpty a -> [a]
+filter p = PlutusTx.filter p . toList
+
 {-# INLINEABLE nub #-}
 
 {- | The 'nub' function removes duplicate elements from a list. In
@@ -328,7 +346,10 @@ NonEmpty [1,2,3,4]
 NonEmpty [2,1,1]
 -}
 nubBy :: forall (a :: Type). (a -> a -> Bool) -> NonEmpty a -> NonEmpty a
-nubBy = asWithList . PlutusTx.nubBy
+nubBy eq (x :| xs) = x :| rest
+  where
+    rest :: [a]
+    rest = PlutusTx.nubBy eq $ PlutusTx.filter (\x' -> not $ x `eq` x') xs
 
 {-# INLINEABLE zip #-}
 
@@ -403,27 +424,15 @@ unzip3 ~((x, y, z) :| lst) =
 
 ==== __Examples__
 
+>>> reverse (1 :| [])
+NonEmpty [1]
+
 >>> reverse (1 :| [2,3])
 NonEmpty [3,2,1]
 -}
 reverse :: forall (a :: Type). NonEmpty a -> NonEmpty a
-reverse = asWithList PlutusTx.reverse
-
-{- |  @'asWithList' f nonEmpty@ transform list function @f@ to work on a 'NonEmpty' stream @nonEmpty@.
-Intended for careful use inside the module only.
-
-/Beware/: The list function @f@ should always return a non-empty list in case of a non-empty argument.
-If the provided list function returns an empty list,this will raise an error.
--}
-asWithList ::
-  forall (a :: Type) (b :: Type).
-  ([a] -> [b]) ->
-  NonEmpty a ->
-  NonEmpty b
-asWithList f = fromList . f . toList
-  where
-    fromList :: forall (c :: Type). [c] -> NonEmpty c
-    fromList (x : xs) = x :| xs
-    fromList [] = traceError "NonEmpty.asWithList: empty list"
+reverse (x :| xs) = case PlutusTx.reverse xs of
+  [] -> x :| []
+  (y : ys) -> y :| ys ++ [x]
 
 makeLift ''NonEmpty

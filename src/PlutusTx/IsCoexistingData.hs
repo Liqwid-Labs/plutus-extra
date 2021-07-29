@@ -1,5 +1,5 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE TemplateHaskell #-}
+{- {-# LANGUAGE BangPatterns #-} -}
+{- {-# LANGUAGE TemplateHaskell #-} -}
 
 {- | Provides a TH-based generator of 'IsData' instances without the problem of
  identically-named constructors clashing on representation.
@@ -90,61 +90,79 @@
 -}
 module PlutusTx.IsCoexistingData (makeCoexistingIsData) where
 
-import Control.Monad (replicateM)
-import Data.Char (ord)
-import Data.Foldable (foldl')
-import Instances.TH.Lift ()
-import Language.Haskell.TH (
-  Body (GuardedB, NormalB),
-  Clause (Clause),
-  Dec (FunD, InstanceD, PragmaD),
-  Exp (AppE, CaseE, ConE, ListE, UInfixE, VarE),
-  Guard (NormalG),
-  Inline (Inlinable),
-  Match (Match),
-  Name,
-  Pat (ConP, InfixP, ListP, VarP, WildP),
-  Phases (AllPhases),
-  Pragma (InlineP),
-  Q,
-  RuleMatch (FunLike),
-  TyVarBndr (KindedTV, PlainTV),
-  Type (AppT, ConT, VarT),
-  integerL,
-  litE,
-  newName,
-  varE,
- )
-import Language.Haskell.TH.Datatype (
-  ConstructorInfo,
-  constructorFields,
-  constructorName,
-  datatypeCons,
-  datatypeVars,
-  reifyDatatype,
- )
-import Language.Haskell.TH.Syntax (lift)
-import PlutusTx.Data qualified as Data
-import PlutusTx.IsData.Class (IsData (fromData, toData))
-import PlutusTx.Prelude hiding (
-  fmap,
-  length,
-  pure,
-  sequence,
-  traverse,
-  (<$>),
-  (<*>),
- )
-import PlutusTx.Prelude qualified as PTx
-import Prelude (
-  fmap,
-  length,
-  pure,
-  traverse,
-  (<$>),
-  (<*>),
- )
-import Prelude qualified
+--------------------------------------------------------------------------------
+
+--import Control.Monad (replicateM)
+--import Data.Char (ord)
+--import Data.Foldable (foldl')
+--import Prelude (
+--  fmap,
+--  length,
+--  pure,
+--  traverse,
+--  (<$>),
+--  (<*>),
+-- )
+--import Prelude qualified
+
+--------------------------------------------------------------------------------
+
+--import Instances.TH.Lift ()
+--import Language.Haskell.TH (
+--  Body (GuardedB, NormalB),
+--  Clause (Clause),
+--  Dec (FunD, InstanceD, PragmaD),
+--  Exp (AppE, CaseE, ConE, ListE, UInfixE, VarE),
+--  Guard (NormalG),
+--  Inline (Inlinable),
+--  Match (Match),
+--  Name,
+--  Pat (ConP, InfixP, ListP, VarP, WildP),
+--  Phases (AllPhases),
+--  Pragma (InlineP),
+--  Q,
+--  RuleMatch (FunLike),
+--  TyVarBndr (KindedTV, PlainTV),
+--  Type (AppT, ConT, VarT),
+--  integerL,
+--  litE,
+--  newName,
+--  varE,
+-- )
+import Language.Haskell.TH (Dec, Name, Q)
+
+--import Language.Haskell.TH.Datatype (
+--  ConstructorInfo,
+--  constructorFields,
+--  constructorName,
+--  datatypeCons,
+--  datatypeVars,
+--  reifyDatatype,
+-- )
+--import Language.Haskell.TH.Syntax (lift)
+
+--------------------------------------------------------------------------------
+
+-- import PlutusTx.Data qualified as Data
+-- import PlutusTx.IsData.Class (IsData (fromData, toData))
+-- import PlutusTx.Prelude hiding (
+--   fmap,
+--   length,
+--   pure,
+--   sequence,
+--   traverse,
+--   (<$>),
+--   (<*>),
+--  )
+-- import PlutusTx.Prelude qualified as PTx
+import PlutusTx.IsData (unstableMakeIsData)
+
+--------------------------------------------------------------------------------
+
+makeCoexistingIsData :: Name -> Q [Dec]
+makeCoexistingIsData = unstableMakeIsData
+
+{- Temporarily removed for version upgrade
 
 -- | Template Haskell helper to generate a \'tagging\' 'IsData' representation.
 makeCoexistingIsData :: Name -> Q [Dec]
@@ -341,3 +359,5 @@ tyVar =
   VarT . \case
     PlainTV nam -> nam
     KindedTV nam _ -> nam
+
+-}

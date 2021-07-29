@@ -27,7 +27,7 @@ toDatum ::
   (Ledger.IsData (Scripts.DatumType script)) =>
   Scripts.DatumType script ->
   Ledger.Datum
-toDatum = Ledger.Datum . Ledger.toData
+toDatum = Ledger.Datum . Ledger.toBuiltinData
 
 -- | Converts an arbitrary value to a `Redeemer`
 {-# INLINEABLE toRedeemer #-}
@@ -36,7 +36,7 @@ toRedeemer ::
   (Ledger.IsData (Scripts.RedeemerType script)) =>
   Scripts.RedeemerType script ->
   Ledger.Redeemer
-toRedeemer = Ledger.Redeemer . Ledger.toData
+toRedeemer = Ledger.Redeemer . Ledger.toBuiltinData
 
 -- | Convert a `Datum` back to an ordinary Haskell value of the correct type
 {-# INLINEABLE fromDatum #-}
@@ -45,7 +45,7 @@ fromDatum ::
   (Ledger.IsData (Scripts.DatumType script)) =>
   Ledger.Datum ->
   Maybe (Scripts.DatumType script)
-fromDatum (Ledger.Datum d) = Ledger.fromData d
+fromDatum (Ledger.Datum d) = Ledger.fromBuiltinData d
 
 -- | Convert a `Redeemer` back to an ordinary Haskell value of the correct type
 {-# INLINEABLE fromRedeemer #-}
@@ -54,4 +54,4 @@ fromRedeemer ::
   (Ledger.IsData (Scripts.RedeemerType script)) =>
   Ledger.Redeemer ->
   Maybe (Scripts.RedeemerType script)
-fromRedeemer (Ledger.Redeemer d) = Ledger.fromData d
+fromRedeemer (Ledger.Redeemer d) = Ledger.fromBuiltinData d
