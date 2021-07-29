@@ -36,8 +36,7 @@ with import ./nix { };
       nixfmt
       plutus.plutus.hlint
 
-      # Using plutus-latest, we get access to hls with ghc 8.10.4.20210212
-      plutus-latest.plutus.haskell-language-server
+      plutus.plutus.haskell-language-server
 
       # hls doesn't support preprocessors yet so this has to exist in PATH
       haskellPackages.record-dot-preprocessor
