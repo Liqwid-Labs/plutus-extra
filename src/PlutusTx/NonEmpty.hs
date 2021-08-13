@@ -51,7 +51,7 @@ import Prelude (Show, show)
 
 import PlutusTx (makeLift)
 import PlutusTx.Builtins qualified as Builtins
-import PlutusTx.IsData.Class (IsData, fromBuiltinData, toBuiltinData, unsafeFromBuiltinData)
+import PlutusTx.IsData.Class
 import PlutusTx.List.Extra qualified as PlutusTx (unzip3, zip3)
 import PlutusTx.Prelude hiding (filter, head, nub, nubBy, reverse, tail, take, toList, zip)
 import PlutusTx.Prelude qualified as PlutusTx (filter, nubBy, reverse, take, zip)
@@ -127,11 +127,15 @@ instance Traversable NonEmpty where
     f (NonEmpty b)
   traverse f ~(a :| as) = liftA2 (:|) (f a) (traverse f as)
 
-instance IsData a => IsData (NonEmpty a) where
+instance ToData a => ToData (NonEmpty a) where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData = toBuiltinData . toList
+
+instance FromData a => FromData (NonEmpty a) where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = maybe Nothing nonEmpty . fromBuiltinData
+
+instance UnsafeFromData a => UnsafeFromData (NonEmpty a) where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData d = case unsafeFromBuiltinData d of
     (a : as) -> a :| as

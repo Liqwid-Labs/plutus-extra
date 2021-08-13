@@ -15,7 +15,8 @@ import Data.Kind (Type)
 --------------------------------------------------------------------------------
 
 import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Api qualified as Ledger (Datum (..), IsData (..), Redeemer (..))
+import Plutus.V1.Ledger.Api qualified as Ledger (Datum (..), Redeemer (..))
+import PlutusTx.IsData qualified as Ledger
 import PlutusTx.Prelude (Maybe, (.))
 
 --------------------------------------------------------------------------------
@@ -24,7 +25,7 @@ import PlutusTx.Prelude (Maybe, (.))
 {-# INLINEABLE toDatum #-}
 toDatum ::
   forall (script :: Type).
-  (Ledger.IsData (Scripts.DatumType script)) =>
+  (Ledger.ToData (Scripts.DatumType script)) =>
   Scripts.DatumType script ->
   Ledger.Datum
 toDatum = Ledger.Datum . Ledger.toBuiltinData
@@ -33,7 +34,7 @@ toDatum = Ledger.Datum . Ledger.toBuiltinData
 {-# INLINEABLE toRedeemer #-}
 toRedeemer ::
   forall (script :: Type).
-  (Ledger.IsData (Scripts.RedeemerType script)) =>
+  (Ledger.ToData (Scripts.RedeemerType script)) =>
   Scripts.RedeemerType script ->
   Ledger.Redeemer
 toRedeemer = Ledger.Redeemer . Ledger.toBuiltinData
@@ -42,7 +43,7 @@ toRedeemer = Ledger.Redeemer . Ledger.toBuiltinData
 {-# INLINEABLE fromDatum #-}
 fromDatum ::
   forall (script :: Type).
-  (Ledger.IsData (Scripts.DatumType script)) =>
+  (Ledger.FromData (Scripts.DatumType script)) =>
   Ledger.Datum ->
   Maybe (Scripts.DatumType script)
 fromDatum (Ledger.Datum d) = Ledger.fromBuiltinData d
@@ -51,7 +52,7 @@ fromDatum (Ledger.Datum d) = Ledger.fromBuiltinData d
 {-# INLINEABLE fromRedeemer #-}
 fromRedeemer ::
   forall (script :: Type).
-  (Ledger.IsData (Scripts.RedeemerType script)) =>
+  (Ledger.FromData (Scripts.RedeemerType script)) =>
   Ledger.Redeemer ->
   Maybe (Scripts.RedeemerType script)
 fromRedeemer (Ledger.Redeemer d) = Ledger.fromBuiltinData d

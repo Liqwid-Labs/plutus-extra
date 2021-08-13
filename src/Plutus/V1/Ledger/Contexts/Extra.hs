@@ -35,7 +35,7 @@ import Plutus.V1.Ledger.Tx qualified as Tx (TxOut (..))
 import Plutus.V1.Ledger.Value qualified as Ledger (Value)
 import PlutusTx.Foldable qualified as Foldable
 import PlutusTx.Foldable.Extra qualified as Foldable.Extra
-import PlutusTx.IsData.Class qualified as PlutusTx (IsData (..))
+import PlutusTx.IsData.Class qualified as PlutusTx
 import PlutusTx.Prelude
 
 --------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ valueFromScript Contexts.TxInfo {txInfoInputs = txInfoInputs} script =
 -}
 getOutputDatum ::
   forall (a :: Type).
-  PlutusTx.IsData a =>
+  PlutusTx.FromData a =>
   Contexts.TxInfo ->
   Scripts.DatumHash ->
   Maybe a
@@ -89,7 +89,7 @@ getOutputDatum txInfo datumHash =
 {-# INLINEABLE findDatumAt #-}
 findDatumAt ::
   forall (datum :: Type).
-  (PlutusTx.IsData datum) =>
+  (PlutusTx.FromData datum) =>
   Bool ->
   Contexts.TxInfo ->
   Scripts.ValidatorHash ->
@@ -121,7 +121,7 @@ findDatumAt
 {-# INLINEABLE findDatumAtOutput #-}
 findDatumAtOutput ::
   forall (datum :: Type).
-  (PlutusTx.IsData datum) =>
+  (PlutusTx.FromData datum) =>
   Contexts.TxInfo ->
   Scripts.ValidatorHash ->
   Maybe datum
@@ -131,7 +131,7 @@ findDatumAtOutput = findDatumAt True
 {-# INLINEABLE findDatumAtInput #-}
 findDatumAtInput ::
   forall (datum :: Type).
-  (PlutusTx.IsData datum) =>
+  (PlutusTx.FromData datum) =>
   Contexts.TxInfo ->
   Scripts.ValidatorHash ->
   Maybe datum
@@ -147,7 +147,7 @@ findDatumAtInput = findDatumAt False
 -}
 allDatumsAt ::
   forall (datum :: Type).
-  (PlutusTx.IsData datum) =>
+  (PlutusTx.FromData datum) =>
   Bool ->
   Contexts.TxInfo ->
   Scripts.ValidatorHash ->
@@ -178,7 +178,7 @@ allDatumsAt
 {-# INLINEABLE allDatumsAtOutput #-}
 allDatumsAtOutput ::
   forall (datum :: Type).
-  (PlutusTx.IsData datum) =>
+  (PlutusTx.FromData datum) =>
   Contexts.TxInfo ->
   Scripts.ValidatorHash ->
   [datum]
@@ -188,7 +188,7 @@ allDatumsAtOutput = allDatumsAt True
 {-# INLINEABLE allDatumsAtInput #-}
 allDatumsAtInput ::
   forall (datum :: Type).
-  (PlutusTx.IsData datum) =>
+  (PlutusTx.FromData datum) =>
   Contexts.TxInfo ->
   Scripts.ValidatorHash ->
   [datum]

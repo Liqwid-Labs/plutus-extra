@@ -35,7 +35,7 @@ import Data.Kind (Type)
 
 --------------------------------------------------------------------------------
 import PlutusTx qualified (makeLift)
-import PlutusTx.IsData.Class (IsData (fromBuiltinData, toBuiltinData, unsafeFromBuiltinData))
+import PlutusTx.IsData.Class
 import PlutusTx.Prelude hiding (all, filter, foldMap, map, null, toList)
 import PlutusTx.Prelude qualified
 
@@ -66,11 +66,13 @@ instance (Ord a, FromJSON a) => FromJSON (Set a) where
   {-# INLINEABLE parseJSON #-}
   parseJSON = Prelude.fmap fromList . parseJSON
 
-instance (Ord a, IsData a) => IsData (Set a) where
+instance ToData a => ToData (Set a) where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData = toBuiltinData . toList
+instance (Ord a, FromData a) => FromData (Set a) where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = PlutusTx.Prelude.fmap fromList . fromBuiltinData
+instance (Ord a, UnsafeFromData a) => UnsafeFromData (Set a) where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = fromList . unsafeFromBuiltinData
 
