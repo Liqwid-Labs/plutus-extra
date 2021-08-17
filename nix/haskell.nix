@@ -50,9 +50,9 @@ in pkgs.haskell-nix.cabalProject rec {
     "https://github.com/input-output-hk/plutus.git"."${sources.plutus.rev}" =
       sources.plutus.sha256;
 
-    # Quid2/flat
-    "https://github.com/Quid2/flat.git"."95e5d7488451e43062ca84d5376b3adcc465f1cd" =
-      "06l31x3y93rjpryvlxnpsyq2zyxvb0z6lik6yq2fvh36i5zwvwa3";
+    # michaelpj/flat
+    "https://github.com/michaelpj/flat.git"."ee59880f47ab835dbd73bea0847dab7869fc20d8" =
+      "1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm";
 
     # shmish111/purescript-bridge
     "https://github.com/shmish111/purescript-bridge.git"."6a92d7853ea514be8b70bab5e72077bf5a510596" =
@@ -63,16 +63,16 @@ in pkgs.haskell-nix.cabalProject rec {
       "11nxxmi5bw66va7psvrgrw7b7n85fvqgfp58yva99w3v9q3a50v9";
 
     # input-output-hk/cardano-base
-    "https://github.com/input-output-hk/cardano-base"."a715c7f420770b70bbe95ca51d3dec83866cb1bd" =
-      "06l06mmb8cd4q37bnvfpgx1c5zgsl4xaf106dqva98738i8asj7j";
+    "https://github.com/input-output-hk/cardano-base"."cb0f19c85e5bb5299839ad4ed66af6fa61322cc4" =
+      "0dnkfqcvbifbk3m5pg8kyjqjy0zj1l4vd23p39n6ym4q0bnib1cq";
 
     # input-output-hk/cardano-crypto
-    "https://github.com/input-output-hk/cardano-crypto.git"."ce8f1934e4b6252084710975bd9bbc0a4648ece4" =
-      "1v2laq04piyj511b2m77hxjh9l1yd6k9kc7g6bjala4w3zdwa4ni";
+    "https://github.com/input-output-hk/cardano-crypto.git"."07397f0e50da97eaa0575d93bee7ac4b2b2576ec" =
+      "06sdx5ndn2g722jhpicmg96vsrys89fl81k8290b3lr6b1b0w4m3";
 
     # input-output-hk/cardano-ledger-specs
-    "https://github.com/input-output-hk/cardano-ledger-specs"."6b0fca7a73c317f3af7c14dd4dc38178cc78a6c8" =
-      "0570g723ac8wf0zha37nsh4n0809rqqfx4j9i80hqkq18cysrglr";
+    "https://github.com/input-output-hk/cardano-ledger-specs"."12a0ef69d64a55e737fbf4e846bd8ed9fb30a956" =
+      "0mx1g18ypdd5m8ijc2cl9m1xmymlqfbwl1r362f92vxrmziacifv";
 
     # input-output-hk/cardano-prelude
     "https://github.com/input-output-hk/cardano-prelude"."fd773f7a58412131512b9f694ab95653ac430852" =
@@ -87,19 +87,23 @@ in pkgs.haskell-nix.cabalProject rec {
       "1fdc0a02ipa385dnwa6r6jyc8jlg537i12hflfglkhjs2b7i92gs";
 
     # input-output-hk/ouroboros-network
-    "https://github.com/input-output-hk/ouroboros-network"."e338f2cf8e1078fbda9555dd2b169c6737ef6774" =
-      "12x81hpjyw2cpkazfalz6bw2wgr6ax7bnmlxl2rlfakkvsjfgaqd";
+    "https://github.com/input-output-hk/ouroboros-network"."f149c1c1e4e4bb5bab51fa055e9e3a7084ddc30e" =
+      "1szh3xr7qnx56kyxd554yswpddbavb7m7k2mk3dqdn7xbg7s8b8w";
+
+    # input-output-hk/optparse-applicative
+    "https://github.com/input-output-hk/optparse-applicative"."7497a29cb998721a9068d5725d49461f2bba0e7a" =
+      "1gvsrg925vynwgqwplgjmp53vj953qyh3wbdf34pw21c8r47w35r";
 
     # input-output-hk/cardano-node
-    "https://github.com/input-output-hk/cardano-node.git"."f3ef4ed72894499160f2330b91572a159005c148" =
-      "1mp8ih6kmq4j354mgjgrxlssv7jbk5zz1j3nyqg43ascql4d0fvq";
+    "https://github.com/input-output-hk/cardano-node.git"."3a56ac245c83d3345f81123ec3bb496bb23477a3" =
+      "0dglxqhqrdn5nc3n6c8b7himgxrjdjszcl905xihrnaav49z09mg";
 
     # input-output-hk/Win32-network
-    "https://github.com/input-output-hk/Win32-network"."94153b676617f8f33abe8d8182c37377d2784bd1" =
-      "0pb7bg0936fldaa5r08nqbxvi2g8pcy4w3c7kdcg7pdgmimr30ss";
+    "https://github.com/input-output-hk/Win32-network"."3825d3abf75f83f406c1f7161883c438dac7277d" =
+      "19wahfv726fa3mqajpqdqhnl9ica3xmf68i254q45iyjcpj1psqx";
 
     # input-output-hk/hedgehog-extras
-    "https://github.com/input-output-hk/hedgehog-extras"."8bcd3c9dc22cc44f9fcfe161f4638a384fc7a187" =
-      "12viwpahjdfvlqpnzdgjp40nw31rvyznnab1hml9afpaxd6ixh70";
+    "https://github.com/input-output-hk/hedgehog-extras"."edf6945007177a638fbeb8802397f3a6f4e47c14" =
+      "0wc7qzkc7j4ns2rz562h6qrx2f8xyq7yjcb7zidnj7f6j0pcd0i9";
   };
 }
