@@ -31,7 +31,11 @@ import Data.Aeson (FromJSON, ToJSON)
 --------------------------------------------------------------------------------
 
 import PlutusTx qualified (makeLift)
-import PlutusTx.IsData.Class (IsData (fromBuiltinData, toBuiltinData, unsafeFromBuiltinData))
+import PlutusTx.IsData.Class (
+  FromData (fromBuiltinData),
+  ToData (toBuiltinData),
+  UnsafeFromData (unsafeFromBuiltinData),
+ )
 import PlutusTx.Prelude hiding (null, toList)
 
 --------------------------------------------------------------------------------
@@ -57,11 +61,15 @@ newtype Bimap (a :: Type) (b :: Type) = Bimap {unBimap :: Set (a, b)}
   deriving stock (Prelude.Show, Prelude.Eq, Generic)
   deriving newtype (ToJSON, FromJSON)
 
-instance (Ord a, Ord b, IsData a, IsData b) => IsData (Bimap a b) where
+instance (ToData a, ToData b) => ToData (Bimap a b) where
   {-# INLINEABLE toBuiltinData #-}
   toBuiltinData = toBuiltinData . unBimap
+
+instance (Ord a, Ord b, FromData a, FromData b) => FromData (Bimap a b) where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData = fmap Bimap . fromBuiltinData
+
+instance (Ord a, Ord b, UnsafeFromData a, UnsafeFromData b) => UnsafeFromData (Bimap a b) where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = Bimap . unsafeFromBuiltinData
 
