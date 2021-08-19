@@ -21,6 +21,11 @@ import PlutusTx.Ord qualified as PlutusTx
 
 --------------------------------------------------------------------------------
 
+import PlutusTx.IsData.Class (
+  FromData (fromBuiltinData),
+  ToData (toBuiltinData),
+  UnsafeFromData (unsafeFromBuiltinData),
+ )
 import PlutusTx.Set (Set)
 import PlutusTx.Set qualified as Set
 
@@ -47,6 +52,10 @@ prop_InsertDeleteDelete x xs = Set.delete x (Set.insert x xs) == Set.delete x xs
 prop_NotNull x xs = not $ Set.null (Set.insert x xs)
 
 prop_ElemsAlwaysUnique xs = Set.toList xs == nub (Set.toList xs)
+
+prop_ToFromDataRoundTrip (xs :: Set a) = fromBuiltinData (toBuiltinData xs) == Just xs
+
+prop_ToUnsafeFromDataRoundTrip (xs :: Set a) = unsafeFromBuiltinData (toBuiltinData xs) == xs
 
 -- Don't ask me.
 pure []
