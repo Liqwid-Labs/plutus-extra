@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans -Wno-missing-signatures #-}
 
-module Suites.Bimap (tests) where
+module Suites.PlutusTx.Bimap (tests) where
 
 import Data.List (nub, sort)
 import Prelude

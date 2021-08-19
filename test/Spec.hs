@@ -8,8 +8,8 @@ import Test.Tasty (defaultMain, testGroup)
 
 --------------------------------------------------------------------------------
 
-import Suites.Bimap qualified as Bimap
-import Suites.Set qualified as Set
+import Suites.PlutusTx.Bimap qualified as Bimap
+import Suites.PlutusTx.Set qualified as Set
 
 --------------------------------------------------------------------------------
 

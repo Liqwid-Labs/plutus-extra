@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans -Wno-missing-signatures #-}
 
-module Suites.Set (tests) where
+module Suites.PlutusTx.Set (tests) where
 
 --------------------------------------------------------------------------------
 
