@@ -18,6 +18,8 @@ with import ./nix { };
       playground-common
       prettyprinter-configurable
       plutus-use-cases
+      cardano-crypto-praos
+      cardano-crypto-class
     ];
 
   withHoogle = true;
