@@ -52,6 +52,8 @@ walletFundsExactChangeWithAccumState = walletFundsChangeWithAccumStateImpl False
 
 {- | Internal implementation for fund checking
  Combining the implementations of walletFundsChangeImpl and assertAccumState functions
+
+  @since 0.3.0.0
 -}
 walletFundsChangeWithAccumStateImpl ::
   ( Monoid w
