@@ -53,7 +53,9 @@ common deps
     , containers
     , deepseq
     , flat
+    , foldl
     , freer-extras
+    , freer-simple
     , lens
     , playground-common
     , plutus-contract
@@ -87,6 +89,7 @@ library
   import:          lang
   import:          deps
   exposed-modules:
+    Plutus.Contract.Test.Extra
     Plutus.PAB.CurrencyForge
     Plutus.PAB.OutputBus
     Plutus.PAB.PrettyLogger
@@ -121,6 +124,7 @@ test-suite plutus-extra-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   other-modules:
+    Suites.Plutus.PAB.CurrencyForge
     Suites.PlutusTx.Bimap
     Suites.PlutusTx.Set
 
