@@ -127,6 +127,7 @@ test-suite plutus-extra-test
     Suites.Plutus.PAB.CurrencyForge
     Suites.PlutusTx.Bimap
     Suites.PlutusTx.Data.Extra
+    Suites.PlutusTx.NonEmpty
     Suites.PlutusTx.Set
 
   build-depends:  plutus-extra
