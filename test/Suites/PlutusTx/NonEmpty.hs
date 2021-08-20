@@ -5,14 +5,14 @@ module Suites.PlutusTx.NonEmpty (tests) where
 
 --------------------------------------------------------------------------------
 
+import PlutusTx.Prelude qualified as PlutusPrelude
 import Prelude hiding (Eq)
-import PlutusTx.Prelude qualified as PlutusPrelude 
 
 --------------------------------------------------------------------------------
 
+import Test.QuickCheck
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.QuickCheck
 
 --------------------------------------------------------------------------------
 
@@ -34,10 +34,10 @@ prop_Insertion x xs = NonEmpty.toList (x :| xs) == x : xs
 
 prop_HeadTailConcat xs = NonEmpty.head xs :| NonEmpty.tail xs PlutusPrelude.== xs
 
-prop_InitLastReverseConcat xs = 
+prop_InitLastReverseConcat xs =
   NonEmpty.last xs :| reverse (NonEmpty.init xs) PlutusPrelude.== NonEmpty.reverse xs
 
-prop_ToFromDataRoundTrip (xs :: NonEmpty a) = 
+prop_ToFromDataRoundTrip (xs :: NonEmpty a) =
   fromBuiltinData (toBuiltinData xs) PlutusPrelude.== Just xs
 
 prop_ToUnsafeFromDataRoundTrip (xs :: NonEmpty a) =

@@ -11,8 +11,8 @@ import Test.Tasty (defaultMain, testGroup)
 import Suites.Plutus.PAB.CurrencyForge qualified as CurrencyForge
 import Suites.PlutusTx.Bimap qualified as Bimap
 import Suites.PlutusTx.Data.Extra qualified as DataExtra
-import Suites.PlutusTx.Set qualified as Set
 import Suites.PlutusTx.NonEmpty qualified as NonEmpty
+import Suites.PlutusTx.Set qualified as Set
 
 --------------------------------------------------------------------------------
 
