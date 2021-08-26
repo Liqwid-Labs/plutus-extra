@@ -18,6 +18,8 @@ with import ./nix { };
       playground-common
       prettyprinter-configurable
       plutus-use-cases
+      cardano-crypto-praos
+      cardano-crypto-class
     ];
 
   withHoogle = true;
@@ -48,13 +50,12 @@ with import ./nix { };
       pab.plutus_pab_client
 
       ### Example contracts
-      plutus.plutus-atomic-swap
-      plutus.plutus-currency
+      plutus.plutus-pab-examples
 
     ] ++ (builtins.attrValues pab.plutus_pab_exes);
 
   buildInputs = (with plutus.pkgs;
-    [ zlib pkg-config libsodium systemd ]
-    ++ (lib.optionals (!stdenv.isDarwin) [ R ]));
+    [ zlib pkg-config libsodium-vrf R ]
+    ++ (lib.optionals (!stdenv.isDarwin) [ systemd ]));
 
 }))

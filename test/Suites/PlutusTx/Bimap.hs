@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans -Wno-missing-signatures #-}
 
-module Suites.Bimap (tests) where
+module Suites.PlutusTx.Bimap (tests) where
 
 import Data.List (nub, sort)
 import Prelude
@@ -15,6 +15,11 @@ import Test.QuickCheck (Arbitrary (arbitrary), allProperties)
 
 --------------------------------------------------------------------------------
 
+import PlutusTx.IsData.Class (
+  FromData (fromBuiltinData),
+  ToData (toBuiltinData),
+  UnsafeFromData (unsafeFromBuiltinData),
+ )
 import PlutusTx.Ord qualified as PlutusTx
 
 --------------------------------------------------------------------------------
@@ -39,6 +44,10 @@ prop_InsertIdempotentLookup a b m = b `elem` Bimap.lookup a (Bimap.insert a b (B
 prop_LengthPreservedNubbed xs = Bimap.size (Bimap.fromList xs) == toInteger (length (nub xs))
 
 prop_NotNull a b m = not $ Bimap.null (Bimap.insert a b m)
+
+prop_ToFromDataRoundTrip (xs :: Bimap a b) = fromBuiltinData (toBuiltinData xs) == Just xs
+
+prop_ToUnsafeFromDataRoundTrip (xs :: Bimap a b) = unsafeFromBuiltinData (toBuiltinData xs) == xs
 
 -- Don't ask me.
 pure []

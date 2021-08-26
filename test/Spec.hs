@@ -8,8 +8,11 @@ import Test.Tasty (defaultMain, testGroup)
 
 --------------------------------------------------------------------------------
 
-import Suites.Bimap qualified as Bimap
-import Suites.Set qualified as Set
+import Suites.Plutus.PAB.CurrencyForge qualified as CurrencyForge
+import Suites.PlutusTx.Bimap qualified as Bimap
+import Suites.PlutusTx.Data.Extra qualified as DataExtra
+import Suites.PlutusTx.NonEmpty qualified as NonEmpty
+import Suites.PlutusTx.Set qualified as Set
 
 --------------------------------------------------------------------------------
 
@@ -18,6 +21,9 @@ main =
   defaultMain $
     testGroup
       "Suites"
-      [ testGroup "Bimap" Bimap.tests
-      , testGroup "Set" Set.tests
+      [ testGroup "PlutusTx.Bimap" Bimap.tests
+      , testGroup "PlutusTx.Set" Set.tests
+      , testGroup "PlutusTx.NonEmpty" NonEmpty.tests
+      , testGroup "PlutusTx.Data.Extra" DataExtra.tests
+      , testGroup "Plutus.PAB.CurrencyForge" CurrencyForge.tests
       ]

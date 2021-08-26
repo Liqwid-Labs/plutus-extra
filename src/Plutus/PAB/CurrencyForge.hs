@@ -11,14 +11,12 @@ import Data.Kind (Type)
 
 --------------------------------------------------------------------------------
 
+import Ledger qualified
 import Ledger.Constraints qualified as Constraints
 import Plutus.Contract qualified as Contract
 import Plutus.Contract.State (Contract)
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
-import Plutus.V1.Ledger.Crypto qualified as Ledger
-import Plutus.V1.Ledger.Tx qualified as Tx
-import Plutus.V1.Ledger.Value qualified as Ledger (AssetClass, TokenName, Value)
 import Plutus.V1.Ledger.Value qualified as Value (assetClass, assetClassValue)
 import Wallet.Emulator.Types (Wallet (..))
 import Wallet.Emulator.Wallet qualified as Wallet
@@ -44,7 +42,7 @@ giveTo wallet value = do
   let pubKeyHash = Ledger.pubKeyHash $ Wallet.walletPubKey wallet
   when (pubKeyHash /= ownPK) $ do
     tx <- Contract.submitTx $ Constraints.mustPayToPubKey pubKeyHash value
-    Contract.awaitTxConfirmed $ Tx.txId tx
+    Contract.awaitTxConfirmed $ Ledger.txId tx
 
 -- | Mint currency and give to a specific wallet
 initCurrency ::

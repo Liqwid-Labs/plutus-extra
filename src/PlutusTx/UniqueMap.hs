@@ -53,7 +53,7 @@ import PlutusTx.These
 -- | A 'Map' of key-value pairs.
 newtype Map (k :: Type) (v :: Type) = Map {unMap :: [(k, v)]}
   deriving stock (Generic, Haskell.Eq, Haskell.Show)
-  deriving newtype (Eq, Ord, IsData, NFData)
+  deriving newtype (Eq, Ord, ToData, FromData, NFData)
 
 instance Functor (Map k) where
   {-# INLINEABLE fmap #-}
