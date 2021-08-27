@@ -12,3 +12,8 @@
 
 - Bump Plutus version to `00e7cc3`.
 - Addition of new test assertions
+
+## 0.3.0.1 -- 2021-08-27
+
+- Derive `UnsafeFromData` in `UniqueMap`
+
