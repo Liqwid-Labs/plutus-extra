@@ -43,7 +43,10 @@ common lang
 
 library
   import:          lang
-  exposed-modules: Test.Tasty.Plutus.Validator.Unit
+  exposed-modules:
+    Test.Tasty.Plutus.Context
+    Test.Tasty.Plutus.Validator.Unit
+
   build-depends:
     , base
     , containers         ^>=0.6.2.1
