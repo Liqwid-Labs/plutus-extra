@@ -27,16 +27,32 @@ module Test.Tasty.Plutus.Validator.Unit (
   spendsFromWalletSigned,
   spendsFromSelf,
   spendsFromOther,
+
+  -- * Testing API
+  shouldn'tParse,
+  -- shouldn'tValidate,
+  -- shouldValidate,
 ) where
 
+import Data.Foldable (traverse_)
 import Data.Kind (Type)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
+import Data.Tagged (Tagged (Tagged))
 import Ledger.Crypto (PubKeyHash, pubKeyHash)
 import Ledger.Scripts (ValidatorHash)
 import Ledger.Value (Value)
+import Plutus.V1.Ledger.Contexts (ScriptContext)
 import PlutusTx.Builtins (BuiltinData)
-import PlutusTx.IsData.Class (ToData (toBuiltinData))
+import PlutusTx.IsData.Class (FromData (fromBuiltinData), ToData (toBuiltinData))
+import Test.Tasty.Providers (
+  IsTest (run, testOptions),
+  TestTree,
+  singleTest,
+  testFailed,
+  testPassed,
+ )
+import Type.Reflection (Typeable)
 import Wallet.Emulator.Types (Wallet, walletPubKey)
 
 -- | @since 1.0
@@ -180,7 +196,66 @@ spendsFromOther ::
 spendsFromOther hash v d =
   input . Input (ScriptInput hash . toBuiltinData $ d) $ v
 
+-- | @since 1.0
+shouldn'tParse ::
+  forall (datum :: Type) (redeemer :: Type).
+  (FromData datum, FromData redeemer, Typeable datum, Typeable redeemer) =>
+  ContextBuilder ->
+  String ->
+  (datum -> redeemer -> ScriptContext -> Bool) ->
+  TestTree
+shouldn'tParse cb name _ =
+  singleTest name . NoParse @datum @redeemer . compileOwnInputs $ cb
+
+{-
+-- | @since 1.0
+shouldn'tValidate ::
+  ContextBuilder ->
+  String ->
+  (ScriptContext -> Bool) ->
+  TestTree
+shouldn'tValidate cb name =
+  singleTest name . ValidatorTest ValidationFail
+
+-- | @since 1.0
+shouldValidate ::
+  ContextBuilder ->
+  String ->
+  (ScriptContext -> Bool) ->
+  TestTree
+shouldValidate cb name =
+  singleTest name . ValidatorTest ValidationSuccess
+-}
+
 -- Helpers
+
+newtype NoParse (datum :: Type) (redeemer :: Type)
+  = NoParse [(BuiltinData, BuiltinData)]
+
+instance
+  (Typeable datum, Typeable redeemer, FromData datum, FromData redeemer) =>
+  IsTest (NoParse datum redeemer)
+  where
+  run _ (NoParse ds) _ = pure $ case traverse_ (uncurry go) ds of
+    Nothing -> testPassed "Parse failure occurred."
+    Just () -> testFailed "Everything parsed successfully."
+    where
+      go :: BuiltinData -> BuiltinData -> Maybe ()
+      go dat red = do
+        _ <- fromBuiltinData @datum dat
+        _ <- fromBuiltinData @redeemer red
+        pure ()
+
+  -- None for now.
+  testOptions = Tagged []
+
+compileOwnInputs :: ContextBuilder -> [(BuiltinData, BuiltinData)]
+compileOwnInputs (ContextBuilder (inputs, _, _, _)) = foldMap go inputs
+  where
+    go :: Input -> [(BuiltinData, BuiltinData)]
+    go (Input t _) = case t of
+      OwnInput dat red -> [(dat, red)]
+      _ -> []
 
 walletPubKeyHash :: Wallet -> PubKeyHash
 walletPubKeyHash = pubKeyHash . walletPubKey

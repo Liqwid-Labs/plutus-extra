@@ -46,10 +46,12 @@ library
   exposed-modules: Test.Tasty.Plutus.Validator.Unit
   build-depends:
     , base
-    , containers       ^>=0.6.2.1
+    , containers         ^>=0.6.2.1
     , plutus-contract
     , plutus-ledger
+    , plutus-ledger-api
     , plutus-tx
-    , tasty            ^>=1.4.1
+    , tagged             ^>=0.8.6.1
+    , tasty              ^>=1.4.1
 
   hs-source-dirs:  src
