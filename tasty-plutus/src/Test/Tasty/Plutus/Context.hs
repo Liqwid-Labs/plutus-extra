@@ -1,5 +1,7 @@
 module Test.Tasty.Plutus.Context (
   -- * Types
+  DecodeFailure (..),
+  Purpose (..),
   InputType (..),
   OutputType (..),
   Input (..),
@@ -12,7 +14,7 @@ module Test.Tasty.Plutus.Context (
   input,
   output,
   signedWith,
-  meta,
+  tagged,
 
   -- ** Paying
   paysToPubKey,
@@ -27,18 +29,51 @@ module Test.Tasty.Plutus.Context (
   spendsFromWalletSigned,
   spendsFromSelf,
   spendsFromOther,
+
+  -- ** Compilation
+  compileSpending,
 ) where
 
-import Data.Functor.Compose (Compose (Compose))
 import Data.Kind (Type)
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
+import Data.Validation (Validation (Failure))
+import GHC.Exts (toList)
+import Ledger.Address (pubKeyHashAddress, scriptHashAddress)
 import Ledger.Crypto (PubKeyHash, pubKeyHash)
-import Ledger.Scripts (ValidatorHash)
-import Ledger.Value (Value)
+import Ledger.Scripts (Datum (Datum), DatumHash, ValidatorHash, datumHash)
+import Ledger.Value (Value (Value))
+import Plutus.V1.Ledger.Contexts (
+  ScriptContext (ScriptContext),
+  ScriptPurpose (Spending),
+  TxInInfo (TxInInfo),
+  TxInfo (TxInfo),
+  TxOut (TxOut),
+  TxOutRef (TxOutRef),
+ )
+import Plutus.V1.Ledger.Interval qualified as Interval
+import Plutus.V1.Ledger.TxId (TxId (TxId))
+import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (BuiltinData)
-import PlutusTx.IsData.Class (ToData (toBuiltinData))
+import PlutusTx.IsData.Class (FromData (fromBuiltinData), ToData (toBuiltinData))
 import Wallet.Emulator.Types (Wallet, walletPubKey)
+import Witherable (iwither, mapMaybe)
+
+-- | @since 1.0
+data DecodeFailure
+  = -- | @since 1.0
+    BadDatumDecode Integer BuiltinData
+  | -- | @since 1.0
+    BadRedeemerDecode Integer BuiltinData
+  deriving stock
+    ( -- | @since 1.0
+      Show
+    )
+
+-- | @since 1.0
+data Purpose = ForMinting | ForSpending | ForRewarding | ForCertifying
 
 -- | @since 1.0
 data InputType
@@ -86,145 +121,215 @@ data Output
       Show
     )
 
-{- | The validator's context. This consists of 'Input's, 'Output's,
- 'PubKeyHash'es and possibly other data of your choice.
+-- | @since 1.0
+data ContextBuilder (p :: Purpose) where
+  SpendingBuilder ::
+    Seq Input ->
+    Seq Output ->
+    Seq PubKeyHash ->
+    Seq BuiltinData ->
+    ContextBuilder 'ForSpending
 
- If you don't need any additional data, use 'Void' as the type parameter.
+-- | @since 1.0
+deriving stock instance Show (ContextBuilder p)
 
- @since 1.0
--}
-newtype ContextBuilder (a :: Type)
-  = ContextBuilder (Seq Input, Seq Output, Seq PubKeyHash, Seq a)
-  deriving stock
-    ( -- | @since 1.0
-      Show
-    )
-  deriving
-    ( -- | @since 1.0
-      Semigroup
-    , -- | @since 1.0
-      Monoid
-    )
-    via (Seq Input, Seq Output, Seq PubKeyHash, Seq a)
-  deriving
-    ( -- | @since 1.0
-      Functor
-    , -- | @since 1.0
-      Applicative
-    )
-    via (Compose ((,,,) (Seq Input) (Seq Output) (Seq PubKeyHash)) Seq)
+-- | @since 1.0
+instance Semigroup (ContextBuilder p) where
+  {-# INLINEABLE (<>) #-}
+  SpendingBuilder is os pkhs ts <> SpendingBuilder is' os' pkhs' ts' =
+    SpendingBuilder (is <> is') (os <> os') (pkhs <> pkhs') (ts <> ts')
 
 {- | Single-input context.
 
  @since 1.0
 -}
-input :: forall (a :: Type). Input -> ContextBuilder a
-input x = ContextBuilder (Seq.singleton x, mempty, mempty, mempty)
+input :: Input -> ContextBuilder 'ForSpending
+input x = SpendingBuilder (Seq.singleton x) mempty mempty mempty
 
 {- | Single-output context.
 
  @since 1.0
 -}
-output :: forall (a :: Type). Output -> ContextBuilder a
-output x = ContextBuilder (mempty, Seq.singleton x, mempty, mempty)
+output :: Output -> ContextBuilder 'ForSpending
+output x = SpendingBuilder mempty (Seq.singleton x) mempty mempty
 
 {- | Context with one signature.
 
  @since 1.0
 -}
-signedWith :: forall (a :: Type). PubKeyHash -> ContextBuilder a
-signedWith pkh = ContextBuilder (mempty, mempty, Seq.singleton pkh, mempty)
+signedWith :: PubKeyHash -> ContextBuilder 'ForSpending
+signedWith pkh = SpendingBuilder mempty mempty (Seq.singleton pkh) mempty
 
-{- | Context with one piece of metadata.
+{- | Context with one tag.
 
  @since 1.0
 -}
-meta :: forall (a :: Type). a -> ContextBuilder a
-meta x = ContextBuilder (mempty, mempty, mempty, Seq.singleton x)
+tagged :: BuiltinData -> ContextBuilder 'ForSpending
+tagged = SpendingBuilder mempty mempty mempty . Seq.singleton
 
 -- | @since 1.0
-paysToPubKey :: forall (a :: Type). PubKeyHash -> Value -> ContextBuilder a
+paysToPubKey :: PubKeyHash -> Value -> ContextBuilder 'ForSpending
 paysToPubKey pkh = output . Output (PubKeyOutput pkh)
 
 -- | @since 1.0
-paysToWallet :: forall (a :: Type). Wallet -> Value -> ContextBuilder a
+paysToWallet :: Wallet -> Value -> ContextBuilder 'ForSpending
 paysToWallet wallet = paysToPubKey (walletPubKeyHash wallet)
 
 -- | @since 1.0
 paysSelf ::
-  forall (a :: Type) (b :: Type).
+  forall (a :: Type).
   (ToData a) =>
   Value ->
   a ->
-  ContextBuilder b
+  ContextBuilder 'ForSpending
 paysSelf v dt = output . Output (OwnOutput . toBuiltinData $ dt) $ v
 
 -- | @since 1.0
 paysOther ::
-  forall (a :: Type) (b :: Type).
+  forall (a :: Type).
   (ToData a) =>
   ValidatorHash ->
   Value ->
   a ->
-  ContextBuilder b
+  ContextBuilder 'ForSpending
 paysOther hash v dt =
   output . Output (ScriptOutput hash . toBuiltinData $ dt) $ v
 
 -- | @since 1.0
 spendsFromPubKey ::
-  forall (a :: Type).
   PubKeyHash ->
   Value ->
-  ContextBuilder a
+  ContextBuilder 'ForSpending
 spendsFromPubKey pkh = input . Input (PubKeyInput pkh)
 
 -- | @since 1.0
 spendsFromPubKeySigned ::
-  forall (a :: Type).
   PubKeyHash ->
   Value ->
-  ContextBuilder a
+  ContextBuilder 'ForSpending
 spendsFromPubKeySigned pkh v = spendsFromPubKey pkh v <> signedWith pkh
 
 -- | @since 1.0
 spendsFromWallet ::
-  forall (a :: Type).
   Wallet ->
   Value ->
-  ContextBuilder a
+  ContextBuilder 'ForSpending
 spendsFromWallet wallet = spendsFromPubKey (walletPubKeyHash wallet)
 
 -- | @since 1.0
 spendsFromWalletSigned ::
-  forall (a :: Type).
   Wallet ->
   Value ->
-  ContextBuilder a
+  ContextBuilder 'ForSpending
 spendsFromWalletSigned wallet = spendsFromPubKeySigned (walletPubKeyHash wallet)
 
 -- | @since 1.0
 spendsFromSelf ::
-  forall (datum :: Type) (redeemer :: Type) (a :: Type).
+  forall (datum :: Type) (redeemer :: Type).
   (ToData datum, ToData redeemer) =>
   Value ->
   datum ->
   redeemer ->
-  ContextBuilder a
+  ContextBuilder 'ForSpending
 spendsFromSelf v d r =
   input . Input (OwnInput (toBuiltinData d) . toBuiltinData $ r) $ v
 
 -- | @since 1.0
 spendsFromOther ::
-  forall (datum :: Type) (a :: Type).
+  forall (datum :: Type).
   (ToData datum) =>
   ValidatorHash ->
   Value ->
   datum ->
-  ContextBuilder a
+  ContextBuilder 'ForSpending
 spendsFromOther hash v d =
   input . Input (ScriptInput hash . toBuiltinData $ d) $ v
 
+-- | @since 1.0
+compileSpending ::
+  forall (datum :: Type) (redeemer :: Type).
+  (FromData datum, FromData redeemer) =>
+  ContextBuilder 'ForSpending ->
+  Validation [DecodeFailure] (Map Integer (datum, redeemer, ScriptContext))
+compileSpending (SpendingBuilder is os pkhs tags) =
+  iwither go . Map.fromAscList $ indexedInputs
+  where
+    indexedInputs :: [(Integer, Input)]
+    indexedInputs = zip [1 ..] . toList $ is
+    go ::
+      Integer ->
+      Input ->
+      Validation [DecodeFailure] (Maybe (datum, redeemer, ScriptContext))
+    go ix (Input typ _) = case typ of
+      OwnInput dat red -> case fromBuiltinData @datum dat of
+        Nothing -> Failure [BadDatumDecode ix dat]
+        Just dat' -> case fromBuiltinData @redeemer red of
+          Nothing -> Failure [BadRedeemerDecode ix dat]
+          Just red' -> pure $ do
+            let ref = TxOutRef (TxId "testSpendingTxId") ix
+            let purpose = Spending ref
+            let info = mkTxInfo
+            pure (dat', red', ScriptContext info purpose)
+      _ -> pure Nothing
+    mkTxInfo :: TxInfo
+    mkTxInfo =
+      TxInfo
+        (uncurry createTxInInfo <$> indexedInputs)
+        (toTxOut <$> toList os)
+        mempty
+        (Value AssocMap.empty)
+        mempty
+        mempty
+        Interval.always
+        (toList pkhs)
+        mkInfoData
+        (TxId "testSpendingTx")
+    mkInfoData :: [(DatumHash, Datum)]
+    mkInfoData =
+      toList $
+        mapMaybe toInputDatum is
+          <> mapMaybe toOutputDatum os
+          <> (datumWithHash <$> tags)
+
 -- Helpers
+
+toInputDatum :: Input -> Maybe (DatumHash, Datum)
+toInputDatum (Input typ _) = case typ of
+  ScriptInput _ dt -> Just . datumWithHash $ dt
+  OwnInput dt _ -> Just . datumWithHash $ dt
+  PubKeyInput _ -> Nothing
+
+toOutputDatum :: Output -> Maybe (DatumHash, Datum)
+toOutputDatum (Output typ _) = case typ of
+  ScriptOutput _ dt -> Just . datumWithHash $ dt
+  OwnOutput dt -> Just . datumWithHash $ dt
+  PubKeyOutput _ -> Nothing
+
+datumWithHash :: BuiltinData -> (DatumHash, Datum)
+datumWithHash dt = (datumHash dt', dt')
+  where
+    dt' :: Datum
+    dt' = Datum dt
+
+createTxInInfo :: Integer -> Input -> TxInInfo
+createTxInInfo ix (Input typ v) =
+  TxInInfo (TxOutRef (TxId "testTxId") ix) $ case typ of
+    PubKeyInput pkh -> TxOut (pubKeyHashAddress pkh) v Nothing
+    ScriptInput hash datum ->
+      TxOut (scriptHashAddress hash) v . justDatumHash $ datum
+    OwnInput datum _ ->
+      TxOut (scriptHashAddress "") v . justDatumHash $ datum
+
+justDatumHash :: BuiltinData -> Maybe DatumHash
+justDatumHash = Just . datumHash . Datum
+
+toTxOut :: Output -> TxOut
+toTxOut (Output typ v) = case typ of
+  PubKeyOutput pkh -> TxOut (pubKeyHashAddress pkh) v Nothing
+  ScriptOutput hash datum ->
+    TxOut (scriptHashAddress hash) v . justDatumHash $ datum
+  OwnOutput datum ->
+    TxOut (scriptHashAddress "") v . justDatumHash $ datum
 
 walletPubKeyHash :: Wallet -> PubKeyHash
 walletPubKeyHash = pubKeyHash . walletPubKey

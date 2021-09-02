@@ -56,5 +56,7 @@ library
     , plutus-tx
     , tagged             ^>=0.8.6.1
     , tasty              ^>=1.4.1
+    , validation         ^>=1.1.1
+    , witherable         ^>=0.4.1
 
   hs-source-dirs:  src
