@@ -1,11 +1,13 @@
 module Test.Tasty.Plutus.Validator.Unit (
   -- * Testing API
-
-  -- shouldn'tParse,
-  -- shouldn'tValidate,
-  -- shouldValidate,
+  shouldn'tValidateSpending,
+  shouldValidateSpending,
 ) where
 
+import Data.Functor (($>))
+import Control.Monad (guard)
+import Data.Map.Strict qualified as Map
+import Witherable (mapMaybe)
 import Data.Foldable (traverse_)
 import Data.Kind (Type)
 import Data.Tagged (Tagged (Tagged))
@@ -15,78 +17,79 @@ import Test.Tasty.Providers (
   IsTest (run, testOptions),
   testFailed,
   testPassed,
+  TestTree,
+  singleTest,
+  Result,
  )
 import Type.Reflection (Typeable)
-
-{-
--- | Specify that, in the given context, the datum or the redeemer are invalid,
--- and should not parse at all.
---
--- @since 1.0
-shouldn'tParse ::
-  forall (datum :: Type) (redeemer :: Type) (a :: Type) .
-  (FromData datum, FromData redeemer, Typeable datum, Typeable redeemer) =>
-  ContextBuilder a ->
-  String ->
-  (datum -> redeemer -> ScriptContext -> Bool) ->
-  TestTree
-shouldn'tParse cb name _ =
-  singleTest name . NoParse @datum @redeemer . compileOwnInputs $ cb
+import Test.Tasty.Plutus.Context (Purpose (ForSpending), ContextBuilder, 
+  compile, DecodeFailure)
+import Plutus.V1.Ledger.Contexts (ScriptContext)
+import Data.Validation (Validation(Failure, Success))
 
 -- | Specify that, in the given context, the datum and redeemer should parse,
 -- but that validation should fail.
 --
 -- @since 1.0
-shouldn'tValidate ::
-  forall (datum :: Type) (redeemer :: Type) (a :: Type) .
+shouldn'tValidateSpending ::
+  forall (datum :: Type) (redeemer :: Type) .
   (FromData datum, FromData redeemer, Typeable datum, Typeable redeemer) =>
-  ContextBuilder a ->
+  ContextBuilder 'ForSpending ->
   String ->
   (datum -> redeemer -> ScriptContext -> Bool) ->
   TestTree
-shouldn'tValidate cb name val = _
+shouldn'tValidateSpending cb name = singleTest name . SpendingTest Fail cb
 
--- | @since 1.0
-shouldValidate ::
-  ContextBuilder ->
-  String ->
-  (ScriptContext -> Bool) ->
+-- | Specify that, in the given context, the validation should succeed.
+--
+-- @since 1.0
+shouldValidateSpending :: 
+  forall (datum :: Type) (redeemer :: Type) . 
+  (FromData datum, FromData redeemer, Typeable datum, Typeable redeemer) => 
+  ContextBuilder 'ForSpending -> 
+  String -> 
+  (datum -> redeemer -> ScriptContext -> Bool) -> 
   TestTree
-shouldValidate cb name =
-  singleTest name . ValidatorTest ValidationSuccess
--}
+shouldValidateSpending cb name = singleTest name . SpendingTest Pass cb
 
 -- Helpers
 
-newtype NoParse (datum :: Type) (redeemer :: Type)
-  = NoParse [(BuiltinData, BuiltinData)]
+data Outcome = Fail | Pass
 
-instance
-  (Typeable datum, Typeable redeemer, FromData datum, FromData redeemer) =>
-  IsTest (NoParse datum redeemer)
-  where
-  run _ (NoParse ds) _ = pure $ case traverse_ (uncurry go) ds of
-    Nothing -> testPassed "Parse failure occurred."
-    Just () -> testFailed "Everything parsed successfully."
+data SpendingTest (datum :: Type) (redeemer :: Type) = 
+  SpendingTest Outcome
+               (ContextBuilder 'ForSpending) 
+               (datum -> redeemer -> ScriptContext -> Bool)
+
+instance (Typeable datum, Typeable redeemer, FromData datum, FromData redeemer) => 
+  IsTest (SpendingTest datum redeemer) where
+  run _ (SpendingTest expected cb val) _ = 
+    pure $ case compile @datum @redeemer cb of 
+      Failure errs -> reportParseFailure errs
+      Success map -> let result = mapMaybe (go expected val) map in
+        case Map.toList result of 
+          [] -> testPassed ""
+          xs -> testFailed . renderTestFailures expected $ xs
     where
-      go :: BuiltinData -> BuiltinData -> Maybe ()
-      go dat red = do
-        _ <- fromBuiltinData @datum dat
-        _ <- fromBuiltinData @redeemer red
-        pure ()
-
+      go :: 
+        Outcome -> 
+        (datum -> redeemer -> ScriptContext -> Bool) -> 
+        (datum, redeemer, ScriptContext) -> 
+        Maybe (datum, redeemer, ScriptContext)
+      go expected val args@(dat, red, context) = 
+        let result = val dat red context in
+          case expected of 
+            Fail -> guard result $> args -- throw away failures
+            Pass -> guard (not result) $> args -- throw away passes
   -- None for now.
   testOptions = Tagged []
 
-{-
-compileOwnInputs ::
-  forall (a :: Type) .
-  ContextBuilder a ->
-  [(BuiltinData, BuiltinData)]
-compileOwnInputs (ContextBuilder (inputs, _, _, _)) = foldMap go inputs
-  where
-    go :: Input -> [(BuiltinData, BuiltinData)]
-    go (Input t _) = case t of
-      OwnInput dat red -> [(dat, red)]
-      _ -> []
--}
+reportParseFailure :: [DecodeFailure] -> Result
+reportParseFailure errs = _
+
+renderTestFailures :: 
+  forall (datum :: Type) (redeemer :: Type) . 
+  Outcome -> 
+  [(Integer, (datum, redeemer, ScriptContext))] -> 
+  String
+renderTestFailures expected unexpecteds = _

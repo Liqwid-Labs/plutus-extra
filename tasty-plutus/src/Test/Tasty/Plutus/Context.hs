@@ -31,7 +31,7 @@ module Test.Tasty.Plutus.Context (
   spendsFromOther,
 
   -- ** Compilation
-  compileSpending,
+  compile,
 ) where
 
 import Data.Kind (Type)
@@ -246,12 +246,12 @@ spendsFromOther hash v d =
   input . Input (ScriptInput hash . toBuiltinData $ d) $ v
 
 -- | @since 1.0
-compileSpending ::
-  forall (datum :: Type) (redeemer :: Type).
+compile ::
+  forall (datum :: Type) (redeemer :: Type) (p :: Purpose) .
   (FromData datum, FromData redeemer) =>
-  ContextBuilder 'ForSpending ->
+  ContextBuilder p ->
   Validation [DecodeFailure] (Map Integer (datum, redeemer, ScriptContext))
-compileSpending (SpendingBuilder is os pkhs tags) =
+compile (SpendingBuilder is os pkhs tags) =
   iwither go . Map.fromAscList $ indexedInputs
   where
     indexedInputs :: [(Integer, Input)]
