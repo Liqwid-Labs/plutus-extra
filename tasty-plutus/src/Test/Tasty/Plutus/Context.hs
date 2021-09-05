@@ -58,6 +58,7 @@ import Plutus.V1.Ledger.TxId (TxId (TxId))
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (FromData (fromBuiltinData), ToData (toBuiltinData))
+import Prettyprinter (Pretty (pretty), hang, hardline, viaShow, (<+>))
 import Wallet.Emulator.Types (Wallet, walletPubKey)
 import Witherable (iwither, mapMaybe)
 
@@ -71,6 +72,13 @@ data DecodeFailure
     ( -- | @since 1.0
       Show
     )
+
+instance Pretty DecodeFailure where
+  pretty = \case
+    BadDatumDecode ix dat ->
+      "Datum" <+> pretty ix <> hardline <> hang 4 (viaShow dat)
+    BadRedeemerDecode ix dat ->
+      "Redeemer" <+> pretty ix <> hardline <> hang 4 (viaShow dat)
 
 -- | @since 1.0
 data Purpose = ForMinting | ForSpending | ForRewarding | ForCertifying
@@ -247,7 +255,7 @@ spendsFromOther hash v d =
 
 -- | @since 1.0
 compile ::
-  forall (datum :: Type) (redeemer :: Type) (p :: Purpose) .
+  forall (datum :: Type) (redeemer :: Type) (p :: Purpose).
   (FromData datum, FromData redeemer) =>
   ContextBuilder p ->
   Validation [DecodeFailure] (Map Integer (datum, redeemer, ScriptContext))

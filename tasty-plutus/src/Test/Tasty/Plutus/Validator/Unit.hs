@@ -1,54 +1,84 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module Test.Tasty.Plutus.Validator.Unit (
   -- * Testing API
   shouldn'tValidateSpending,
   shouldValidateSpending,
 ) where
 
-import Data.Functor (($>))
 import Control.Monad (guard)
-import Data.Map.Strict qualified as Map
-import Witherable (mapMaybe)
-import Data.Foldable (traverse_)
+import Data.Functor (($>))
 import Data.Kind (Type)
+import Data.Map.Strict qualified as Map
 import Data.Tagged (Tagged (Tagged))
-import PlutusTx.Builtins (BuiltinData)
-import PlutusTx.IsData.Class (FromData (fromBuiltinData))
+import Data.Validation (Validation (Failure, Success))
+import Plutus.V1.Ledger.Contexts (ScriptContext)
+import PlutusTx.IsData.Class (FromData)
+import Prettyprinter (
+  Doc,
+  defaultLayoutOptions,
+  hang,
+  hardline,
+  layoutPretty,
+  pretty,
+  viaShow,
+  vsep,
+  (<+>),
+ )
+import Prettyprinter.Render.String (renderString)
+import Test.Tasty.Plutus.Context (
+  ContextBuilder,
+  DecodeFailure,
+  Purpose (ForSpending),
+  compile,
+ )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
-  testFailed,
-  testPassed,
   TestTree,
   singleTest,
-  Result,
+  testFailed,
+  testPassed,
  )
-import Type.Reflection (Typeable)
-import Test.Tasty.Plutus.Context (Purpose (ForSpending), ContextBuilder, 
-  compile, DecodeFailure)
-import Plutus.V1.Ledger.Contexts (ScriptContext)
-import Data.Validation (Validation(Failure, Success))
+import Type.Reflection (Typeable, tyConName, typeRep, typeRepTyCon)
+import Witherable (mapMaybe)
+import Prelude hiding (map)
 
--- | Specify that, in the given context, the datum and redeemer should parse,
--- but that validation should fail.
---
--- @since 1.0
+{- | Specify that, in the given context, the datum and redeemer should parse,
+ but that validation should fail.
+
+ @since 1.0
+-}
 shouldn'tValidateSpending ::
-  forall (datum :: Type) (redeemer :: Type) .
-  (FromData datum, FromData redeemer, Typeable datum, Typeable redeemer) =>
+  forall (datum :: Type) (redeemer :: Type).
+  ( FromData datum
+  , FromData redeemer
+  , Typeable datum
+  , Typeable redeemer
+  , Show datum
+  , Show redeemer
+  ) =>
   ContextBuilder 'ForSpending ->
   String ->
   (datum -> redeemer -> ScriptContext -> Bool) ->
   TestTree
 shouldn'tValidateSpending cb name = singleTest name . SpendingTest Fail cb
 
--- | Specify that, in the given context, the validation should succeed.
---
--- @since 1.0
-shouldValidateSpending :: 
-  forall (datum :: Type) (redeemer :: Type) . 
-  (FromData datum, FromData redeemer, Typeable datum, Typeable redeemer) => 
-  ContextBuilder 'ForSpending -> 
-  String -> 
-  (datum -> redeemer -> ScriptContext -> Bool) -> 
+{- | Specify that, in the given context, the validation should succeed.
+
+ @since 1.0
+-}
+shouldValidateSpending ::
+  forall (datum :: Type) (redeemer :: Type).
+  ( FromData datum
+  , FromData redeemer
+  , Typeable datum
+  , Typeable redeemer
+  , Show datum
+  , Show redeemer
+  ) =>
+  ContextBuilder 'ForSpending ->
+  String ->
+  (datum -> redeemer -> ScriptContext -> Bool) ->
   TestTree
 shouldValidateSpending cb name = singleTest name . SpendingTest Pass cb
 
@@ -56,40 +86,117 @@ shouldValidateSpending cb name = singleTest name . SpendingTest Pass cb
 
 data Outcome = Fail | Pass
 
-data SpendingTest (datum :: Type) (redeemer :: Type) = 
-  SpendingTest Outcome
-               (ContextBuilder 'ForSpending) 
-               (datum -> redeemer -> ScriptContext -> Bool)
+data SpendingTest (datum :: Type) (redeemer :: Type)
+  = SpendingTest
+      Outcome
+      (ContextBuilder 'ForSpending)
+      (datum -> redeemer -> ScriptContext -> Bool)
 
-instance (Typeable datum, Typeable redeemer, FromData datum, FromData redeemer) => 
-  IsTest (SpendingTest datum redeemer) where
-  run _ (SpendingTest expected cb val) _ = 
-    pure $ case compile @datum @redeemer cb of 
-      Failure errs -> reportParseFailure errs
-      Success map -> let result = mapMaybe (go expected val) map in
-        case Map.toList result of 
-          [] -> testPassed ""
-          xs -> testFailed . renderTestFailures expected $ xs
+instance
+  ( Typeable datum
+  , Typeable redeemer
+  , FromData datum
+  , FromData redeemer
+  , Show datum
+  , Show redeemer
+  ) =>
+  IsTest (SpendingTest datum redeemer)
+  where
+  run _ (SpendingTest expected cb val) _ =
+    pure $ case compile @datum @redeemer cb of
+      Failure errs ->
+        testFailed . renderDecodeFailures @datum @redeemer $ errs
+      Success map ->
+        let result = mapMaybe go map
+         in case Map.toList result of
+              [] -> testPassed ""
+              xs -> testFailed . renderTestFailures expected $ xs
     where
-      go :: 
-        Outcome -> 
-        (datum -> redeemer -> ScriptContext -> Bool) -> 
-        (datum, redeemer, ScriptContext) -> 
+      go ::
+        (datum, redeemer, ScriptContext) ->
         Maybe (datum, redeemer, ScriptContext)
-      go expected val args@(dat, red, context) = 
-        let result = val dat red context in
-          case expected of 
-            Fail -> guard result $> args -- throw away failures
-            Pass -> guard (not result) $> args -- throw away passes
-  -- None for now.
+      go args@(dat, red, context) =
+        let result = val dat red context
+         in case expected of
+              Fail -> guard result $> args -- throw away failures
+              Pass -> guard (not result) $> args -- throw away passes
+              -- None for now.
+
   testOptions = Tagged []
 
-reportParseFailure :: [DecodeFailure] -> Result
-reportParseFailure errs = _
-
-renderTestFailures :: 
-  forall (datum :: Type) (redeemer :: Type) . 
-  Outcome -> 
-  [(Integer, (datum, redeemer, ScriptContext))] -> 
+renderDecodeFailures ::
+  forall (datum :: Type) (redeemer :: Type).
+  (Typeable datum, Typeable redeemer) =>
+  [DecodeFailure] ->
   String
-renderTestFailures expected unexpecteds = _
+renderDecodeFailures = renderString . layoutPretty defaultLayoutOptions . go
+  where
+    go :: forall (ann :: Type). [DecodeFailure] -> Doc ann
+    go errs =
+      "Some inputs failed to decode."
+        <> hardline
+        <> "Datum type:" <+> prettyTypeName @datum
+        <> hardline
+        <> "Redeemer type:" <+> prettyTypeName @redeemer
+        <> hardline
+        <> (hang 4 . vsep . fmap pretty $ errs)
+
+renderTestFailures ::
+  forall (datum :: Type) (redeemer :: Type).
+  (Typeable datum, Show datum, Typeable redeemer, Show redeemer) =>
+  Outcome ->
+  [(Integer, (datum, redeemer, ScriptContext))] ->
+  String
+renderTestFailures expected unexpecteds =
+  renderString . layoutPretty defaultLayoutOptions $ go
+  where
+    go :: forall (ann :: Type). Doc ann
+    go =
+      "Unexpected" <+> pretty what <> ":"
+        <> hardline
+        <> (hang 4 . vsep . fmap prettyUnexpected $ unexpecteds)
+    what :: String
+    what = case expected of
+      Fail -> "success(es)"
+      Pass -> "failure(s)"
+    prettyUnexpected ::
+      forall (ann :: Type).
+      (Integer, (datum, redeemer, ScriptContext)) ->
+      Doc ann
+    prettyUnexpected (ix, (dat, red, sc)) =
+      "Input" <+> pretty ix <> hardline
+        <> "Datum:"
+        <> hardline
+        <> hang 4 (prettyDatum dat)
+        <> hardline
+        <> "Redeemer:"
+        <> hardline
+        <> hang 4 (prettyRedeemer red)
+        <> hardline
+        <> "ScriptContext:"
+        <> hardline
+        <> hang 4 (viaShow sc)
+
+prettyDatum ::
+  forall (datum :: Type) (ann :: Type).
+  (Typeable datum, Show datum) =>
+  datum ->
+  Doc ann
+prettyDatum dat =
+  "Type:" <+> prettyTypeName @datum <> hardline
+    <> "Representation:" <+> viaShow dat
+
+prettyRedeemer ::
+  forall (redeemer :: Type) (ann :: Type).
+  (Typeable redeemer, Show redeemer) =>
+  redeemer ->
+  Doc ann
+prettyRedeemer red =
+  "Type:" <+> prettyTypeName @redeemer <> hardline
+    <> "Representation:" <+> viaShow red
+
+prettyTypeName ::
+  forall (a :: Type) (ann :: Type).
+  (Typeable a) =>
+  Doc ann
+prettyTypeName = pretty . tyConName . typeRepTyCon $ typeRep @a

@@ -48,12 +48,13 @@ library
     Test.Tasty.Plutus.Validator.Unit
 
   build-depends:
-    , base
+    , base               ^>=4.14
     , containers         ^>=0.6.2.1
     , plutus-contract
     , plutus-ledger
     , plutus-ledger-api
     , plutus-tx
+    , prettyprinter      ^>=1.7.0
     , tagged             ^>=0.8.6.1
     , tasty              ^>=1.4.1
     , validation         ^>=1.1.1
