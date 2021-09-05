@@ -1,10 +1,9 @@
-cabal-version:      2.4
+cabal-version:      3.0
 name:               plutus-extra
-version:            0.3.0.1
+version:            1.0
 extra-source-files: CHANGELOG.md
 
 common lang
-  default-language:   Haskell2010
   default-extensions:
     NoImplicitPrelude
     BangPatterns
@@ -38,56 +37,21 @@ common lang
     TypeSynonymInstances
     UndecidableInstances
 
+  build-depends:
+    , base                     ^>=4.14
+    , record-dot-preprocessor  ^>=0.2.11
+    , record-hasfield          ^>=1.0
+
   ghc-options:
     -Wall -Wcompat -Wincomplete-uni-patterns -Wredundant-constraints
     -Wmissing-export-lists -Werror -Wincomplete-record-updates
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     -fobject-code -fno-strictness -fplugin=RecordDotPreprocessor
 
-common deps
-  build-depends:
-    , aeson
-    , ansi-terminal
-    , base                     >=4.9 && <5
-    , bytestring
-    , containers
-    , deepseq
-    , flat
-    , foldl
-    , freer-extras
-    , freer-simple
-    , lens
-    , playground-common
-    , plutus-contract
-    , plutus-core
-    , plutus-ledger
-    , plutus-ledger-api
-    , plutus-pab
-    , plutus-tx
-    , plutus-tx-plugin
-    , plutus-use-cases
-    , prettyprinter
-    , record-dot-preprocessor
-    , record-hasfield
-    , row-types
-    , serialise
-    , template-haskell
-    , text
-    , th-abstraction
-    , th-lift-instances
-
-common test-deps
-  import:        deps
-  build-depends:
-    , QuickCheck
-    , quickcheck-instances
-    , tasty
-    , tasty-hunit
-    , tasty-quickcheck
+  default-language:   Haskell2010
 
 library
   import:          lang
-  import:          deps
   exposed-modules:
     Plutus.Contract.Test.Extra
     Plutus.PAB.CurrencyForge
@@ -115,12 +79,26 @@ library
     PlutusTx.UniqueMap
 
   build-depends:
+    , aeson              ^>=1.5.6.0
+    , ansi-terminal      ^>=0.11
+    , deepseq            ^>=1.4.4.0
+    , foldl              ^>=1.4.12
+    , freer-simple       ^>=1.2.1.1
+    , lens               ^>=4.19.2
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-pab
+    , plutus-tx
+    , plutus-use-cases
+    , prettyprinter      ^>=1.7.0
+    , row-types          ^>=1.0.1.0
+    , template-haskell   ^>=2.16.0.0
+
   hs-source-dirs:  src
 
 test-suite plutus-extra-test
   import:         lang
-  import:         deps
-  import:         test-deps
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   other-modules:
@@ -130,14 +108,14 @@ test-suite plutus-extra-test
     Suites.PlutusTx.NonEmpty
     Suites.PlutusTx.Set
 
-  build-depends:  plutus-extra
-  hs-source-dirs: test
+  build-depends:
+    , plutus-contract
+    , plutus-extra
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-tx
+    , QuickCheck         ^>=2.14.2
+    , tasty              ^>=1.4.1
+    , tasty-quickcheck   ^>=0.10.1.2
 
--- test-suite is-data-tagged
---   import:           lang
---   import:           deps
---   import:           test-deps
---   type:             exitcode-stdio-1.0
---   main-is:          Main.hs
---   build-depends:    plutus-extra
---   hs-source-dirs:   test/is-data-tagged
+  hs-source-dirs: test
