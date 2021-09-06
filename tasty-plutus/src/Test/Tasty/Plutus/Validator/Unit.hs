@@ -1,5 +1,15 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
+{- |
+ Module: Test.Tasty.Plutus.Validator.Unit
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ A unit-test-like interface for validator testing.
+-}
 module Test.Tasty.Plutus.Validator.Unit (
   -- * Testing API
   shouldn'tValidateSpending,

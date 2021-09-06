@@ -1,3 +1,13 @@
+{- |
+ Module: Test.Tasty.Plutus.Context
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ An interface for building up Plutus validator contexts for testing purposes.
+-}
 module Test.Tasty.Plutus.Context (
   -- * Types
   DecodeFailure (..),
@@ -62,7 +72,10 @@ import Prettyprinter (Pretty (pretty), hang, hardline, viaShow, (<+>))
 import Wallet.Emulator.Types (Wallet, walletPubKey)
 import Witherable (iwither, mapMaybe)
 
--- | @since 1.0
+{- | A representation of decode failures for datums and redeemers.
+
+ @since 1.0
+-}
 data DecodeFailure
   = -- | @since 1.0
     BadDatumDecode Integer BuiltinData
@@ -80,10 +93,33 @@ instance Pretty DecodeFailure where
     BadRedeemerDecode ix dat ->
       "Redeemer" <+> pretty ix <> hardline <> hang 4 (viaShow dat)
 
--- | @since 1.0
-data Purpose = ForMinting | ForSpending | ForRewarding | ForCertifying
+{- | Describes what kind of validator this is meant to test. Directly
+ corresponds to 'ScriptPurpose'.
 
--- | @since 1.0
+ @since 1.0
+-}
+data Purpose
+  = -- | Corresponds to 'Plutus.V1.Ledger.Contexts.Minting'.
+    --
+    -- @since 1.0
+    ForMinting
+  | -- | Corresponds to 'Plutus.V1.Ledger.Contexts.Spending'.
+    --
+    -- @since 1.0
+    ForSpending
+  | -- | Corresponds to 'Plutus.V1.Ledger.Contexts.Rewarding'.
+    --
+    -- @since 1.0
+    ForRewarding
+  | -- | Corresponds to 'Plutus.V1.Ledger.Contexts.Certifying'.
+    --
+    -- @since 1.0
+    ForCertifying
+
+{- | Different input types, and some of their metadata.
+
+ @since 1.0
+-}
 data InputType
   = -- | @since 1.0
     PubKeyInput PubKeyHash
@@ -98,7 +134,10 @@ data InputType
       Show
     )
 
--- | @since 1.0
+{- | Different output types, and some of their metadata.
+
+ @since 1.0
+-}
 data OutputType
   = -- | @since 1.0
     PubKeyOutput PubKeyHash
@@ -111,7 +150,10 @@ data OutputType
       Show
     )
 
--- | @since 1.0
+{- | An input to a script, consisting of a value and a type.
+
+ @since 1.0
+-}
 data Input
   = -- | @since 1.0
     Input InputType Value
@@ -120,7 +162,10 @@ data Input
       Show
     )
 
--- | @since 1.0
+{- | An output from a script, consisting of a value and a type.
+
+ @since 1.0
+-}
 data Output
   = -- | @since 1.0
     Output OutputType Value
@@ -129,7 +174,20 @@ data Output
       Show
     )
 
--- | @since 1.0
+{- | A way to incrementally build up a script context.
+
+ It is tagged with a 'Purpose' as a marker for what kind of script it's
+ supposed to be validating. For now, only 'Spending' is supported.
+
+ You can use the 'Semigroup' instance of this type to build up larger
+ contexts. For example:
+
+ > let cb = 'paysToWallet' aWallet someValue <>
+ >          'signedWith' aHash <>
+ >          'tagged' aUniqueTag
+
+ @since 1.0
+-}
 data ContextBuilder (p :: Purpose) where
   SpendingBuilder ::
     Seq Input ->
@@ -253,7 +311,13 @@ spendsFromOther ::
 spendsFromOther hash v d =
   input . Input (ScriptInput hash . toBuiltinData $ d) $ v
 
--- | @since 1.0
+{- | Given a context builder, and expected datum and redeemer types, check if
+ all inputs can decode into those types. If this fails, collect all failures
+ and give up; otherwise, construct a 'Map' where positions of inputs (in the
+ order they were provided to the builder) are mapped to script inputs.
+
+ @since 1.0
+-}
 compile ::
   forall (datum :: Type) (redeemer :: Type) (p :: Purpose).
   (FromData datum, FromData redeemer) =>
