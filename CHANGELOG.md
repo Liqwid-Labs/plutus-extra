@@ -17,3 +17,13 @@
 
 - Derive `UnsafeFromData` in `UniqueMap`
 
+## 1.0 -- 2021-09-06
+
+### Changed
+
+* Changelog now follows style guide and [Keep A
+  Changelog](https://keepachangelog.com/en/1.0.0) conventions.
+* Plutus is at commit ``289ac956a33c14fe1d75d6c0a6d6100f96a7d22c``.
+* Version pins in Cabal file, general clean-up of unnecessary dependencies and
+  clutter.
+* Version number(s) fit the style guide now.
