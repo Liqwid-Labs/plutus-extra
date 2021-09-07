@@ -27,3 +27,8 @@
 * Version pins in Cabal file, general clean-up of unnecessary dependencies and
   clutter.
 * Version number(s) fit the style guide now.
+
+## 1.1 -- 2021-09-13
+#### Added
+* New test assertions in `Plutus.Contract.Test.Extra` for checking UTxOs at
+  address computed from the state of `EmulatorTrace`.
