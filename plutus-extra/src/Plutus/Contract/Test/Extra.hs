@@ -1,28 +1,65 @@
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Plutus.Contract.Test.Extra (walletFundsChangeWithAccumState, walletFundsExactChangeWithAccumState) where
+module Plutus.Contract.Test.Extra (
+  walletFundsChangeWithAccumState,
+  walletFundsExactChangeWithAccumState,
+  valueAtAddressComputedFromAccumState,
+  dataAtAddressComputedFromAccumState,
+) where
+
+--------------------------------------------------------------------------------
 
 import Control.Foldl qualified as L
 
-import Control.Lens (at, (^.))
+--------------------------------------------------------------------------------
+
+import Control.Arrow ((>>>))
+import Control.Lens (at, view, (^.))
 import Control.Monad (unless)
+import Control.Monad.Freer (Eff, Member)
+import Control.Monad.Freer.Error (Error)
 import Control.Monad.Freer.Reader (ask)
-import Control.Monad.Freer.Writer (tell)
+import Control.Monad.Freer.Writer (Writer, tell)
 import Data.Foldable (fold)
+import Data.Kind (Type)
+import Data.List (foldl')
+import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
+import Data.Row (Row)
 import Data.Text.Prettyprint.Doc (Doc, colon, indent, pretty, viaShow, vsep, (<+>))
 import Data.Void
+import Prelude
+
+--------------------------------------------------------------------------------
+
 import Ledger qualified
 import Ledger.Ada qualified as Ada
+import Ledger.AddressMap (UtxoMap)
+import Ledger.AddressMap qualified as AM
 import Plutus.Contract.Test (TracePredicate)
 import Plutus.Contract.Trace (InitialDistribution, Wallet)
 import Plutus.Contract.Types (IsContract (toContract))
 import Plutus.Trace.Emulator (ContractInstanceTag)
+import PlutusTx (FromData (fromBuiltinData))
 import PlutusTx.Prelude qualified as P
+import Wallet.Emulator.Chain (ChainEvent (..))
+import Wallet.Emulator.Folds (postMapM)
 import Wallet.Emulator.Folds qualified as Folds
-import Prelude
 
--- | Check that the funds in the wallet have changed by the given amount, exluding fees.
+--------------------------------------------------------------------------------
+
+{- | Check that the funds in the wallet have changed by the given amount, exluding fees.
+
+ @since 0.3.0.0
+-}
 walletFundsChangeWithAccumState ::
+  forall
+    (w :: Type)
+    (s :: Row Type)
+    (e :: Type)
+    (a :: Type)
+    (contract :: Type -> Row Type -> Type -> Type -> Type).
   ( Monoid w
   , Show w
   , IsContract contract
@@ -37,8 +74,16 @@ walletFundsChangeWithAccumState = walletFundsChangeWithAccumStateImpl False
 {- | Check that the funds in the wallet have changed by the given amount, including fees.
  This functions allows us to peek into the accumulated state, and make decisions about the
  expected value based on that.
+
+ @since 0.3.0.0
 -}
 walletFundsExactChangeWithAccumState ::
+  forall
+    (w :: Type)
+    (s :: Row Type)
+    (e :: Type)
+    (a :: Type)
+    (contract :: Type -> Row Type -> Type -> Type -> Type).
   ( Monoid w
   , Show w
   , IsContract contract
@@ -56,6 +101,12 @@ walletFundsExactChangeWithAccumState = walletFundsChangeWithAccumStateImpl False
   @since 0.3.0.0
 -}
 walletFundsChangeWithAccumStateImpl ::
+  forall
+    (w :: Type)
+    (s :: Row Type)
+    (e :: Type)
+    (a :: Type)
+    (contract :: Type -> Row Type -> Type -> Type -> Type).
   ( Monoid w
   , Show w
   , IsContract contract
@@ -97,3 +148,122 @@ walletFundsChangeWithAccumStateImpl exact contract inst wallet toDlt =
                  , indent 2 (viaShow w)
                  ]
       pure result
+
+{- | Check that the funds at a computed address meet some condition.
+ The address is computed using data acquired from contract's writer instance.
+
+  @since 1.0.1.0
+-}
+valueAtAddressComputedFromAccumState ::
+  forall
+    (w :: Type)
+    (s :: Row Type)
+    (e :: Type)
+    (a :: Type)
+    (contract :: Type -> Row Type -> Type -> Type -> Type).
+  ( Monoid w
+  , IsContract contract
+  ) =>
+  contract w s e a ->
+  ContractInstanceTag ->
+  (w -> Maybe Ledger.Address) ->
+  (Ledger.Value -> Bool) ->
+  TracePredicate
+valueAtAddressComputedFromAccumState contract inst addressGetter check =
+  utxoAtAddressComputedFromAccumState contract inst addressGetter $ \addr utxoMap -> do
+    let value = foldMap (Ledger.txOutValue . Ledger.txOutTxOut) utxoMap
+        result = check value
+    unless result $
+      tell @(Doc Void) ("Funds at address" <+> pretty addr <+> "were" <> pretty value)
+    return result
+
+{- | Check that the datum at a computed address meet some condition.
+ The address is computed using data acquired from contract's writer instance.
+
+  @since 1.0.1.0
+-}
+dataAtAddressComputedFromAccumState ::
+  forall
+    (datum :: Type)
+    (w :: Type)
+    (s :: Row Type)
+    (e :: Type)
+    (a :: Type)
+    (contract :: Type -> Row Type -> Type -> Type -> Type).
+  ( FromData datum
+  , Monoid w
+  , IsContract contract
+  ) =>
+  contract w s e a ->
+  ContractInstanceTag ->
+  (w -> Maybe Ledger.Address) ->
+  (datum -> Bool) ->
+  TracePredicate
+dataAtAddressComputedFromAccumState contract inst addressGetter check =
+  utxoAtAddressComputedFromAccumState contract inst addressGetter $ \addr utxoMap -> do
+    let datums = mapMaybe (uncurry $ getTxOutDatum @datum) $ Map.toList utxoMap
+        result = any check datums
+    unless result $
+      tell @(Doc Void)
+        ( "Data at address" <+> pretty addr <+> "was"
+            <+> foldMap (foldMap pretty . Ledger.txData . Ledger.txOutTxTx) utxoMap
+        )
+    return result
+
+{- | Extract UTxOs at a computed address and call continuation returning
+ Boolean value based on both the address and UTxOs.
+ The address is computed using data acquired from contract's writer instance.
+
+  @since 1.0.1.0
+-}
+utxoAtAddressComputedFromAccumState ::
+  forall
+    (effs :: [Type -> Type])
+    (w :: Type)
+    (s :: Row Type)
+    (e :: Type)
+    (a :: Type)
+    (contract :: Type -> Row Type -> Type -> Type -> Type).
+  ( Member (Error Folds.EmulatorFoldErr) effs
+  , Member (Writer (Doc Void)) effs
+  , Monoid w
+  , IsContract contract
+  ) =>
+  contract w s e a ->
+  ContractInstanceTag ->
+  (w -> Maybe Ledger.Address) ->
+  (Ledger.Address -> UtxoMap -> Eff effs Bool) ->
+  Folds.EmulatorEventFoldM effs Bool
+utxoAtAddressComputedFromAccumState contract inst addressGetter cont =
+  flip
+    postMapM
+    ( (,)
+        <$> Folds.instanceAccumState (toContract contract) inst
+        <*> L.generalize Folds.chainEvents
+    )
+    $ \(w, chainEvents) -> do
+      case addressGetter w of
+        Nothing -> do
+          tell @(Doc Void) $ "Could not compute address using the given getter"
+          return False
+        Just addr -> do
+          let step = \case
+                TxnValidate _ txn _ -> AM.updateAddresses (Ledger.Valid txn)
+                TxnValidationFail Ledger.Phase2 _ txn _ _ -> AM.updateAddresses (Ledger.Invalid txn)
+                _ -> id
+              am = foldl' (flip step) (AM.addAddress addr mempty) chainEvents
+              utxoMap = view (AM.fundsAt addr) am
+          cont addr utxoMap
+
+-- Function copied from https://github.com/input-output-hk/plutus/blob/master/plutus-contract/src/Plutus/Contract/Test.hs
+
+-- | Get a datum of a given type 'd' out of a Transaction Output.
+getTxOutDatum ::
+  forall (datum :: Type).
+  (FromData datum) =>
+  Ledger.TxOutRef ->
+  Ledger.TxOutTx ->
+  Maybe datum
+getTxOutDatum _ (Ledger.TxOutTx _ (Ledger.TxOut _ _ Nothing)) = Nothing
+getTxOutDatum _ (Ledger.TxOutTx tx' (Ledger.TxOut _ _ (Just datumHash))) =
+  Ledger.lookupDatum tx' datumHash >>= (Ledger.getDatum >>> fromBuiltinData @datum)
