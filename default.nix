@@ -4,6 +4,8 @@
 , doCoverage ? true }:
 let
   project = import ./nix/haskell.nix {
+
     inherit sourcesFile system sources plutus deferPluginErrors doCoverage;
+    # trigger rebuild
   };
 in project
