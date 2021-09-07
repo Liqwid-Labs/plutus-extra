@@ -11,17 +11,26 @@
  A unit-test-like interface for validator testing.
 -}
 module Test.Tasty.Plutus.Validator.Unit (
+  -- * Validator context type
+  WithValidator,
+
   -- * Testing API
+  withValidator,
   shouldn'tValidateSpending,
   shouldValidateSpending,
 ) where
 
 import Control.Monad (guard)
+import Control.Monad.RWS.Strict (RWS, evalRWS, tell)
+import Control.Monad.Reader (MonadReader, asks)
 import Data.Functor (($>))
 import Data.Kind (Type)
 import Data.Map.Strict qualified as Map
+import Data.Sequence (Seq)
+import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Validation (Validation (Failure, Success))
+import GHC.Exts (toList)
 import Plutus.V1.Ledger.Contexts (ScriptContext)
 import PlutusTx.IsData.Class (FromData)
 import Prettyprinter (
@@ -36,6 +45,7 @@ import Prettyprinter (
   (<+>),
  )
 import Prettyprinter.Render.String (renderString)
+import Test.Tasty (testGroup)
 import Test.Tasty.Plutus.Context (
   ContextBuilder,
   DecodeFailure,
@@ -53,6 +63,48 @@ import Type.Reflection (Typeable, tyConName, typeRep, typeRepTyCon)
 import Witherable (mapMaybe)
 import Prelude hiding (map)
 
+{- | Provides a monadic API for composing tests against the same validator.
+ While it has all the capabilities of a monad, you mostly won't need them; the
+ intended usage is:
+
+ > withValidator "My lovely validator" fooValidator $ do
+ >    shouldValidate "Normal" ctxBuilderGood
+ >    shouldn'tValidate "Missing input" ctxBuilderNoInput
+ >    ...
+
+ For convenience, we also let you access the validator in the environment
+ using 'ask', and \'hot modify\' using 'local', as per 'MonadReader'.
+
+ @since 1.0
+-}
+newtype WithValidator (datum :: Type) (redeemer :: Type) (a :: Type)
+  = WithValidator (RWS (datum -> redeemer -> ScriptContext -> Bool) (Seq TestTree) () a)
+  deriving
+    ( -- | @since 1.0
+      Functor
+    , -- | @since 1.0
+      Applicative
+    , -- | @since 1.0
+      Monad
+    , -- | @since 1.0
+      MonadReader (datum -> redeemer -> ScriptContext -> Bool)
+    )
+    via (RWS (datum -> redeemer -> ScriptContext -> Bool) (Seq TestTree) ())
+
+{- | Given a validator and a sequence of tests to execute, produce a 'TestTree'
+ that will execute them. See 'WithValidator' for an example of use.
+
+ @since 1.0
+-}
+withValidator ::
+  forall (datum :: Type) (redeemer :: Type).
+  String ->
+  (datum -> redeemer -> ScriptContext -> Bool) ->
+  WithValidator datum redeemer () ->
+  TestTree
+withValidator name val (WithValidator comp) = case evalRWS comp val () of
+  ((), tests) -> testGroup name . toList $ tests
+
 {- | Specify that, in the given context, the datum and redeemer should parse,
  but that validation should fail.
 
@@ -67,11 +119,12 @@ shouldn'tValidateSpending ::
   , Show datum
   , Show redeemer
   ) =>
-  ContextBuilder 'ForSpending ->
   String ->
-  (datum -> redeemer -> ScriptContext -> Bool) ->
-  TestTree
-shouldn'tValidateSpending cb name = singleTest name . SpendingTest Fail cb
+  ContextBuilder 'ForSpending ->
+  WithValidator datum redeemer ()
+shouldn'tValidateSpending name cb = WithValidator $ do
+  tt <- asks (singleTest name . SpendingTest Fail cb)
+  tell . Seq.singleton $ tt
 
 {- | Specify that, in the given context, the validation should succeed.
 
@@ -86,11 +139,12 @@ shouldValidateSpending ::
   , Show datum
   , Show redeemer
   ) =>
-  ContextBuilder 'ForSpending ->
   String ->
-  (datum -> redeemer -> ScriptContext -> Bool) ->
-  TestTree
-shouldValidateSpending cb name = singleTest name . SpendingTest Pass cb
+  ContextBuilder 'ForSpending ->
+  WithValidator datum redeemer ()
+shouldValidateSpending name cb = WithValidator $ do
+  tt <- asks (singleTest name . SpendingTest Pass cb)
+  tell . Seq.singleton $ tt
 
 -- Helpers
 
