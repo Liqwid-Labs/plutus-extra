@@ -1,4 +1,124 @@
 {
+    "Win32-network": {
+        "branch": "master",
+        "description": "Networking library for Windows",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "Win32-network",
+        "rev": "3825d3abf75f83f406c1f7161883c438dac7277d",
+        "sha256": "19wahfv726fa3mqajpqdqhnl9ica3xmf68i254q45iyjcpj1psqx",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/Win32-network/archive/3825d3abf75f83f406c1f7161883c438dac7277d.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "cardano-base": {
+        "branch": "master",
+        "description": "Code used throughout the Cardano eco-system",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "cardano-base",
+        "rev": "cb0f19c85e5bb5299839ad4ed66af6fa61322cc4",
+        "sha256": "0dnkfqcvbifbk3m5pg8kyjqjy0zj1l4vd23p39n6ym4q0bnib1cq",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-base/archive/cb0f19c85e5bb5299839ad4ed66af6fa61322cc4.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "cardano-crypto": {
+        "branch": "develop",
+        "description": null,
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "cardano-crypto",
+        "rev": "07397f0e50da97eaa0575d93bee7ac4b2b2576ec",
+        "sha256": "06sdx5ndn2g722jhpicmg96vsrys89fl81k8290b3lr6b1b0w4m3",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-crypto/archive/07397f0e50da97eaa0575d93bee7ac4b2b2576ec.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "cardano-ledger-specs": {
+        "branch": "master",
+        "description": "A formal specification and executable model of the ledger rules introduced by the Shelley release",
+        "homepage": "",
+        "owner": "input-output-hk",
+        "repo": "cardano-ledger-specs",
+        "rev": "d5b184a820853c7ba202efd615b8fadca1acb52c",
+        "sha256": "04k5p6qwmfdza65gl5319r1ahdfwjnyqgzpfxdx0x2g5jcbimar4",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-ledger-specs/archive/d5b184a820853c7ba202efd615b8fadca1acb52c.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "cardano-node": {
+        "branch": "master",
+        "description": "The core component that is used to participate in a Cardano decentralised blockchain.",
+        "homepage": "https://cardano.org",
+        "owner": "input-output-hk",
+        "repo": "cardano-node",
+        "rev": "ed11e8b6429d4af1cb2539460e5cb2283a06b2dc",
+        "sha256": "1wvr3zzl37i1fn5y9ni027rqw5bhh25z1bacvcaapxxjgdn38lbq",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-node/archive/ed11e8b6429d4af1cb2539460e5cb2283a06b2dc.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "cardano-prelude": {
+        "branch": "master",
+        "description": "A protolude-based custom prelude for the Cardano project",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "cardano-prelude",
+        "rev": "fd773f7a58412131512b9f694ab95653ac430852",
+        "sha256": "02jddik1yw0222wd6q0vv10f7y8rdgrlqaiy83ph002f9kjx7mh6",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-prelude/archive/fd773f7a58412131512b9f694ab95653ac430852.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "flat": {
+        "branch": "master",
+        "description": "Principled and efficient binary serialization",
+        "homepage": null,
+        "owner": "Quid2",
+        "repo": "flat",
+        "rev": "ee59880f47ab835dbd73bea0847dab7869fc20d8",
+        "sha256": "1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm",
+        "type": "tarball",
+        "url": "https://github.com/Quid2/flat/archive/ee59880f47ab835dbd73bea0847dab7869fc20d8.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "goblins": {
+        "branch": "master",
+        "description": "Genetic Algorithm based randomized testing",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "goblins",
+        "rev": "cde90a2b27f79187ca8310b6549331e59595e7ba",
+        "sha256": "17c88rbva3iw82yg9srlxjv2ia5wjb9cyqw44hik565f5v9svnyg",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/goblins/archive/cde90a2b27f79187ca8310b6549331e59595e7ba.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "hedgehog-extras": {
+        "branch": "master",
+        "description": null,
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "hedgehog-extras",
+        "rev": "edf6945007177a638fbeb8802397f3a6f4e47c14",
+        "sha256": "0wc7qzkc7j4ns2rz562h6qrx2f8xyq7yjcb7zidnj7f6j0pcd0i9",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/hedgehog-extras/archive/edf6945007177a638fbeb8802397f3a6f4e47c14.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "iohk-monitoring-framework": {
+        "branch": "master",
+        "description": "This framework provides logging, benchmarking and monitoring.",
+        "homepage": null,
+        "owner": "input-output-hk",
+        "repo": "iohk-monitoring-framework",
+        "rev": "808724ff8a19a33d0ed06f9ef59fbd900b08553c",
+        "sha256": "0298dpl29gxzs9as9ha6y0w18hqwc00ipa3hzkxv7nlfrjjz8hmz",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/iohk-monitoring-framework/archive/808724ff8a19a33d0ed06f9ef59fbd900b08553c.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "niv": {
         "branch": "master",
         "description": "Easy dependency management for Nix projects",
@@ -23,18 +143,29 @@
         "url": "https://github.com/NixOS/nixpkgs/archive/6d1a044fc9ff3cc96fca5fa3ba9c158522bbf2a5.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
-    "nixpkgs-2009": {
-        "branch": "release-20.09",
-        "description": "Nix Packages collection",
+    "optparse-applicative": {
+        "branch": "main",
+        "description": "Applicative option parser",
         "homepage": "",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "17b101e29dfff7ae02cdd00e8cde243d2a56472d",
-        "sha256": "142lbns0qxl9c6gz035c07v9gpsfd29absqvpd539iz898bdlc48",
+        "owner": "input-output-hk",
+        "repo": "optparse-applicative",
+        "rev": "7497a29cb998721a9068d5725d49461f2bba0e7a",
+        "sha256": "1gvsrg925vynwgqwplgjmp53vj953qyh3wbdf34pw21c8r47w35r",
         "type": "tarball",
-        "url": "https://github.com/nixos/nixpkgs/archive/17b101e29dfff7ae02cdd00e8cde243d2a56472d.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
-        "version": "20.09"
+        "url": "https://github.com/input-output-hk/optparse-applicative/archive/7497a29cb998721a9068d5725d49461f2bba0e7a.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "ouroboros-network": {
+        "branch": "master",
+        "description": "An implementation of the Ouroboros family of consensus algorithms, with its networking support",
+        "homepage": "",
+        "owner": "input-output-hk",
+        "repo": "ouroboros-network",
+        "rev": "877ce057ff6fb086474c8eaad53f2b7f0e0fce6b",
+        "sha256": "1kp0qysfy3hl96a3a61rijascq36f1imh3z4jy0vyiygb6qrv47z",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/ouroboros-network/archive/877ce057ff6fb086474c8eaad53f2b7f0e0fce6b.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "plutus": {
         "branch": "master",
@@ -46,6 +177,30 @@
         "sha256": "0jsdsbw451cc59zdxb4s6l143ysvb37xibbi9ymzhgc27g90p17z",
         "type": "tarball",
         "url": "https://github.com/input-output-hk/plutus/archive/289ac956a33c14fe1d75d6c0a6d6100f96a7d22c.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "purescript-bridge": {
+        "branch": "master",
+        "description": "Create PureScript datatypes from Haskell datatypes",
+        "homepage": null,
+        "owner": "shmish111",
+        "repo": "purescript-bridge",
+        "rev": "6a92d7853ea514be8b70bab5e72077bf5a510596",
+        "sha256": "13j64vv116in3c204qsl1v0ajphac9fqvsjp7x3zzfr7n7g61drb",
+        "type": "tarball",
+        "url": "https://github.com/shmish111/purescript-bridge/archive/6a92d7853ea514be8b70bab5e72077bf5a510596.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "servant-purescript": {
+        "branch": "master",
+        "description": "Translate servant API to purescript code, with the help of purescript-bridge.",
+        "homepage": null,
+        "owner": "shmish111",
+        "repo": "servant-purescript",
+        "rev": "a76104490499aa72d40c2790d10e9383e0dbde63",
+        "sha256": "11nxxmi5bw66va7psvrgrw7b7n85fvqgfp58yva99w3v9q3a50v9",
+        "type": "tarball",
+        "url": "https://github.com/shmish111/servant-purescript/archive/a76104490499aa72d40c2790d10e9383e0dbde63.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }
