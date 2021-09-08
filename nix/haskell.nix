@@ -92,8 +92,8 @@ in pkgs.haskell-nix.cabalProject rec {
       "1fdc0a02ipa385dnwa6r6jyc8jlg537i12hflfglkhjs2b7i92gs";
 
     # input-output-hk/ouroboros-network
-    "https://github.com/input-output-hk/ouroboros-network"."f149c1c1e4e4bb5bab51fa055e9e3a7084ddc30e" =
-      "1szh3xr7qnx56kyxd554yswpddbavb7m7k2mk3dqdn7xbg7s8b8w";
+    "https://github.com/input-output-hk/ouroboros-network"."877ce057ff6fb086474c8eaad53f2b7f0e0fce6b" =
+      "1kp0qysfy3hl96a3a61rijascq36f1imh3z4jy0vyiygb6qrv47z";
 
     # input-output-hk/optparse-applicative
     "https://github.com/input-output-hk/optparse-applicative"."7497a29cb998721a9068d5725d49461f2bba0e7a" =
