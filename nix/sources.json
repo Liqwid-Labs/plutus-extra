@@ -23,19 +23,6 @@
         "url": "https://github.com/NixOS/nixpkgs/archive/6d1a044fc9ff3cc96fca5fa3ba9c158522bbf2a5.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
-    "nixpkgs-2009": {
-        "branch": "release-20.09",
-        "description": "Nix Packages collection",
-        "homepage": "",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "17b101e29dfff7ae02cdd00e8cde243d2a56472d",
-        "sha256": "142lbns0qxl9c6gz035c07v9gpsfd29absqvpd539iz898bdlc48",
-        "type": "tarball",
-        "url": "https://github.com/nixos/nixpkgs/archive/17b101e29dfff7ae02cdd00e8cde243d2a56472d.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz",
-        "version": "20.09"
-    },
     "plutus": {
         "branch": "master",
         "description": "The Plutus language implementation and tools",
