@@ -42,11 +42,16 @@ module Test.Tasty.Plutus.Context (
 
   -- ** Compilation
   compile,
+
+  -- ** Rendering
+  renderDecodeFailure,
 ) where
 
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.Portray.Plutus (portrayBuiltinData)
+import Data.Portray.Pretty (portrayalToDoc)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import Data.Validation (Validation (Failure))
@@ -68,7 +73,7 @@ import Plutus.V1.Ledger.TxId (TxId (TxId))
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (FromData (fromBuiltinData), ToData (toBuiltinData))
-import Prettyprinter (Pretty (pretty), hang, hardline, viaShow, (<+>))
+import Text.PrettyPrint (Doc, integer, nest, ($+$), (<+>))
 import Wallet.Emulator.Types (Wallet, walletPubKey)
 import Witherable (iwither, mapMaybe)
 
@@ -86,12 +91,27 @@ data DecodeFailure
       Show
     )
 
+{- | Renders a 'DecodeFailure'.
+
+ @since 2.0
+-}
+renderDecodeFailure :: DecodeFailure -> Doc
+renderDecodeFailure = \case
+  BadDatumDecode ix dat ->
+    "Datum" <+> integer ix
+      $+$ (nest 4 . portrayalToDoc . portrayBuiltinData $ dat)
+  BadRedeemerDecode ix dat ->
+    "Redeemer" <+> integer ix
+      $+$ (nest 4 . portrayalToDoc . portrayBuiltinData $ dat)
+
+{-
 instance Pretty DecodeFailure where
   pretty = \case
     BadDatumDecode ix dat ->
       "Datum" <+> pretty ix <> hardline <> hang 4 (viaShow dat)
     BadRedeemerDecode ix dat ->
       "Redeemer" <+> pretty ix <> hardline <> hang 4 (viaShow dat)
+-}
 
 {- | Describes what kind of validator this is meant to test. Directly
  corresponds to 'ScriptPurpose'.
