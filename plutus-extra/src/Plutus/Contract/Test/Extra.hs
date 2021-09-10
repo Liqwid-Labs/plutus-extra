@@ -1,4 +1,4 @@
-{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE PolyKinds  #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Plutus.Contract.Test.Extra (
@@ -10,42 +10,43 @@ module Plutus.Contract.Test.Extra (
 
 --------------------------------------------------------------------------------
 
-import Control.Foldl qualified as L
+import qualified Control.Foldl              as L
 
 --------------------------------------------------------------------------------
 
-import Control.Arrow ((>>>))
-import Control.Lens (at, view, (^.))
-import Control.Monad (unless)
-import Control.Monad.Freer (Eff, Member)
-import Control.Monad.Freer.Error (Error)
-import Control.Monad.Freer.Reader (ask)
-import Control.Monad.Freer.Writer (Writer, tell)
-import Data.Foldable (fold)
-import Data.Kind (Type)
-import Data.List (foldl')
-import Data.Map qualified as Map
-import Data.Maybe (mapMaybe)
-import Data.Row (Row)
-import Data.Text.Prettyprint.Doc (Doc, colon, indent, pretty, viaShow, vsep, (<+>))
-import Data.Void
-import Prelude
+import           Control.Arrow              ((>>>))
+import           Control.Lens               (at, view, (^.))
+import           Control.Monad              (unless)
+import           Control.Monad.Freer        (Eff, Member)
+import           Control.Monad.Freer.Error  (Error)
+import           Control.Monad.Freer.Reader (ask)
+import           Control.Monad.Freer.Writer (Writer, tell)
+import           Data.Foldable              (fold)
+import           Data.Kind                  (Type)
+import           Data.List                  (foldl')
+import qualified Data.Map                   as Map
+import           Data.Maybe                 (mapMaybe)
+import           Data.Row                   (Row)
+import           Data.Text.Prettyprint.Doc  (Doc, colon, indent, pretty,
+                                             viaShow, vsep, (<+>))
+import           Data.Void
+import           Prelude
 
 --------------------------------------------------------------------------------
 
-import Ledger qualified
-import Ledger.Ada qualified as Ada
-import Ledger.AddressMap (UtxoMap)
-import Ledger.AddressMap qualified as AM
-import Plutus.Contract.Test (TracePredicate)
-import Plutus.Contract.Trace (InitialDistribution, Wallet)
-import Plutus.Contract.Types (IsContract (toContract))
-import Plutus.Trace.Emulator (ContractInstanceTag)
-import PlutusTx (FromData (fromBuiltinData))
-import PlutusTx.Prelude qualified as P
-import Wallet.Emulator.Chain (ChainEvent (..))
-import Wallet.Emulator.Folds (postMapM)
-import Wallet.Emulator.Folds qualified as Folds
+import qualified Ledger
+import qualified Ledger.Ada                 as Ada
+import           Ledger.AddressMap          (UtxoMap)
+import qualified Ledger.AddressMap          as AM
+import           Plutus.Contract.Test       (TracePredicate)
+import           Plutus.Contract.Trace      (InitialDistribution, Wallet)
+import           Plutus.Contract.Types      (IsContract (toContract))
+import           Plutus.Trace.Emulator      (ContractInstanceTag)
+import           PlutusTx                   (FromData (fromBuiltinData))
+import qualified PlutusTx.Prelude           as P
+import           Wallet.Emulator.Chain      (ChainEvent (..))
+import           Wallet.Emulator.Folds      (postMapM)
+import qualified Wallet.Emulator.Folds      as Folds
 
 --------------------------------------------------------------------------------
 
@@ -121,8 +122,8 @@ walletFundsChangeWithAccumStateImpl exact contract inst wallet toDlt =
   flip
     Folds.postMapM
     ( (,,) <$> L.generalize (Folds.walletFunds wallet)
-        <*> L.generalize (Folds.walletFees wallet)
-        <*> Folds.instanceAccumState (toContract contract) inst
+           <*> L.generalize (Folds.walletFees wallet)
+           <*> Folds.instanceAccumState (toContract contract) inst
     )
     $ \(finalValue', fees, w) -> do
       dist <- ask @InitialDistribution
