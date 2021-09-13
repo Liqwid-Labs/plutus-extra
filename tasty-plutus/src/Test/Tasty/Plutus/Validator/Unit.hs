@@ -26,31 +26,24 @@ import Control.Monad.Reader (MonadReader, asks)
 import Data.Functor (($>))
 import Data.Kind (Type)
 import Data.Map.Strict qualified as Map
+import Data.Portray (GPortray (gportray), portrayType)
+import Data.Portray.Plutus (portrayScriptContext)
+import Data.Portray.Pretty (portrayalToDoc)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Validation (Validation (Failure, Success))
 import GHC.Exts (toList)
+import GHC.Generics (Generic (Rep, from))
 import Plutus.V1.Ledger.Contexts (ScriptContext)
 import PlutusTx.IsData.Class (FromData)
-import Prettyprinter (
-  Doc,
-  defaultLayoutOptions,
-  hang,
-  hardline,
-  layoutPretty,
-  pretty,
-  viaShow,
-  vsep,
-  (<+>),
- )
-import Prettyprinter.Render.String (renderString)
 import Test.Tasty (testGroup)
 import Test.Tasty.Plutus.Context (
   ContextBuilder,
   DecodeFailure,
   Purpose (ForSpending),
   compile,
+  renderDecodeFailure,
  )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
@@ -59,7 +52,18 @@ import Test.Tasty.Providers (
   testFailed,
   testPassed,
  )
-import Type.Reflection (Typeable, tyConName, typeRep, typeRepTyCon)
+import Text.PrettyPrint (
+  Doc,
+  Style (lineLength),
+  hang,
+  integer,
+  renderStyle,
+  style,
+  vcat,
+  ($+$),
+  (<+>),
+ )
+import Type.Reflection (Typeable, typeRep)
 import Witherable (mapMaybe)
 import Prelude hiding (map)
 
@@ -116,8 +120,10 @@ shouldn'tValidateSpending ::
   , FromData redeemer
   , Typeable datum
   , Typeable redeemer
-  , Show datum
-  , Show redeemer
+  , Generic datum
+  , Generic redeemer
+  , GPortray (Rep datum)
+  , GPortray (Rep redeemer)
   ) =>
   String ->
   ContextBuilder 'ForSpending ->
@@ -136,8 +142,10 @@ shouldValidateSpending ::
   , FromData redeemer
   , Typeable datum
   , Typeable redeemer
-  , Show datum
-  , Show redeemer
+  , Generic datum
+  , Generic redeemer
+  , GPortray (Rep datum)
+  , GPortray (Rep redeemer)
   ) =>
   String ->
   ContextBuilder 'ForSpending ->
@@ -161,8 +169,10 @@ instance
   , Typeable redeemer
   , FromData datum
   , FromData redeemer
-  , Show datum
-  , Show redeemer
+  , Generic datum
+  , Generic redeemer
+  , GPortray (Rep datum)
+  , GPortray (Rep redeemer)
   ) =>
   IsTest (SpendingTest datum redeemer)
   where
@@ -184,8 +194,6 @@ instance
          in case expected of
               Fail -> guard result $> args -- throw away failures
               Pass -> guard (not result) $> args -- throw away passes
-              -- None for now.
-
   testOptions = Tagged []
 
 renderDecodeFailures ::
@@ -193,74 +201,77 @@ renderDecodeFailures ::
   (Typeable datum, Typeable redeemer) =>
   [DecodeFailure] ->
   String
-renderDecodeFailures = renderString . layoutPretty defaultLayoutOptions . go
+renderDecodeFailures = renderStyle ourStyle . go
   where
-    go :: forall (ann :: Type). [DecodeFailure] -> Doc ann
+    go :: [DecodeFailure] -> Doc
     go errs =
-      "Some inputs failed to decode."
-        <> hardline
-        <> "Datum type:" <+> prettyTypeName @datum
-        <> hardline
-        <> "Redeemer type:" <+> prettyTypeName @redeemer
-        <> hardline
-        <> (hang 4 . vsep . fmap pretty $ errs)
+      hang "Some inputs failed to decode." 4 $
+        ("Datum type:" <+> typeRepDoc @datum)
+          $+$ ("Redeemer type:" <+> typeRepDoc @redeemer)
+          $+$ (vcat . fmap renderDecodeFailure $ errs)
 
 renderTestFailures ::
   forall (datum :: Type) (redeemer :: Type).
-  (Typeable datum, Show datum, Typeable redeemer, Show redeemer) =>
+  ( Generic datum
+  , Generic redeemer
+  , GPortray (Rep datum)
+  , GPortray (Rep redeemer)
+  ) =>
   Outcome ->
   [(Integer, (datum, redeemer, ScriptContext))] ->
   String
-renderTestFailures expected unexpecteds =
-  renderString . layoutPretty defaultLayoutOptions $ go
+renderTestFailures expected = renderStyle ourStyle . go
   where
-    go :: forall (ann :: Type). Doc ann
-    go =
-      "Unexpected" <+> pretty what <> ":"
-        <> hardline
-        <> (hang 4 . vsep . fmap prettyUnexpected $ unexpecteds)
-    what :: String
+    go :: [(Integer, (datum, redeemer, ScriptContext))] -> Doc
+    go = hang ("Unexpected" <+> what) 4 . vcat . fmap prettyUnexpected
+    what :: Doc
     what = case expected of
       Fail -> "success(es)"
       Pass -> "failure(s)"
     prettyUnexpected ::
-      forall (ann :: Type).
       (Integer, (datum, redeemer, ScriptContext)) ->
-      Doc ann
+      Doc
     prettyUnexpected (ix, (dat, red, sc)) =
-      "Input" <+> pretty ix <> hardline
-        <> "Datum:"
-        <> hardline
-        <> hang 4 (prettyDatum dat)
-        <> hardline
-        <> "Redeemer:"
-        <> hardline
-        <> hang 4 (prettyRedeemer red)
-        <> hardline
-        <> "ScriptContext:"
-        <> hardline
-        <> hang 4 (viaShow sc)
+      hang ("Input" <+> integer ix) 4 $
+        hang "Datum:" 4 (genericDoc dat)
+          $+$ hang "Redeemer:" 4 (genericDoc red)
+          $+$ hang "ScriptContext:" 4 (scDoc sc)
 
+genericDoc ::
+  forall (a :: Type).
+  (Generic a, GPortray (Rep a)) =>
+  a ->
+  Doc
+genericDoc = portrayalToDoc . gportray . from
+
+scDoc :: ScriptContext -> Doc
+scDoc = portrayalToDoc . portrayScriptContext
+
+{-
 prettyDatum ::
-  forall (datum :: Type) (ann :: Type).
+  forall (datum :: Type) .
   (Typeable datum, Show datum) =>
   datum ->
-  Doc ann
-prettyDatum dat =
+  Doc
+prettyDatum dat = _
   "Type:" <+> prettyTypeName @datum <> hardline
     <> "Representation:" <+> viaShow dat
 
 prettyRedeemer ::
-  forall (redeemer :: Type) (ann :: Type).
+  forall (redeemer :: Type).
   (Typeable redeemer, Show redeemer) =>
   redeemer ->
-  Doc ann
-prettyRedeemer red =
+  Doc
+prettyRedeemer red = _
   "Type:" <+> prettyTypeName @redeemer <> hardline
     <> "Representation:" <+> viaShow red
+-}
 
-prettyTypeName ::
-  forall (a :: Type) (ann :: Type).
+typeRepDoc ::
+  forall (a :: Type).
   (Typeable a) =>
-  Doc ann
-prettyTypeName = pretty . tyConName . typeRepTyCon $ typeRep @a
+  Doc
+typeRepDoc = portrayalToDoc . portrayType $ typeRep @a
+
+ourStyle :: Style
+ourStyle = style {lineLength = 80}
