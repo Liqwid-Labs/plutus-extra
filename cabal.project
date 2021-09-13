@@ -8,23 +8,6 @@ packages:
 
 source-repository-package
   type: git
-  location: https://github.com/google/hs-portray
-  subdir:
-    portray
-    portray-diff
-    portray-pretty
-  tag: bb75052449c3e2d15811097b64fb11692c945405
-
--- Dependency of portray
-source-repository-package
-  type: git
-  location: https://github.com/google/hs-wrapped
-  subdir:
-    wrapped
-  tag: 4b4f83fd0c5ee28e56281f453efc40556005992f
-
-source-repository-package
-  type: git
   location: https://github.com/input-output-hk/plutus.git
   subdir:
     doc

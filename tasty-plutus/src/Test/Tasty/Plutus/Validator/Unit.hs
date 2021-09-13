@@ -26,15 +26,11 @@ import Control.Monad.Reader (MonadReader, asks)
 import Data.Functor (($>))
 import Data.Kind (Type)
 import Data.Map.Strict qualified as Map
-import Data.Portray (GPortray (gportray), portrayType)
-import Data.Portray.Plutus (portrayScriptContext)
-import Data.Portray.Pretty (portrayalToDoc)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Validation (Validation (Failure, Success))
 import GHC.Exts (toList)
-import GHC.Generics (Generic (Rep, from))
 import Plutus.V1.Ledger.Contexts (ScriptContext)
 import PlutusTx.IsData.Class (FromData)
 import Test.Tasty (testGroup)
@@ -59,11 +55,18 @@ import Text.PrettyPrint (
   integer,
   renderStyle,
   style,
+  text,
   vcat,
   ($+$),
   (<+>),
  )
-import Type.Reflection (Typeable, typeRep)
+import Text.Show.Pretty (ppDoc)
+import Type.Reflection (
+  Typeable,
+  tyConName,
+  typeRep,
+  typeRepTyCon,
+ )
 import Witherable (mapMaybe)
 import Prelude hiding (map)
 
@@ -120,10 +123,8 @@ shouldn'tValidateSpending ::
   , FromData redeemer
   , Typeable datum
   , Typeable redeemer
-  , Generic datum
-  , Generic redeemer
-  , GPortray (Rep datum)
-  , GPortray (Rep redeemer)
+  , Show datum
+  , Show redeemer
   ) =>
   String ->
   ContextBuilder 'ForSpending ->
@@ -142,10 +143,8 @@ shouldValidateSpending ::
   , FromData redeemer
   , Typeable datum
   , Typeable redeemer
-  , Generic datum
-  , Generic redeemer
-  , GPortray (Rep datum)
-  , GPortray (Rep redeemer)
+  , Show datum
+  , Show redeemer
   ) =>
   String ->
   ContextBuilder 'ForSpending ->
@@ -169,10 +168,8 @@ instance
   , Typeable redeemer
   , FromData datum
   , FromData redeemer
-  , Generic datum
-  , Generic redeemer
-  , GPortray (Rep datum)
-  , GPortray (Rep redeemer)
+  , Show datum
+  , Show redeemer
   ) =>
   IsTest (SpendingTest datum redeemer)
   where
@@ -212,10 +209,8 @@ renderDecodeFailures = renderStyle ourStyle . go
 
 renderTestFailures ::
   forall (datum :: Type) (redeemer :: Type).
-  ( Generic datum
-  , Generic redeemer
-  , GPortray (Rep datum)
-  , GPortray (Rep redeemer)
+  ( Show datum
+  , Show redeemer
   ) =>
   Outcome ->
   [(Integer, (datum, redeemer, ScriptContext))] ->
@@ -233,45 +228,15 @@ renderTestFailures expected = renderStyle ourStyle . go
       Doc
     prettyUnexpected (ix, (dat, red, sc)) =
       hang ("Input" <+> integer ix) 4 $
-        hang "Datum:" 4 (genericDoc dat)
-          $+$ hang "Redeemer:" 4 (genericDoc red)
-          $+$ hang "ScriptContext:" 4 (scDoc sc)
-
-genericDoc ::
-  forall (a :: Type).
-  (Generic a, GPortray (Rep a)) =>
-  a ->
-  Doc
-genericDoc = portrayalToDoc . gportray . from
-
-scDoc :: ScriptContext -> Doc
-scDoc = portrayalToDoc . portrayScriptContext
-
-{-
-prettyDatum ::
-  forall (datum :: Type) .
-  (Typeable datum, Show datum) =>
-  datum ->
-  Doc
-prettyDatum dat = _
-  "Type:" <+> prettyTypeName @datum <> hardline
-    <> "Representation:" <+> viaShow dat
-
-prettyRedeemer ::
-  forall (redeemer :: Type).
-  (Typeable redeemer, Show redeemer) =>
-  redeemer ->
-  Doc
-prettyRedeemer red = _
-  "Type:" <+> prettyTypeName @redeemer <> hardline
-    <> "Representation:" <+> viaShow red
--}
+        hang "Datum:" 4 (ppDoc dat)
+          $+$ hang "Redeemer:" 4 (ppDoc red)
+          $+$ hang "ScriptContext:" 4 (ppDoc sc)
 
 typeRepDoc ::
   forall (a :: Type).
   (Typeable a) =>
   Doc
-typeRepDoc = portrayalToDoc . portrayType $ typeRep @a
+typeRepDoc = text . tyConName . typeRepTyCon $ typeRep @a
 
 ourStyle :: Style
 ourStyle = style {lineLength = 80}

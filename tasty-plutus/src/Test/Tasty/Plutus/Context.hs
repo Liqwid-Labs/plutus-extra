@@ -50,8 +50,6 @@ module Test.Tasty.Plutus.Context (
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
-import Data.Portray.Plutus (portrayBuiltinData)
-import Data.Portray.Pretty (portrayalToDoc)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import Data.Validation (Validation (Failure))
@@ -74,6 +72,7 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (FromData (fromBuiltinData), ToData (toBuiltinData))
 import Text.PrettyPrint (Doc, integer, nest, ($+$), (<+>))
+import Text.Show.Pretty (ppDoc)
 import Wallet.Emulator.Types (Wallet, walletPubKey)
 import Witherable (iwither, mapMaybe)
 
@@ -99,10 +98,10 @@ renderDecodeFailure :: DecodeFailure -> Doc
 renderDecodeFailure = \case
   BadDatumDecode ix dat ->
     "Datum" <+> integer ix
-      $+$ (nest 4 . portrayalToDoc . portrayBuiltinData $ dat)
+      $+$ (nest 4 . ppDoc $ dat)
   BadRedeemerDecode ix dat ->
     "Redeemer" <+> integer ix
-      $+$ (nest 4 . portrayalToDoc . portrayBuiltinData $ dat)
+      $+$ (nest 4 . ppDoc $ dat)
 
 {-
 instance Pretty DecodeFailure where
