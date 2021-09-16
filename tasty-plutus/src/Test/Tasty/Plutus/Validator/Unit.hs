@@ -33,24 +33,13 @@ import Data.Validation (Validation (Failure, Success))
 import GHC.Exts (toList)
 import Plutus.V1.Ledger.Contexts (ScriptContext)
 import PlutusTx.IsData.Class (FromData)
-import Prettyprinter (
-  Doc,
-  defaultLayoutOptions,
-  hang,
-  hardline,
-  layoutPretty,
-  pretty,
-  viaShow,
-  vsep,
-  (<+>),
- )
-import Prettyprinter.Render.String (renderString)
 import Test.Tasty (testGroup)
 import Test.Tasty.Plutus.Context (
   ContextBuilder,
   DecodeFailure,
   Purpose (ForSpending),
   compile,
+  renderDecodeFailure,
  )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
@@ -59,7 +48,25 @@ import Test.Tasty.Providers (
   testFailed,
   testPassed,
  )
-import Type.Reflection (Typeable, tyConName, typeRep, typeRepTyCon)
+import Text.PrettyPrint (
+  Doc,
+  Style (lineLength),
+  hang,
+  integer,
+  renderStyle,
+  style,
+  text,
+  vcat,
+  ($+$),
+  (<+>),
+ )
+import Text.Show.Pretty (ppDoc)
+import Type.Reflection (
+  Typeable,
+  tyConName,
+  typeRep,
+  typeRepTyCon,
+ )
 import Witherable (mapMaybe)
 import Prelude hiding (map)
 
@@ -184,8 +191,6 @@ instance
          in case expected of
               Fail -> guard result $> args -- throw away failures
               Pass -> guard (not result) $> args -- throw away passes
-              -- None for now.
-
   testOptions = Tagged []
 
 renderDecodeFailures ::
@@ -193,74 +198,45 @@ renderDecodeFailures ::
   (Typeable datum, Typeable redeemer) =>
   [DecodeFailure] ->
   String
-renderDecodeFailures = renderString . layoutPretty defaultLayoutOptions . go
+renderDecodeFailures = renderStyle ourStyle . go
   where
-    go :: forall (ann :: Type). [DecodeFailure] -> Doc ann
+    go :: [DecodeFailure] -> Doc
     go errs =
-      "Some inputs failed to decode."
-        <> hardline
-        <> "Datum type:" <+> prettyTypeName @datum
-        <> hardline
-        <> "Redeemer type:" <+> prettyTypeName @redeemer
-        <> hardline
-        <> (hang 4 . vsep . fmap pretty $ errs)
+      hang "Some inputs failed to decode." 4 $
+        ("Datum type:" <+> typeRepDoc @datum)
+          $+$ ("Redeemer type:" <+> typeRepDoc @redeemer)
+          $+$ (vcat . fmap renderDecodeFailure $ errs)
 
 renderTestFailures ::
   forall (datum :: Type) (redeemer :: Type).
-  (Typeable datum, Show datum, Typeable redeemer, Show redeemer) =>
+  ( Show datum
+  , Show redeemer
+  ) =>
   Outcome ->
   [(Integer, (datum, redeemer, ScriptContext))] ->
   String
-renderTestFailures expected unexpecteds =
-  renderString . layoutPretty defaultLayoutOptions $ go
+renderTestFailures expected = renderStyle ourStyle . go
   where
-    go :: forall (ann :: Type). Doc ann
-    go =
-      "Unexpected" <+> pretty what <> ":"
-        <> hardline
-        <> (hang 4 . vsep . fmap prettyUnexpected $ unexpecteds)
-    what :: String
+    go :: [(Integer, (datum, redeemer, ScriptContext))] -> Doc
+    go = hang ("Unexpected" <+> what) 4 . vcat . fmap prettyUnexpected
+    what :: Doc
     what = case expected of
       Fail -> "success(es)"
       Pass -> "failure(s)"
     prettyUnexpected ::
-      forall (ann :: Type).
       (Integer, (datum, redeemer, ScriptContext)) ->
-      Doc ann
+      Doc
     prettyUnexpected (ix, (dat, red, sc)) =
-      "Input" <+> pretty ix <> hardline
-        <> "Datum:"
-        <> hardline
-        <> hang 4 (prettyDatum dat)
-        <> hardline
-        <> "Redeemer:"
-        <> hardline
-        <> hang 4 (prettyRedeemer red)
-        <> hardline
-        <> "ScriptContext:"
-        <> hardline
-        <> hang 4 (viaShow sc)
+      hang ("Input" <+> integer ix) 4 $
+        hang "Datum:" 4 (ppDoc dat)
+          $+$ hang "Redeemer:" 4 (ppDoc red)
+          $+$ hang "ScriptContext:" 4 (ppDoc sc)
 
-prettyDatum ::
-  forall (datum :: Type) (ann :: Type).
-  (Typeable datum, Show datum) =>
-  datum ->
-  Doc ann
-prettyDatum dat =
-  "Type:" <+> prettyTypeName @datum <> hardline
-    <> "Representation:" <+> viaShow dat
-
-prettyRedeemer ::
-  forall (redeemer :: Type) (ann :: Type).
-  (Typeable redeemer, Show redeemer) =>
-  redeemer ->
-  Doc ann
-prettyRedeemer red =
-  "Type:" <+> prettyTypeName @redeemer <> hardline
-    <> "Representation:" <+> viaShow red
-
-prettyTypeName ::
-  forall (a :: Type) (ann :: Type).
+typeRepDoc ::
+  forall (a :: Type).
   (Typeable a) =>
-  Doc ann
-prettyTypeName = pretty . tyConName . typeRepTyCon $ typeRep @a
+  Doc
+typeRepDoc = text . tyConName . typeRepTyCon $ typeRep @a
+
+ourStyle :: Style
+ourStyle = style {lineLength = 80}
