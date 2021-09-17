@@ -10,13 +10,24 @@
 -}
 module Test.Tasty.Plutus.Context (
   -- * Types
+
+  -- ** Errors
   DecodeFailure (..),
+
+  -- ** Classification and labelling
   Purpose (..),
+
+  -- ** Building contexts
   InputType (..),
   OutputType (..),
   Input (..),
   Output (..),
+  Minting (..),
   ContextBuilder,
+
+  -- ** Transaction configuration
+  TransactionConfig (..),
+  defaultTransactionConfig,
 
   -- * Functions
 
@@ -24,7 +35,7 @@ module Test.Tasty.Plutus.Context (
   input,
   output,
   signedWith,
-  tagged,
+  datum,
 
   -- ** Paying
   paysToPubKey,
@@ -41,7 +52,8 @@ module Test.Tasty.Plutus.Context (
   spendsFromOther,
 
   -- ** Compilation
-  compile,
+  compileSpending,
+  compileMinting,
 
   -- ** Rendering
   renderDecodeFailure,
@@ -57,7 +69,7 @@ import GHC.Exts (toList)
 import Ledger.Address (pubKeyHashAddress, scriptHashAddress)
 import Ledger.Crypto (PubKeyHash, pubKeyHash)
 import Ledger.Scripts (Datum (Datum), DatumHash, ValidatorHash, datumHash)
-import Ledger.Value (Value (Value))
+import Ledger.Value (CurrencySymbol, TokenName, Value (Value))
 import Plutus.V1.Ledger.Contexts (
   ScriptContext (ScriptContext),
   ScriptPurpose (Spending),
@@ -66,7 +78,9 @@ import Plutus.V1.Ledger.Contexts (
   TxOut (TxOut),
   TxOutRef (TxOutRef),
  )
+import Plutus.V1.Ledger.Interval (Interval)
 import Plutus.V1.Ledger.Interval qualified as Interval
+import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.TxId (TxId (TxId))
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (BuiltinData)
@@ -103,15 +117,6 @@ renderDecodeFailure = \case
     "Redeemer" <+> integer ix
       $+$ (nest 4 . ppDoc $ dat)
 
-{-
-instance Pretty DecodeFailure where
-  pretty = \case
-    BadDatumDecode ix dat ->
-      "Datum" <+> pretty ix <> hardline <> hang 4 (viaShow dat)
-    BadRedeemerDecode ix dat ->
-      "Redeemer" <+> pretty ix <> hardline <> hang 4 (viaShow dat)
--}
-
 {- | Describes what kind of validator this is meant to test. Directly
  corresponds to 'ScriptPurpose'.
 
@@ -126,14 +131,6 @@ data Purpose
     --
     -- @since 1.0
     ForSpending
-  | -- | Corresponds to 'Plutus.V1.Ledger.Contexts.Rewarding'.
-    --
-    -- @since 1.0
-    ForRewarding
-  | -- | Corresponds to 'Plutus.V1.Ledger.Contexts.Certifying'.
-    --
-    -- @since 1.0
-    ForCertifying
 
 {- | Different input types, and some of their metadata.
 
@@ -193,6 +190,73 @@ data Output
       Show
     )
 
+{- | A minting result.
+
+ @since 3.0
+-}
+data Minting
+  = -- | @since 3.0
+    OwnMint TokenName Integer
+  | -- | @since 3.0
+    OtherMint Value
+  deriving stock
+    ( -- | @since 3.0
+      Show
+    )
+
+{- | Sets certain parameters around the transaction a validator is supposed to
+ test.
+
+ @since 3.0
+-}
+data TransactionConfig = TransactionConfig
+  { -- | The fee paid.
+    --
+    -- @since 3.0
+    testFee :: Value
+  , -- | Valid time range.
+    --
+    -- @since 3.0
+    testTimeRange :: Interval POSIXTime
+  , -- | Consume the inputs of this 'TxId'.
+    --
+    -- @since 3.0
+    testTxId :: TxId
+  , -- | The script's 'CurrencySymbol'.
+    --
+    -- @since 3.0
+    testCurrencySymbol :: CurrencySymbol
+  , -- | The validator address.
+    --
+    -- @since 3.0
+    testValidatorHash :: ValidatorHash
+  }
+  deriving stock
+    ( -- | @since 3.0
+      Show
+    )
+
+{- | A transaction configuration with the following settings:
+
+ * 'testFee' is the empty 'Value'.
+ * 'testTimeRange' is 'always'.
+ * Other values are arbitrary
+
+ In particular, only 'testFee' and 'testTimeRange' are assumed to be stable;
+ if you want specific values, set them manually.
+
+ @since 3.0
+-}
+defaultTransactionConfig :: TransactionConfig
+defaultTransactionConfig =
+  TransactionConfig
+    { testFee = mempty
+    , testTimeRange = Interval.always
+    , testTxId = TxId "abcd"
+    , testCurrencySymbol = "ff"
+    , testValidatorHash = "90ab"
+    }
+
 {- | A way to incrementally build up a script context.
 
  It is tagged with a 'Purpose' as a marker for what kind of script it's
@@ -207,13 +271,13 @@ data Output
 
  @since 1.0
 -}
-data ContextBuilder (p :: Purpose) where
-  SpendingBuilder ::
-    Seq Input ->
-    Seq Output ->
-    Seq PubKeyHash ->
-    Seq BuiltinData ->
-    ContextBuilder 'ForSpending
+data ContextBuilder (p :: Purpose)
+  = ContextBuilder
+      (Seq Input)
+      (Seq Output)
+      (Seq PubKeyHash)
+      (Seq BuiltinData)
+      (Seq Minting)
 
 -- | @since 1.0
 deriving stock instance Show (ContextBuilder p)
@@ -221,88 +285,104 @@ deriving stock instance Show (ContextBuilder p)
 -- | @since 1.0
 instance Semigroup (ContextBuilder p) where
   {-# INLINEABLE (<>) #-}
-  SpendingBuilder is os pkhs ts <> SpendingBuilder is' os' pkhs' ts' =
-    SpendingBuilder (is <> is') (os <> os') (pkhs <> pkhs') (ts <> ts')
+  ContextBuilder is os pkhs ts ms <> ContextBuilder is' os' pkhs' ts' ms' =
+    ContextBuilder (is <> is') (os <> os') (pkhs <> pkhs') (ts <> ts') (ms <> ms')
 
 {- | Single-input context.
 
  @since 1.0
 -}
-input :: Input -> ContextBuilder 'ForSpending
-input x = SpendingBuilder (Seq.singleton x) mempty mempty mempty
+input :: forall (p :: Purpose). Input -> ContextBuilder p
+input x = ContextBuilder (Seq.singleton x) mempty mempty mempty mempty
 
 {- | Single-output context.
 
  @since 1.0
 -}
-output :: Output -> ContextBuilder 'ForSpending
-output x = SpendingBuilder mempty (Seq.singleton x) mempty mempty
+output :: forall (p :: Purpose). Output -> ContextBuilder p
+output x = ContextBuilder mempty (Seq.singleton x) mempty mempty mempty
 
 {- | Context with one signature.
 
  @since 1.0
 -}
-signedWith :: PubKeyHash -> ContextBuilder 'ForSpending
-signedWith pkh = SpendingBuilder mempty mempty (Seq.singleton pkh) mempty
+signedWith :: forall (p :: Purpose). PubKeyHash -> ContextBuilder p
+signedWith pkh = ContextBuilder mempty mempty (Seq.singleton pkh) mempty mempty
 
-{- | Context with one tag.
+{- | Context with one additional datum.
 
  @since 1.0
 -}
-tagged :: BuiltinData -> ContextBuilder 'ForSpending
-tagged = SpendingBuilder mempty mempty mempty . Seq.singleton
+datum :: forall (p :: Purpose). BuiltinData -> ContextBuilder p
+datum d = ContextBuilder mempty mempty mempty (Seq.singleton d) mempty
+
+-- TODO: addDatum, addTag
 
 -- | @since 1.0
-paysToPubKey :: PubKeyHash -> Value -> ContextBuilder 'ForSpending
+paysToPubKey ::
+  forall (p :: Purpose).
+  PubKeyHash ->
+  Value ->
+  ContextBuilder p
 paysToPubKey pkh = output . Output (PubKeyOutput pkh)
 
 -- | @since 1.0
-paysToWallet :: Wallet -> Value -> ContextBuilder 'ForSpending
+paysToWallet ::
+  forall (p :: Purpose).
+  Wallet ->
+  Value ->
+  ContextBuilder p
 paysToWallet wallet = paysToPubKey (walletPubKeyHash wallet)
 
 -- | @since 1.0
 paysSelf ::
-  forall (a :: Type).
+  forall (p :: Purpose) (a :: Type).
   (ToData a) =>
   Value ->
   a ->
-  ContextBuilder 'ForSpending
+  ContextBuilder p
 paysSelf v dt = output . Output (OwnOutput . toBuiltinData $ dt) $ v
 
 -- | @since 1.0
 paysOther ::
-  forall (a :: Type).
+  forall (p :: Purpose) (a :: Type).
   (ToData a) =>
   ValidatorHash ->
   Value ->
   a ->
-  ContextBuilder 'ForSpending
+  ContextBuilder p
 paysOther hash v dt =
   output . Output (ScriptOutput hash . toBuiltinData $ dt) $ v
 
+-- TODO: payLovelaceToPkh, payLovelaceToWallet
+
 -- | @since 1.0
 spendsFromPubKey ::
+  forall (p :: Purpose).
   PubKeyHash ->
   Value ->
-  ContextBuilder 'ForSpending
+  ContextBuilder p
 spendsFromPubKey pkh = input . Input (PubKeyInput pkh)
 
 -- | @since 1.0
 spendsFromPubKeySigned ::
+  forall (p :: Purpose).
   PubKeyHash ->
   Value ->
-  ContextBuilder 'ForSpending
+  ContextBuilder p
 spendsFromPubKeySigned pkh v = spendsFromPubKey pkh v <> signedWith pkh
 
 -- | @since 1.0
 spendsFromWallet ::
+  forall (p :: Purpose).
   Wallet ->
   Value ->
-  ContextBuilder 'ForSpending
+  ContextBuilder p
 spendsFromWallet wallet = spendsFromPubKey (walletPubKeyHash wallet)
 
 -- | @since 1.0
 spendsFromWalletSigned ::
+  forall (p :: Purpose).
   Wallet ->
   Value ->
   ContextBuilder 'ForSpending
@@ -310,26 +390,31 @@ spendsFromWalletSigned wallet = spendsFromPubKeySigned (walletPubKeyHash wallet)
 
 -- | @since 1.0
 spendsFromSelf ::
-  forall (datum :: Type) (redeemer :: Type).
+  forall (p :: Purpose) (datum :: Type) (redeemer :: Type).
   (ToData datum, ToData redeemer) =>
   Value ->
   datum ->
   redeemer ->
-  ContextBuilder 'ForSpending
+  ContextBuilder p
 spendsFromSelf v d r =
   input . Input (OwnInput (toBuiltinData d) . toBuiltinData $ r) $ v
 
 -- | @since 1.0
 spendsFromOther ::
-  forall (datum :: Type).
+  forall (p :: Purpose) (datum :: Type).
   (ToData datum) =>
   ValidatorHash ->
   Value ->
   datum ->
-  ContextBuilder 'ForSpending
+  ContextBuilder p
 spendsFromOther hash v d =
   input . Input (ScriptInput hash . toBuiltinData $ d) $ v
 
+-- TODO: mintWithThisScript, mintValue
+
+-- TODO: compileSpending, compileMinting
+
+{-
 {- | Given a context builder, and expected datum and redeemer types, check if
  all inputs can decode into those types. If this fails, collect all failures
  and give up; otherwise, construct a 'Map' where positions of inputs (in the
@@ -381,6 +466,7 @@ compile (SpendingBuilder is os pkhs tags) =
         mapMaybe toInputDatum is
           <> mapMaybe toOutputDatum os
           <> (datumWithHash <$> tags)
+-}
 
 -- Helpers
 
