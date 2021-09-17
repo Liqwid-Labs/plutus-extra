@@ -9,6 +9,9 @@ module Plutus.V1.Ledger.Contexts.Extra (
   getOutputDatum,
   findDatumAtOutput,
   findDatumAtInput,
+  parseDatum,
+  getAllOutputsWithDatum,
+  getScriptOutputsWithDatum,
   allDatumsAtInput,
   allDatumsAtOutput,
   runsValidator,
@@ -193,6 +196,54 @@ allDatumsAtInput ::
   Scripts.ValidatorHash ->
   [datum]
 allDatumsAtInput = allDatumsAt False
+
+{-# INLINEABLE parseDatum #-}
+
+{- | Helper function to parse a UTXO's datum and keep the UTXO
+-}
+parseDatum ::
+  forall (datum :: Type).
+  (PlutusTx.FromData datum) =>
+  Contexts.TxInfo ->
+  Contexts.TxOut ->
+  Maybe (Contexts.TxOut, datum)
+parseDatum txInfo out = do
+  dh <- Contexts.txOutDatumHash out
+  datum <- Scripts.getDatum <$> Contexts.findDatum dh txInfo
+  typedDatum <- PlutusTx.fromBuiltinData datum
+  return (out, typedDatum)
+
+{-# INLINEABLE getAllOutputsWithDatum #-}
+
+{- | Get a list of pairs (utxo, datum) consisting of outputs
+     whose datums succeded to parse as the passed `datum`
+     type and those datums themselves
+     that go to any address
+-}
+getAllOutputsWithDatum ::
+  forall (datum :: Type).
+  (PlutusTx.FromData datum) =>
+  Contexts.ScriptContext ->
+  [(Contexts.TxOut, datum)]
+getAllOutputsWithDatum
+  Contexts.ScriptContext{scriptContextTxInfo=txInfo} =
+  mapMaybe (parseDatum txInfo) (Contexts.txInfoOutputs txInfo)
+
+{-# INLINEABLE getScriptOutputsWithDatum #-}
+
+{- | Get a list of pairs (utxo, datum) consisting of outputs
+     whose datums succeded to parse as the passed `datum`
+     type and those datums themselves
+     that go to the script address
+-}
+getScriptOutputsWithDatum ::
+  forall (datum :: Type).
+  (PlutusTx.FromData datum) =>
+  Contexts.ScriptContext ->
+  [(Contexts.TxOut, datum)]
+getScriptOutputsWithDatum
+  sc@Contexts.ScriptContext{scriptContextTxInfo=txInfo} =
+  mapMaybe (parseDatum txInfo) (Contexts.getContinuingOutputs sc)
 
 --------------------------------------------------------------------------------
 
