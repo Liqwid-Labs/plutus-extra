@@ -48,6 +48,7 @@ library
     Test.Tasty.Plutus.Context
     Test.Tasty.Plutus.Validator.Unit
 
+  other-modules:   Test.Tasty.Plutus.Context.Internal
   build-depends:
     , base               ^>=4.14
     , containers         ^>=0.6.2.1
