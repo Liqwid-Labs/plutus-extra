@@ -1,8 +1,7 @@
 -- Internals of context building.
 module Test.Tasty.Plutus.Context.Internal (
   Purpose (..),
-  InputType (..),
-  OutputType (..),
+  ExternalType (..),
   Input (..),
   Output (..),
   Minting (..),
@@ -62,35 +61,19 @@ data Purpose
     -- @since 1.0
     ForSpending
 
-{- | Different input types, and some of their metadata.
+{- | \'Marker type\' for input and output metadata.
 
- @since 1.0
+ @since 3.0
 -}
-data InputType
-  = -- | @since 1.0
-    PubKeyInput PubKeyHash
-  | -- | @since 1.0
-    ScriptInput ValidatorHash BuiltinData
+data ExternalType
+  = -- | @since 3.0
+    PubKeyType PubKeyHash
   | -- | @since 3.0
-    OwnInput BuiltinData
+    ScriptType ValidatorHash BuiltinData
+  | -- | @since 3.0
+    OwnType BuiltinData
   deriving stock
-    ( -- | @since 1.0
-      Show
-    )
-
-{- | Different output types, and some of their metadata.
-
- @since 1.0
--}
-data OutputType
-  = -- | @since 1.0
-    PubKeyOutput PubKeyHash
-  | -- | @since 1.0
-    ScriptOutput ValidatorHash BuiltinData
-  | -- | @since 1.0
-    OwnOutput BuiltinData
-  deriving stock
-    ( -- | @since 1.0
+    ( -- | @since 3.0
       Show
     )
 
@@ -99,8 +82,8 @@ data OutputType
  @since 1.0
 -}
 data Input
-  = -- | @since 1.0
-    Input InputType Value
+  = -- | @since 3.0
+    Input ExternalType Value
   deriving stock
     ( -- | @since 1.0
       Show
@@ -111,8 +94,8 @@ data Input
  @since 1.0
 -}
 data Output
-  = -- | @since 1.0
-    Output OutputType Value
+  = -- | @since 3.0
+    Output ExternalType Value
   deriving stock
     ( -- | @since 1.0
       Show
@@ -213,7 +196,7 @@ compileSpending conf cb d val =
     go =
       let dt = toBuiltinData d
           baseInfo = baseTxInfo conf cb
-          inInfo = createTxInInfo 0 . Input (OwnInput dt) $ val
+          inInfo = createTxInInfo 0 . Input (OwnType dt) $ val
           inData = datumWithHash dt
        in baseInfo
             { txInfoInputs = inInfo : txInfoInputs baseInfo
@@ -268,15 +251,15 @@ mintingToValue cs = \case
 
 toInputDatum :: Input -> Maybe (DatumHash, Datum)
 toInputDatum (Input typ _) = case typ of
-  ScriptInput _ dt -> Just . datumWithHash $ dt
-  OwnInput dt -> Just . datumWithHash $ dt
-  PubKeyInput _ -> Nothing
+  ScriptType _ dt -> Just . datumWithHash $ dt
+  OwnType dt -> Just . datumWithHash $ dt
+  PubKeyType _ -> Nothing
 
 toOutputDatum :: Output -> Maybe (DatumHash, Datum)
 toOutputDatum (Output typ _) = case typ of
-  ScriptOutput _ dt -> Just . datumWithHash $ dt
-  OwnOutput dt -> Just . datumWithHash $ dt
-  PubKeyOutput _ -> Nothing
+  ScriptType _ dt -> Just . datumWithHash $ dt
+  OwnType dt -> Just . datumWithHash $ dt
+  PubKeyType _ -> Nothing
 
 datumWithHash :: BuiltinData -> (DatumHash, Datum)
 datumWithHash dt = (datumHash dt', dt')
@@ -287,10 +270,10 @@ datumWithHash dt = (datumHash dt', dt')
 createTxInInfo :: Integer -> Input -> TxInInfo
 createTxInInfo ix (Input typ v) =
   TxInInfo (TxOutRef (TxId "testTxId") ix) $ case typ of
-    PubKeyInput pkh -> TxOut (pubKeyHashAddress pkh) v Nothing
-    ScriptInput hash dat ->
+    PubKeyType pkh -> TxOut (pubKeyHashAddress pkh) v Nothing
+    ScriptType hash dat ->
       TxOut (scriptHashAddress hash) v . justDatumHash $ dat
-    OwnInput dat ->
+    OwnType dat ->
       TxOut (scriptHashAddress "") v . justDatumHash $ dat
 
 justDatumHash :: BuiltinData -> Maybe DatumHash
@@ -298,8 +281,8 @@ justDatumHash = Just . datumHash . Datum
 
 toTxOut :: Output -> TxOut
 toTxOut (Output typ v) = case typ of
-  PubKeyOutput pkh -> TxOut (pubKeyHashAddress pkh) v Nothing
-  ScriptOutput hash dat ->
+  PubKeyType pkh -> TxOut (pubKeyHashAddress pkh) v Nothing
+  ScriptType hash dat ->
     TxOut (scriptHashAddress hash) v . justDatumHash $ dat
-  OwnOutput dat ->
+  OwnType dat ->
     TxOut (scriptHashAddress "") v . justDatumHash $ dat

@@ -15,8 +15,7 @@ module Test.Tasty.Plutus.Context (
   Internal.Purpose (..),
 
   -- ** Building contexts
-  Internal.InputType (..),
-  Internal.OutputType (..),
+  Internal.ExternalType (..),
   Internal.Input (..),
   Internal.Output (..),
   Internal.Minting (..),
@@ -164,7 +163,7 @@ paysToPubKey ::
   Value ->
   Internal.ContextBuilder p
 paysToPubKey pkh =
-  output . Internal.Output (Internal.PubKeyOutput pkh)
+  output . Internal.Output (Internal.PubKeyType pkh)
 
 -- | @since 1.0
 paysToWallet ::
@@ -182,7 +181,7 @@ paysSelf ::
   a ->
   Internal.ContextBuilder p
 paysSelf v dt =
-  output . Internal.Output (Internal.OwnOutput . toBuiltinData $ dt) $ v
+  output . Internal.Output (Internal.OwnType . toBuiltinData $ dt) $ v
 
 -- | @since 1.0
 paysOther ::
@@ -193,7 +192,7 @@ paysOther ::
   a ->
   Internal.ContextBuilder p
 paysOther hash v dt =
-  output . Internal.Output (Internal.ScriptOutput hash . toBuiltinData $ dt) $ v
+  output . Internal.Output (Internal.ScriptType hash . toBuiltinData $ dt) $ v
 
 -- | @since 3.0
 paysLovelaceToPubKey ::
@@ -218,7 +217,7 @@ spendsFromPubKey ::
   Value ->
   Internal.ContextBuilder p
 spendsFromPubKey pkh =
-  input . Internal.Input (Internal.PubKeyInput pkh)
+  input . Internal.Input (Internal.PubKeyType pkh)
 
 -- | @since 1.0
 spendsFromPubKeySigned ::
@@ -253,7 +252,7 @@ spendsFromOther ::
   datum ->
   Internal.ContextBuilder p
 spendsFromOther hash v d =
-  input . Internal.Input (Internal.ScriptInput hash . toBuiltinData $ d) $ v
+  input . Internal.Input (Internal.ScriptType hash . toBuiltinData $ d) $ v
 
 -- | @since 3.0
 mintsWithSelf ::

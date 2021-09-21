@@ -14,6 +14,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0)
 * `tagged` is now `datum` to reflect its more general purpose.
 * 'Construction' functions in `Context` are now polymorphic over
   `Purpose`s.
+* `InputType` and `OutputType` unified into `ExternalType`.
 
 ### Removed
 
