@@ -200,6 +200,8 @@ allDatumsAtInput = allDatumsAt False
 {-# INLINEABLE parseDatum #-}
 
 {- | Helper function to parse a UTXO's datum and keep the UTXO
+
+  @since 1.2
 -}
 parseDatum ::
   forall (datum :: Type).
@@ -219,6 +221,8 @@ parseDatum txInfo out = do
      whose datums succeded to parse as the passed `datum`
      type and those datums themselves
      that go to any address
+
+  @since 1.2
 -}
 getAllOutputsWithDatum ::
   forall (datum :: Type).
@@ -235,6 +239,8 @@ getAllOutputsWithDatum
      whose datums succeded to parse as the passed `datum`
      type and those datums themselves
      that go to the script address
+
+  @since 1.2
 -}
 getScriptOutputsWithDatum ::
   forall (datum :: Type).
