@@ -8,37 +8,15 @@ module Test.Tasty.Plutus.Context.Internal (
   Minting (..),
   ContextBuilder (..),
   TransactionConfig (..),
-  defaultTransactionConfig,
-  input,
-  output,
-  signedWith,
-  datum,
-  addDatum,
-  minting,
-  paysToPubKey,
-  paysToWallet,
-  paysLovelaceToPubKey,
-  paysLovelaceToWallet,
-  paysSelf,
-  paysOther,
-  spendsFromPubKey,
-  spendsFromWallet,
-  spendsFromPubKeySigned,
-  spendsFromWalletSigned,
-  spendsFromOther,
-  mintsWithSelf,
-  mintsValue,
   compileSpending,
   compileMinting,
 ) where
 
 import Data.Kind (Type)
 import Data.Sequence (Seq)
-import Data.Sequence qualified as Seq
 import GHC.Exts (toList)
-import Ledger.Ada (lovelaceValueOf)
 import Ledger.Address (pubKeyHashAddress, scriptHashAddress)
-import Ledger.Crypto (PubKeyHash, pubKeyHash)
+import Ledger.Crypto (PubKeyHash)
 import Ledger.Scripts (Datum (Datum), DatumHash, ValidatorHash, datumHash)
 import Ledger.Value (CurrencySymbol, TokenName, Value)
 import Plutus.V1.Ledger.Contexts (
@@ -62,13 +40,11 @@ import Plutus.V1.Ledger.Contexts (
   TxOutRef (TxOutRef),
  )
 import Plutus.V1.Ledger.Interval (Interval)
-import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.TxId (TxId (TxId))
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
-import Wallet.Emulator.Types (Wallet, walletPubKey)
 import Witherable (mapMaybe)
 
 {- | Describes what kind of validator this is meant to test. Directly
@@ -188,27 +164,6 @@ data TransactionConfig = TransactionConfig
       Show
     )
 
-{- | A transaction configuration with the following settings:
-
- * 'testFee' is the empty 'Value'.
- * 'testTimeRange' is 'always'.
- * Other values are arbitrary
-
- In particular, only 'testFee' and 'testTimeRange' are assumed to be stable;
- if you want specific values, set them manually.
-
- @since 3.0
--}
-defaultTransactionConfig :: TransactionConfig
-defaultTransactionConfig =
-  TransactionConfig
-    { testFee = mempty
-    , testTimeRange = Interval.always
-    , testTxId = TxId "abcd"
-    , testCurrencySymbol = "ff"
-    , testValidatorHash = "90ab"
-    }
-
 {- | A way to incrementally build up a script context.
 
  It is tagged with a 'Purpose' as a marker for what kind of script it's
@@ -239,167 +194,6 @@ instance Semigroup (ContextBuilder p) where
   {-# INLINEABLE (<>) #-}
   ContextBuilder is os pkhs ts ms <> ContextBuilder is' os' pkhs' ts' ms' =
     ContextBuilder (is <> is') (os <> os') (pkhs <> pkhs') (ts <> ts') (ms <> ms')
-
-{- | Single-input context.
-
- @since 1.0
--}
-input :: forall (p :: Purpose). Input -> ContextBuilder p
-input x = ContextBuilder (Seq.singleton x) mempty mempty mempty mempty
-
-{- | Single-output context.
-
- @since 1.0
--}
-output :: forall (p :: Purpose). Output -> ContextBuilder p
-output x = ContextBuilder mempty (Seq.singleton x) mempty mempty mempty
-
-{- | Context with one signature.
-
- @since 1.0
--}
-signedWith :: forall (p :: Purpose). PubKeyHash -> ContextBuilder p
-signedWith pkh = ContextBuilder mempty mempty (Seq.singleton pkh) mempty mempty
-
-{- | Context with one additional datum.
-
- @since 1.0
--}
-datum :: forall (p :: Purpose). BuiltinData -> ContextBuilder p
-datum d = ContextBuilder mempty mempty mempty (Seq.singleton d) mempty
-
-{- | Short for @'datum' '.' 'toBuiltinData'@.
-
- @since 3.0
--}
-addDatum ::
-  forall (p :: Purpose) (a :: Type).
-  (ToData a) =>
-  a ->
-  ContextBuilder p
-addDatum = datum . toBuiltinData
-
-{- | Context with one minting.
-
- @since 3.0
--}
-minting ::
-  forall (p :: Purpose).
-  Minting ->
-  ContextBuilder p
-minting = ContextBuilder mempty mempty mempty mempty . Seq.singleton
-
--- | @since 1.0
-paysToPubKey ::
-  forall (p :: Purpose).
-  PubKeyHash ->
-  Value ->
-  ContextBuilder p
-paysToPubKey pkh = output . Output (PubKeyOutput pkh)
-
--- | @since 1.0
-paysToWallet ::
-  forall (p :: Purpose).
-  Wallet ->
-  Value ->
-  ContextBuilder p
-paysToWallet wallet = paysToPubKey (walletPubKeyHash wallet)
-
--- | @since 1.0
-paysSelf ::
-  forall (p :: Purpose) (a :: Type).
-  (ToData a) =>
-  Value ->
-  a ->
-  ContextBuilder p
-paysSelf v dt = output . Output (OwnOutput . toBuiltinData $ dt) $ v
-
--- | @since 1.0
-paysOther ::
-  forall (p :: Purpose) (a :: Type).
-  (ToData a) =>
-  ValidatorHash ->
-  Value ->
-  a ->
-  ContextBuilder p
-paysOther hash v dt =
-  output . Output (ScriptOutput hash . toBuiltinData $ dt) $ v
-
--- | @since 3.0
-paysLovelaceToPubKey ::
-  forall (p :: Purpose).
-  PubKeyHash ->
-  Integer ->
-  ContextBuilder p
-paysLovelaceToPubKey pkh = paysToPubKey pkh . lovelaceValueOf
-
--- | @since 3.0
-paysLovelaceToWallet ::
-  forall (p :: Purpose).
-  Wallet ->
-  Integer ->
-  ContextBuilder p
-paysLovelaceToWallet wallet = paysToWallet wallet . lovelaceValueOf
-
--- | @since 1.0
-spendsFromPubKey ::
-  forall (p :: Purpose).
-  PubKeyHash ->
-  Value ->
-  ContextBuilder p
-spendsFromPubKey pkh = input . Input (PubKeyInput pkh)
-
--- | @since 1.0
-spendsFromPubKeySigned ::
-  forall (p :: Purpose).
-  PubKeyHash ->
-  Value ->
-  ContextBuilder p
-spendsFromPubKeySigned pkh v = spendsFromPubKey pkh v <> signedWith pkh
-
--- | @since 1.0
-spendsFromWallet ::
-  forall (p :: Purpose).
-  Wallet ->
-  Value ->
-  ContextBuilder p
-spendsFromWallet wallet = spendsFromPubKey (walletPubKeyHash wallet)
-
--- | @since 1.0
-spendsFromWalletSigned ::
-  forall (p :: Purpose).
-  Wallet ->
-  Value ->
-  ContextBuilder p
-spendsFromWalletSigned wallet = spendsFromPubKeySigned (walletPubKeyHash wallet)
-
--- | @since 1.0
-spendsFromOther ::
-  forall (p :: Purpose) (datum :: Type).
-  (ToData datum) =>
-  ValidatorHash ->
-  Value ->
-  datum ->
-  ContextBuilder p
-spendsFromOther hash v d =
-  input . Input (ScriptInput hash . toBuiltinData $ d) $ v
-
--- | @since 3.0
-mintsWithSelf ::
-  forall (p :: Purpose).
-  TokenName ->
-  Integer ->
-  ContextBuilder p
-mintsWithSelf tn = minting . OwnMint tn
-
--- | @since 3.0
-mintsValue ::
-  forall (p :: Purpose).
-  Value ->
-  ContextBuilder p
-mintsValue = minting . OtherMint
-
--- Helpers
 
 compileSpending ::
   forall (datum :: Type).
@@ -438,6 +232,8 @@ compileMinting conf cb =
   where
     go :: TxInfo
     go = baseTxInfo conf cb
+
+-- Helpers
 
 baseTxInfo ::
   forall (p :: Purpose).
@@ -507,6 +303,3 @@ toTxOut (Output typ v) = case typ of
     TxOut (scriptHashAddress hash) v . justDatumHash $ dat
   OwnOutput dat ->
     TxOut (scriptHashAddress "") v . justDatumHash $ dat
-
-walletPubKeyHash :: Wallet -> PubKeyHash
-walletPubKeyHash = pubKeyHash . walletPubKey
