@@ -59,9 +59,7 @@ library
     , plutus-tx
     , pretty             ^>=1.1.3.6
     , pretty-show        ^>=1.10
-    , safe               ^>=0.3.19
     , tagged             ^>=0.8.6.1
     , tasty              ^>=1.4.1
-    , text               ^>=1.2.4.1
 
   hs-source-dirs:  src
