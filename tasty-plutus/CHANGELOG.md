@@ -23,6 +23,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0)
 * `spendsFromSelf`, as self-spending is now handled differently.
 * `compile`, as this is now handled purely internally.
 * `DecodeFailure`, as this condition no longer exists.
+* Dependency on `validation`.
 
 ## 2.0 -- 2021-09-14
 
