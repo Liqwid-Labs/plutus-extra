@@ -8,6 +8,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0)
 
 * `paysLovelaceToPubKey`, `paysLovelaceToWallet`.
 * Minting validator support and functions.
+* `TestData` type for testing API.
 
 ### Changed
 
@@ -15,6 +16,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0)
 * 'Construction' functions in `Context` are now polymorphic over
   `Purpose`s.
 * `InputType` and `OutputType` unified into `ExternalType`.
+* Testing API now supports minting, and has been reworked with that in mind.
 
 ### Removed
 
@@ -23,7 +25,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0)
 * `spendsFromSelf`, as self-spending is now handled differently.
 * `compile`, as this is now handled purely internally.
 * `DecodeFailure`, as this condition no longer exists.
-* Dependency on `validation`.
+* Dependencies on `validation` and `witherable`.
 
 ## 2.0 -- 2021-09-14
 

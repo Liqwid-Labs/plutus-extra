@@ -12,6 +12,7 @@ module Test.Tasty.Plutus.Context.Internal (
 ) where
 
 import Data.Kind (Type)
+import Data.Maybe (mapMaybe)
 import Data.Sequence (Seq)
 import GHC.Exts (toList)
 import Ledger.Address (pubKeyHashAddress, scriptHashAddress)
@@ -44,7 +45,6 @@ import Plutus.V1.Ledger.TxId (TxId (TxId))
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
-import Witherable (mapMaybe)
 
 {- | Describes what kind of validator this is meant to test. Directly
  corresponds to 'ScriptPurpose'.
@@ -234,10 +234,9 @@ baseTxInfo conf (ContextBuilder ins outs pkhs dats mints) =
     , txInfoValidRange = testTimeRange conf
     , txInfoSignatories = toList pkhs
     , txInfoData =
-        toList $
-          mapMaybe toInputDatum ins
-            <> mapMaybe toOutputDatum outs
-            <> fmap datumWithHash dats
+        (mapMaybe toInputDatum . toList $ ins)
+          <> (mapMaybe toOutputDatum . toList $ outs)
+          <> (toList . fmap datumWithHash $ dats)
     , txInfoId = TxId "testTx"
     }
   where

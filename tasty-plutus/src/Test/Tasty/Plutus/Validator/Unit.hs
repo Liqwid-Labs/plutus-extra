@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 {- |
  Module: Test.Tasty.Plutus.Validator.Unit
  Copyright: (C) MLabs 2021
@@ -14,6 +12,10 @@ module Test.Tasty.Plutus.Validator.Unit (
   -- * Validator context types
   TestData (..),
   WithValidator,
+
+  -- * Wrappers
+  toTestValidator,
+  toTestMintingPolicy,
 
   -- * Testing API
   withValidator,
@@ -40,18 +42,19 @@ import Plutus.V1.Ledger.Scripts (
   Redeemer (Redeemer),
   ScriptError,
   Validator,
-  mkMintingPolicyScript,
-  mkValidatorScript,
   runMintingPolicyScript,
   runScript,
  )
-import PlutusTx.Builtins (BuiltinData, trace)
-import PlutusTx.Code (CompiledCode, applyCode)
+import PlutusTx.Builtins (
+  BuiltinData,
+  BuiltinString,
+  appendString,
+  trace,
+ )
 import PlutusTx.IsData.Class (
   FromData (fromBuiltinData),
   ToData (toBuiltinData),
  )
-import PlutusTx.TH (compile)
 import Safe (lastMay)
 import Test.Tasty (testGroup)
 import Test.Tasty.Plutus.Context.Internal (
@@ -85,6 +88,40 @@ import Text.PrettyPrint (
 import Text.Show.Pretty (ppDoc)
 import Type.Reflection (Typeable)
 
+-- | @since 3.0
+{-# INLINEABLE toTestValidator #-}
+toTestValidator ::
+  forall (datum :: Type) (redeemer :: Type).
+  (FromData datum, FromData redeemer) =>
+  (datum -> redeemer -> ScriptContext -> Bool) ->
+  (BuiltinData -> BuiltinData -> BuiltinData -> ())
+toTestValidator f d r p = case fromBuiltinData d of
+  Nothing -> reportParseFailed "Datum"
+  Just d' -> case fromBuiltinData r of
+    Nothing -> reportParseFailed "Redeemer"
+    Just r' -> case fromBuiltinData p of
+      Nothing -> reportParseFailed "ScriptContext"
+      Just p' ->
+        if f d' r' p'
+          then reportPass
+          else reportFail
+
+-- | @since 3.0
+{-# INLINEABLE toTestMintingPolicy #-}
+toTestMintingPolicy ::
+  forall (redeemer :: Type).
+  (FromData redeemer) =>
+  (redeemer -> ScriptContext -> Bool) ->
+  (BuiltinData -> BuiltinData -> ())
+toTestMintingPolicy f r p = case fromBuiltinData r of
+  Nothing -> reportParseFailed "Redeemer"
+  Just r' -> case fromBuiltinData p of
+    Nothing -> reportParseFailed "ScriptContext"
+    Just p' ->
+      if f r' p'
+        then reportPass
+        else reportFail
+
 {- | A structure housing a validator, and the data needed to execute it.
 
  @since 3.0
@@ -99,7 +136,7 @@ data TestData (p :: Purpose) where
     , Show datum
     , Show redeemer
     ) =>
-    CompiledCode (datum -> redeemer -> ScriptContext -> Bool) ->
+    Validator ->
     datum ->
     redeemer ->
     Value ->
@@ -107,7 +144,7 @@ data TestData (p :: Purpose) where
   -- | @since 3.0
   MintingTest ::
     (ToData redeemer, FromData redeemer, Show redeemer) =>
-    CompiledCode (redeemer -> ScriptContext -> Bool) ->
+    MintingPolicy ->
     redeemer ->
     TestData 'ForMinting
 
@@ -184,20 +221,18 @@ data ValidatorTest (p :: Purpose)
 
 instance (Typeable p) => IsTest (ValidatorTest p) where
   run _ (ValidatorTest expected cb (conf, td)) _ = pure $ case td of
-    SpendingTest cc d r val ->
+    SpendingTest validator d r val ->
       let context = compileSpending conf cb d val
           context' = Context . toBuiltinData $ context
           d' = Datum . toBuiltinData $ d
           r' = Redeemer . toBuiltinData $ r
-          validator = compileValidator cc
        in case runScript context' validator d' r' of
             Left err -> testFailed . formatScriptError $ err
             Right (_, logs) -> deliverResult expected logs conf context td
-    MintingTest cc r ->
+    MintingTest mp r ->
       let context = compileMinting conf cb
           context' = Context . toBuiltinData $ context
           r' = Redeemer . toBuiltinData $ r
-          mp = compileMintingPolicy cc
        in case runMintingPolicyScript context' mp r' of
             Left err -> testFailed . formatScriptError $ err
             Right (_, logs) -> deliverResult expected logs conf context td
@@ -268,69 +303,22 @@ deliverResult expected logs conf sc td =
 ourStyle :: Style
 ourStyle = style {lineLength = 80}
 
-compileValidator ::
-  forall (datum :: Type) (redeemer :: Type).
-  (FromData datum, FromData redeemer) =>
-  CompiledCode (datum -> redeemer -> ScriptContext -> Bool) ->
-  Validator
-compileValidator =
-  mkValidatorScript . applyCode $$(compile [||wrap||])
-  where
-    -- This is needed for, as the Plutus docs say it, 'technical reasons'. More
-    -- specifically, without 'trapping' the type class constraints on 'datum'
-    -- and 'redeemer', the compiler can't assure us that what it compiles can
-    -- 'fit', as 'applyCode' doesn't guarantee any constraints on 'datum' or
-    -- 'redeemer'. This throws GHC into a tailspin at compile time, as it finds
-    -- itself having to prove that type class dictionaries exist before it can
-    -- be sure of that.
-    --
-    -- Doing this 'local trapping' allows us to avoid this problem, as this
-    -- 'burns in' the type class dictionaries 'atop' of 'wrap'.
-    --
-    -- Koz
-    wrap ::
-      (datum -> redeemer -> ScriptContext -> Bool) ->
-      BuiltinData ->
-      BuiltinData ->
-      BuiltinData ->
-      ()
-    wrap f d r p = case fromBuiltinData d of
-      Nothing -> trace "tasty-plutus: Parse failed: Datum" ()
-      Just d' -> case fromBuiltinData r of
-        Nothing -> trace "tasty-plutus: Parse failed: Redeemer" ()
-        Just r' -> case fromBuiltinData p of
-          Nothing -> trace "tasty-plutus: Parse failed: ScriptContext" ()
-          Just p' ->
-            if f d' r' p'
-              then trace "tasty-plutus: Pass" ()
-              else trace "tasty-plutus: Fail" ()
-
-compileMintingPolicy ::
-  forall (redeemer :: Type).
-  (FromData redeemer) =>
-  CompiledCode (redeemer -> ScriptContext -> Bool) ->
-  MintingPolicy
-compileMintingPolicy =
-  mkMintingPolicyScript . applyCode $$(compile [||wrap||])
-  where
-    -- See the note on the 'wrap' function for 'compileValidator' for why this
-    -- is needed.
-    --
-    -- Koz
-    wrap ::
-      (redeemer -> ScriptContext -> Bool) ->
-      BuiltinData ->
-      BuiltinData ->
-      ()
-    wrap f r p = case fromBuiltinData r of
-      Nothing -> trace "tasty-plutus: Parse failed: Redeemer" ()
-      Just r' -> case fromBuiltinData p of
-        Nothing -> trace "tasty-plutus: Parse failed: ScriptContext" ()
-        Just p' ->
-          if f r' p'
-            then trace "tasty-plutus: Pass" ()
-            else trace "tasty-plutus: Fail" ()
-
 formatScriptError :: ScriptError -> String
 formatScriptError =
   renderStyle ourStyle . hang "Script execution error:" 4 . ppDoc
+
+{-# INLINEABLE reportParseFailed #-}
+reportParseFailed :: BuiltinString -> ()
+reportParseFailed what = report ("Parse failed: " `appendString` what)
+
+{-# INLINEABLE reportPass #-}
+reportPass :: ()
+reportPass = report "Pass"
+
+{-# INLINEABLE reportFail #-}
+reportFail :: ()
+reportFail = report "Fail"
+
+{-# INLINEABLE report #-}
+report :: BuiltinString -> ()
+report what = trace ("tasty-plutus: " `appendString` what) ()
