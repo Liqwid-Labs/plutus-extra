@@ -198,7 +198,7 @@ compileSpending conf cb d val =
           baseInfo = baseTxInfo conf cb
           inInfo =
             createTxInInfo
-              (testValidatorHash conf)
+              conf
               (0, Input (OwnType dt) val)
           inData = datumWithHash dt
        in baseInfo
@@ -227,10 +227,10 @@ baseTxInfo ::
   ContextBuilder p ->
   TxInfo
 baseTxInfo conf (ContextBuilder ins outs pkhs dats mints) =
-  let valHash = testValidatorHash conf
-      currSymb = testCurrencySymbol conf
+  let currSymb = testCurrencySymbol conf
+      valHash = testValidatorHash conf
    in TxInfo
-        { txInfoInputs = createTxInInfo valHash <$> indexedInputs
+        { txInfoInputs = createTxInInfo conf <$> indexedInputs
         , txInfoOutputs = toList . fmap (toTxOut valHash) $ outs
         , txInfoFee = testFee conf
         , txInfoMint = foldMap (mintingToValue currSymb) mints
@@ -271,14 +271,14 @@ datumWithHash dt = (datumHash dt', dt')
     dt' :: Datum
     dt' = Datum dt
 
-createTxInInfo :: ValidatorHash -> (Integer, Input) -> TxInInfo
-createTxInInfo valHash (ix, Input typ v) =
-  TxInInfo (TxOutRef (TxId "testTxId") ix) $ case typ of
+createTxInInfo :: TransactionConfig -> (Integer, Input) -> TxInInfo
+createTxInInfo conf (ix, Input typ v) =
+  TxInInfo (TxOutRef (testTxId conf) ix) $ case typ of
     PubKeyType pkh -> TxOut (pubKeyHashAddress pkh) v Nothing
     ScriptType hash dat ->
       TxOut (scriptHashAddress hash) v . justDatumHash $ dat
     OwnType dat ->
-      TxOut (scriptHashAddress valHash) v . justDatumHash $ dat
+      TxOut (scriptHashAddress . testValidatorHash $ conf) v . justDatumHash $ dat
 
 justDatumHash :: BuiltinData -> Maybe DatumHash
 justDatumHash = Just . datumHash . Datum
