@@ -22,24 +22,29 @@ module Test.Tasty.Plutus.Validator.Unit (
   shouldValidate,
   shouldn'tValidate,
 
-  -- * State control helpers
-  withConfig,
-  withTestData,
+  -- * Options
+  Fee (..),
+  TimeRange (..),
+  TestTxId (..),
+  TestCurrencySymbol (..),
+  TestValidatorHash (..),
 ) where
 
 import Control.Monad.RWS.Strict (RWS, evalRWS)
-import Control.Monad.Reader (MonadReader, asks, local)
+import Control.Monad.Reader (MonadReader, asks)
 import Control.Monad.Writer (tell)
-import Data.Bifunctor (first, second)
 import Data.Kind (Type)
+import Data.Proxy (Proxy (Proxy))
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Data.Text qualified as Text
-import GHC.Exts (toList)
-import Ledger.Value (Value)
+import GHC.Exts (IsString, toList)
+import Ledger.Value (CurrencySymbol (CurrencySymbol), Value)
 import Plutus.V1.Ledger.Contexts (ScriptContext)
+import Plutus.V1.Ledger.Interval (Interval)
+import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts (
   Context (Context),
   Datum (Datum),
@@ -47,9 +52,12 @@ import Plutus.V1.Ledger.Scripts (
   Redeemer (Redeemer),
   ScriptError,
   Validator,
+  ValidatorHash (ValidatorHash),
   runMintingPolicyScript,
   runScript,
  )
+import Plutus.V1.Ledger.Time (POSIXTime)
+import Plutus.V1.Ledger.TxId (TxId (TxId))
 import PlutusTx.Builtins (
   BuiltinData,
   BuiltinString,
@@ -62,10 +70,28 @@ import PlutusTx.IsData.Class (
  )
 import Safe (lastMay)
 import Test.Tasty (testGroup)
+import Test.Tasty.Options (
+  IsOption (
+    defaultValue,
+    optionHelp,
+    optionName,
+    parseValue,
+    showDefaultValue
+  ),
+  OptionDescription (Option),
+  lookupOption,
+ )
 import Test.Tasty.Plutus.Context.Internal (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
-  TransactionConfig,
+  TransactionConfig (
+    TransactionConfig,
+    testCurrencySymbol,
+    testFee,
+    testTimeRange,
+    testTxId,
+    testValidatorHash
+  ),
   compileMinting,
   compileSpending,
  )
@@ -197,14 +223,14 @@ data TestData (p :: Purpose) where
  >    shouldn'tValidatoe "Invalid case" invalidContext
  >    ...
 
- For convenience, we also let you access the 'TestData' and 'TransactionConfig'
+ For convenience, we also let you access the 'TestData'
  in the environment using 'ask' and \'hot modify\' using 'local', as per
  'MonadReader'.
 
  @since 3.0
 -}
 newtype WithValidator (p :: Purpose) (a :: Type)
-  = WithValidator (RWS (TransactionConfig, TestData p) (Seq TestTree) () a)
+  = WithValidator (RWS (TestData p) (Seq TestTree) () a)
   deriving
     ( -- | @since 1.0
       Functor
@@ -213,31 +239,9 @@ newtype WithValidator (p :: Purpose) (a :: Type)
     , -- | @since 1.0
       Monad
     , -- | @since 3.0
-      MonadReader (TransactionConfig, TestData p)
+      MonadReader (TestData p)
     )
-    via (RWS (TransactionConfig, TestData p) (Seq TestTree) ())
-
-{- | A specialized form of 'local', modifying only the 'TransactionConfig'.
-
- @since 3.0
--}
-withConfig ::
-  forall (p :: Purpose) (a :: Type).
-  (TransactionConfig -> TransactionConfig) ->
-  WithValidator p a ->
-  WithValidator p a
-withConfig f = local (first f)
-
-{- | A specialized form of 'local', modifying only the 'TestData'.
-
- @since 3.0
--}
-withTestData ::
-  forall (p :: Purpose) (a :: Type).
-  (TestData p -> TestData p) ->
-  WithValidator p a ->
-  WithValidator p a
-withTestData f = local (second f)
+    via (RWS (TestData p) (Seq TestTree) ())
 
 {- | Given the name for the tests, a configuration, and test data, execute all
  specified tests in the 'WithValidator' as a 'TestTree'.
@@ -255,12 +259,11 @@ withTestData f = local (second f)
 withValidator ::
   forall (p :: Purpose).
   String ->
-  TransactionConfig ->
   TestData p ->
   WithValidator p () ->
   TestTree
-withValidator name conf td (WithValidator comp) =
-  case evalRWS comp (conf, td) () of
+withValidator name td (WithValidator comp) =
+  case evalRWS comp td () of
     ((), tests) -> testGroup name . toList $ tests
 
 {- | Specify that, in the given context, the validation should succeed.
@@ -292,15 +295,148 @@ shouldn'tValidate name cb = WithValidator $ do
   tt <- asks (singleTest name . ValidatorTest Fail cb)
   tell . Seq.singleton $ tt
 
+{- | The transaction fee used for the tests.
+
+ Defaults to 'mempty'. Parsing this option is currently not supported.
+
+ @since 3.0
+-}
+newtype Fee = Fee Value
+  deriving stock
+    ( -- | @since 3.0
+      Show
+    )
+
+-- | @since 3.0
+instance IsOption Fee where
+  defaultValue = Fee mempty
+
+  parseValue = const Nothing
+
+  optionName = Tagged "fee"
+
+  optionHelp = Tagged "CLI PASSING NOT SUPPORTED"
+
+  showDefaultValue = Just . show
+
+{- | Valid time range for tests.
+
+ Defaults to 'Interval.always'. Parsing this option is currently not supported.
+
+ @since 3.0
+-}
+newtype TimeRange = TimeRange (Interval POSIXTime)
+  deriving stock
+    ( -- | @since 3.0
+      Show
+    )
+
+-- | @since 3.0
+instance IsOption TimeRange where
+  defaultValue = TimeRange Interval.always
+
+  parseValue = const Nothing
+
+  optionName = Tagged "time-range"
+
+  optionHelp = Tagged "CLI PASSING NOT SUPPORTED"
+
+  showDefaultValue = Just . show
+
+{- | The 'TxId' whose inputs should be consumed.
+
+ The default value is arbitrary - if you need a specific value, set it
+ manually. Parsing this option is currently not supported.
+
+ @since 3.0
+-}
+newtype TestTxId = TestTxId TxId
+  deriving stock
+    ( -- | @since 3.0
+      Show
+    )
+
+-- | @since 3.0
+instance IsOption TestTxId where
+  defaultValue = TestTxId . TxId $ "abcd"
+
+  parseValue = const Nothing
+
+  optionName = Tagged "tx-id"
+
+  optionHelp = Tagged "CLI PASSING NOT SUPPORTED"
+
+  showDefaultValue = const Nothing
+
+{- | The 'CurrencySymbol' used in the tests.
+
+ The default value is arbitrary - if you need a specific value, set it
+ manually. Parsing this option is currently not supported.
+
+ @since 3.0
+-}
+newtype TestCurrencySymbol = TestCurrencySymbol CurrencySymbol
+  deriving stock
+    ( -- | @since 3.0
+      Show
+    )
+  deriving
+    ( -- | @since 3.0
+      IsString
+    )
+    via CurrencySymbol
+
+-- | @since 3.0
+instance IsOption TestCurrencySymbol where
+  defaultValue = "ff"
+
+  parseValue = const Nothing
+
+  optionName = Tagged "currency-symbol"
+
+  optionHelp = Tagged "CLI PASSING NOT SUPPORTED"
+
+  showDefaultValue = const Nothing
+
+{- | Validator address during testing.
+
+ The default value is arbitrary - if you need a specific value, set it
+ manually. Parsing this option is currently not supported.
+
+ @since 3.0
+-}
+newtype TestValidatorHash = TestValidatorHash ValidatorHash
+  deriving stock
+    ( -- | @since 3.0
+      Show
+    )
+  deriving
+    ( -- | @since 3.0
+      IsString
+    )
+    via ValidatorHash
+
+-- | @since 3.0
+instance IsOption TestValidatorHash where
+  defaultValue = "90ab"
+
+  parseValue = const Nothing
+
+  optionName = Tagged "validator-hash"
+
+  optionHelp = Tagged "CLI PASSING NOT SUPPORTED"
+
+  showDefaultValue = const Nothing
+
 -- Helpers
 
 data Outcome = Fail | Pass
 
 data ValidatorTest (p :: Purpose)
-  = ValidatorTest Outcome (ContextBuilder p) (TransactionConfig, TestData p)
+  = ValidatorTest Outcome (ContextBuilder p) (TestData p)
 
 instance (Typeable p) => IsTest (ValidatorTest p) where
-  run _ (ValidatorTest expected cb (conf, td)) _ = pure $ case td of
+  run opts (ValidatorTest expected cb td) _ = pure $ case td of
     SpendingTest validator d r val ->
       let context = compileSpending conf cb d val
           context' = Context . toBuiltinData $ context
@@ -316,7 +452,34 @@ instance (Typeable p) => IsTest (ValidatorTest p) where
        in case runMintingPolicyScript context' mp r' of
             Left err -> testFailed . formatScriptError $ err
             Right (_, logs) -> deliverResult expected logs conf context td
-  testOptions = Tagged []
+    where
+      conf :: TransactionConfig
+      conf =
+        TransactionConfig
+          { testFee = testFee'
+          , testTimeRange = testTimeRange'
+          , testTxId = testTxId'
+          , testCurrencySymbol = testCurrencySymbol'
+          , testValidatorHash = testValidatorHash'
+          }
+      testFee' :: Value
+      Fee testFee' = lookupOption opts
+      testTimeRange' :: Interval POSIXTime
+      TimeRange testTimeRange' = lookupOption opts
+      testTxId' :: TxId
+      TestTxId testTxId' = lookupOption opts
+      testCurrencySymbol' :: CurrencySymbol
+      TestCurrencySymbol testCurrencySymbol' = lookupOption opts
+      testValidatorHash' :: ValidatorHash
+      TestValidatorHash testValidatorHash' = lookupOption opts
+  testOptions =
+    Tagged
+      [ Option @Fee Proxy
+      , Option @TimeRange Proxy
+      , Option @TestTxId Proxy
+      , Option @TestCurrencySymbol Proxy
+      , Option @TestValidatorHash Proxy
+      ]
 
 deliverResult ::
   forall (p :: Purpose).

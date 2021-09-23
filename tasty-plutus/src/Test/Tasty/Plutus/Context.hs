@@ -21,10 +21,6 @@ module Test.Tasty.Plutus.Context (
   Internal.Minting (..),
   Internal.ContextBuilder,
 
-  -- ** Transaction configuration
-  Internal.TransactionConfig (..),
-  defaultTransactionConfig,
-
   -- * Functions
 
   -- ** Basic construction
@@ -60,35 +56,12 @@ import Data.Sequence qualified as Seq
 import Ledger.Crypto (pubKeyHash)
 import Plutus.V1.Ledger.Ada (lovelaceValueOf)
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
-import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts (ValidatorHash)
-import Plutus.V1.Ledger.TxId (TxId (TxId))
 import Plutus.V1.Ledger.Value (TokenName, Value)
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Test.Tasty.Plutus.Context.Internal qualified as Internal
 import Wallet.Emulator.Types (Wallet, walletPubKey)
-
-{- | A transaction configuration with the following settings:
-
- * 'testFee' is the empty 'Value'.
- * 'testTimeRange' is 'always'.
- * Other values are arbitrary
-
- In particular, only 'testFee' and 'testTimeRange' are assumed to be stable;
- if you want specific values, set them manually.
-
- @since 3.0
--}
-defaultTransactionConfig :: Internal.TransactionConfig
-defaultTransactionConfig =
-  Internal.TransactionConfig
-    { Internal.testFee = mempty
-    , Internal.testTimeRange = Interval.always
-    , Internal.testTxId = TxId "abcd"
-    , Internal.testCurrencySymbol = "ff"
-    , Internal.testValidatorHash = "90ab"
-    }
 
 {- | Single-input context.
 

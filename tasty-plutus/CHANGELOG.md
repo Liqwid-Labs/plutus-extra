@@ -9,6 +9,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0)
 * `paysLovelaceToPubKey`, `paysLovelaceToWallet`.
 * Minting validator support and functions.
 * `TestData` type for testing API.
+* Multiple `tasty` options.
 
 ### Changed
 

@@ -115,37 +115,14 @@ data Minting
       Show
     )
 
-{- | Sets certain parameters around the transaction a validator is supposed to
- test.
-
- @since 3.0
--}
 data TransactionConfig = TransactionConfig
-  { -- | The fee paid.
-    --
-    -- @since 3.0
-    testFee :: Value
-  , -- | Valid time range.
-    --
-    -- @since 3.0
-    testTimeRange :: Interval POSIXTime
-  , -- | Consume the inputs of this 'TxId'.
-    --
-    -- @since 3.0
-    testTxId :: TxId
-  , -- | The script's 'CurrencySymbol'.
-    --
-    -- @since 3.0
-    testCurrencySymbol :: CurrencySymbol
-  , -- | The validator address.
-    --
-    -- @since 3.0
-    testValidatorHash :: ValidatorHash
+  { testFee :: Value
+  , testTimeRange :: Interval POSIXTime
+  , testTxId :: TxId
+  , testCurrencySymbol :: CurrencySymbol
+  , testValidatorHash :: ValidatorHash
   }
-  deriving stock
-    ( -- | @since 3.0
-      Show
-    )
+  deriving stock (Show)
 
 {- | A way to incrementally build up a script context.
 
