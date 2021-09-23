@@ -21,11 +21,16 @@ module Test.Tasty.Plutus.Validator.Unit (
   withValidator,
   shouldValidate,
   shouldn'tValidate,
+
+  -- * State control helpers
+  withConfig,
+  withTestData,
 ) where
 
 import Control.Monad.RWS.Strict (RWS, evalRWS)
-import Control.Monad.Reader (MonadReader, asks)
+import Control.Monad.Reader (MonadReader, asks, local)
 import Control.Monad.Writer (tell)
+import Data.Bifunctor (first, second)
 import Data.Kind (Type)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
@@ -88,7 +93,32 @@ import Text.PrettyPrint (
 import Text.Show.Pretty (ppDoc)
 import Type.Reflection (Typeable)
 
--- | @since 3.0
+{- | A wrapper for validators. Use this to construct 'Validator's suitable for
+ passing to 'TestData'.
+
+ = Usage
+
+ > testValidator :: Validator
+ > testValidator = mkValidatorScript $
+      $$(compile [|| go ||]) `applyCode` $$(compile [|| myValidator ||])
+ >   where
+ >    go = toTestValidator
+
+ = Important note
+
+ If @myValidator@ requires \'burned in\' arguments, these should be passed via
+ 'liftCode' and 'applyCode', rather than as literal arguments inside of
+ 'compile':
+
+ > testValidatorWithArg :: Validator
+ > testValidatorWithArg = mkValidatorScript $
+ >    $$(compile [|| go ||]) `applyCode` ( $$(compile [|| myValidator ||])
+ >                                          `applyCode`
+ >                                         liftCode arg1
+ >                                       )
+
+ @since 3.0
+-}
 {-# INLINEABLE toTestValidator #-}
 toTestValidator ::
   forall (datum :: Type) (redeemer :: Type).
@@ -106,7 +136,11 @@ toTestValidator f d r p = case fromBuiltinData d of
           then reportPass
           else reportFail
 
--- | @since 3.0
+{- | A wrapper for minting policies. Should be used similarly to
+ 'toTestValidator': see the documentation for more information and examples.
+
+ @since 3.0
+-}
 {-# INLINEABLE toTestMintingPolicy #-}
 toTestMintingPolicy ::
   forall (redeemer :: Type).
@@ -123,6 +157,12 @@ toTestMintingPolicy f r p = case fromBuiltinData r of
         else reportFail
 
 {- | A structure housing a validator, and the data needed to execute it.
+
+ = Important note
+
+ If passing a 'Validator' or 'MintingPolicy', ensure that it's constructed
+ _only_ using 'toTestValidator' or 'toTestMintingPolicy' as described in their
+ documentation. Failing to do so will likely lead to unexpected behaviour.
 
  @since 3.0
 -}
@@ -152,8 +192,14 @@ data TestData (p :: Purpose) where
  While it has all the capabilities of a monad, you mostly won't need them; the
  intended usage is:
 
- For convenience, we also let you access the 'TestData' in the environment
- using 'ask' and \'hot modify\' using 'local', as per 'MonadReader'.
+ > withValidator "Testing my validator" myConfig myTestData $ do
+ >    shouldValidate "Valid case" validContext
+ >    shouldn'tValidatoe "Invalid case" invalidContext
+ >    ...
+
+ For convenience, we also let you access the 'TestData' and 'TransactionConfig'
+ in the environment using 'ask' and \'hot modify\' using 'local', as per
+ 'MonadReader'.
 
  @since 3.0
 -}
@@ -171,7 +217,41 @@ newtype WithValidator (p :: Purpose) (a :: Type)
     )
     via (RWS (TransactionConfig, TestData p) (Seq TestTree) ())
 
--- | @since 3.0
+{- | A specialized form of 'local', modifying only the 'TransactionConfig'.
+
+ @since 3.0
+-}
+withConfig ::
+  forall (p :: Purpose) (a :: Type).
+  (TransactionConfig -> TransactionConfig) ->
+  WithValidator p a ->
+  WithValidator p a
+withConfig f = local (first f)
+
+{- | A specialized form of 'local', modifying only the 'TestData'.
+
+ @since 3.0
+-}
+withTestData ::
+  forall (p :: Purpose) (a :: Type).
+  (TestData p -> TestData p) ->
+  WithValidator p a ->
+  WithValidator p a
+withTestData f = local (second f)
+
+{- | Given the name for the tests, a configuration, and test data, execute all
+ specified tests in the 'WithValidator' as a 'TestTree'.
+
+ = Usage
+
+ > myTests :: TestTree
+ > myTests = withValidator "Testing my validator" myConfig myTestData $ do
+ >    shouldValidate "Valid case" validContext
+ >    shouldn'tValidate "Invalid case" invalidContext
+ >    ...
+
+ @since 3.0
+-}
 withValidator ::
   forall (p :: Purpose).
   String ->
@@ -260,7 +340,10 @@ deliverResult expected logs conf sc td =
     noOutcome :: String
     noOutcome =
       renderStyle ourStyle $
-        "No outcome from run" $+$ dumpState
+        "No outcome from run"
+          $+$ dumpState
+          $+$ ""
+          $+$ "Did you forget to use toTestValidator or toTestMintingPolicy?"
     unexpectedSuccess :: String
     unexpectedSuccess =
       renderStyle ourStyle $
