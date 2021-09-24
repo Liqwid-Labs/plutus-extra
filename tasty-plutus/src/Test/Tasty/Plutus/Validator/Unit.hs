@@ -19,6 +19,7 @@ module Test.Tasty.Plutus.Validator.Unit (
 
   -- * Testing API
   withValidator,
+  withMintingPolicy,
   shouldValidate,
   shouldn'tValidate,
 
@@ -31,7 +32,7 @@ module Test.Tasty.Plutus.Validator.Unit (
 ) where
 
 import Control.Monad.RWS.Strict (RWS, evalRWS)
-import Control.Monad.Reader (MonadReader, asks)
+import Control.Monad.Reader (MonadReader (ask, local), asks)
 import Control.Monad.Writer (tell)
 import Data.Kind (Type)
 import Data.Proxy (Proxy (Proxy))
@@ -120,7 +121,7 @@ import Text.Show.Pretty (ppDoc)
 import Type.Reflection (Typeable)
 
 {- | A wrapper for validators. Use this to construct 'Validator's suitable for
- passing to 'TestData'.
+ passing to 'withValidator'.
 
  = Usage
 
@@ -162,8 +163,11 @@ toTestValidator f d r p = case fromBuiltinData d of
           then reportPass
           else reportFail
 
-{- | A wrapper for minting policies. Should be used similarly to
- 'toTestValidator': see the documentation for more information and examples.
+{- | A wrapper for minting policies. Use this to construct a 'MintingPolicy'
+ suitable for passing to 'withMintingPolicy'.
+
+ The usage (and caveats) of this function is similar to 'toTestValidator'; see
+ its documentation for details.
 
  @since 3.0
 -}
@@ -182,13 +186,7 @@ toTestMintingPolicy f r p = case fromBuiltinData r of
         then reportPass
         else reportFail
 
-{- | A structure housing a validator, and the data needed to execute it.
-
- = Important note
-
- If passing a 'Validator' or 'MintingPolicy', ensure that it's constructed
- _only_ using 'toTestValidator' or 'toTestMintingPolicy' as described in their
- documentation. Failing to do so will likely lead to unexpected behaviour.
+{- | All the data needed to test a validator or minting policy.
 
  @since 3.0
 -}
@@ -202,7 +200,6 @@ data TestData (p :: Purpose) where
     , Show datum
     , Show redeemer
     ) =>
-    Validator ->
     datum ->
     redeemer ->
     Value ->
@@ -210,63 +207,137 @@ data TestData (p :: Purpose) where
   -- | @since 3.0
   MintingTest ::
     (ToData redeemer, FromData redeemer, Show redeemer) =>
-    MintingPolicy ->
     redeemer ->
     TestData 'ForMinting
 
-{- | Provides a monadic API for composing tests against the same validator.
- While it has all the capabilities of a monad, you mostly won't need them; the
- intended usage is:
+{- | Provides a monadic API for composing tests against the same validator or
+ minting policy. While it has all the capabilities of a monad, you mostly
+ won't need them. The intended usage is:
 
- > withValidator "Testing my validator" myConfig myTestData $ do
- >    shouldValidate "Valid case" validContext
- >    shouldn'tValidatoe "Invalid case" invalidContext
+ > withValidator "Testing my validator" myValidator $ do
+ >    shouldValidate "Valid case" validData validContext
+ >    shouldn'tValidate "Invalid context" validData invalidContext
+ >    shouldn'tValidate "Invalid data" invalidData validContext
+ >    shouldn'tValidate "Everything is bad" invalidData invalidContext
  >    ...
-
- For convenience, we also let you access the 'TestData'
- in the environment using 'ask' and \'hot modify\' using 'local', as per
- 'MonadReader'.
 
  @since 3.0
 -}
-newtype WithValidator (p :: Purpose) (a :: Type)
-  = WithValidator (RWS (TestData p) (Seq TestTree) () a)
-  deriving
-    ( -- | @since 1.0
-      Functor
-    , -- | @since 1.0
-      Applicative
-    , -- | @since 1.0
-      Monad
-    , -- | @since 3.0
-      MonadReader (TestData p)
-    )
-    via (RWS (TestData p) (Seq TestTree) ())
+data WithValidator (p :: Purpose) (a :: Type) where
+  WithSpending ::
+    RWS Validator (Seq TestTree) () a ->
+    WithValidator 'ForSpending a
+  WithMinting ::
+    RWS MintingPolicy (Seq TestTree) () a ->
+    WithValidator 'ForMinting a
 
-{- | Given the name for the tests, a configuration, and test data, execute all
- specified tests in the 'WithValidator' as a 'TestTree'.
+-- | @since 1.0
+deriving stock instance Functor (WithValidator p)
+
+-- | @since 1.0
+instance Applicative (WithValidator 'ForSpending) where
+  {-# INLINEABLE pure #-}
+  pure = WithSpending . pure
+  {-# INLINEABLE (<*>) #-}
+  WithSpending fs <*> WithSpending xs = WithSpending (fs <*> xs)
+
+-- | @since 1.0
+instance Applicative (WithValidator 'ForMinting) where
+  {-# INLINEABLE pure #-}
+  pure = WithMinting . pure
+  {-# INLINEABLE (<*>) #-}
+  WithMinting fs <*> WithMinting xs = WithMinting (fs <*> xs)
+
+-- | @since 1.0
+instance Monad (WithValidator 'ForSpending) where
+  {-# INLINEABLE (>>=) #-}
+  WithSpending xs >>= f = WithSpending $ do
+    x <- xs
+    let (WithSpending ys) = f x
+    ys
+
+-- | @since 1.0
+instance Monad (WithValidator 'ForMinting) where
+  {-# INLINEABLE (>>=) #-}
+  WithMinting xs >>= f = WithMinting $ do
+    x <- xs
+    let (WithMinting ys) = f x
+    ys
+
+-- | @since 3.0
+instance MonadReader Validator (WithValidator 'ForSpending) where
+  {-# INLINEABLE ask #-}
+  ask = WithSpending ask
+  {-# INLINEABLE local #-}
+  local f (WithSpending comp) = WithSpending . local f $ comp
+
+-- | @since 3.0
+instance MonadReader MintingPolicy (WithValidator 'ForMinting) where
+  {-# INLINEABLE ask #-}
+  ask = WithMinting ask
+  {-# INLINEABLE local #-}
+  local f (WithMinting comp) = WithMinting . local f $ comp
+
+{- | Given the name for the tests, a 'Validator', and a collection of
+ spending-related tests, execute all of them as a 'TestTree'.
 
  = Usage
 
  > myTests :: TestTree
- > myTests = withValidator "Testing my validator" myConfig myTestData $ do
- >    shouldValidate "Valid case" validContext
- >    shouldn'tValidate "Invalid case" invalidContext
+ > myTests = withValidator "Testing my spending" myValidator $ do
+ >    shouldValidate "Valid case" validData validContext
+ >    shouldn'tValidate "Invalid context" validData invalidContext
+ >    shouldn'tValidate "Invalid data" invalidData validContext
+ >    shouldn'tValidate "Everything is bad" invalidData invalidContext
  >    ...
+
+ = Important note
+
+ Unless your 'Validator' has been prepared using 'toTestValidator', this will
+ likely not behave as intended.
 
  @since 3.0
 -}
 withValidator ::
-  forall (p :: Purpose).
   String ->
-  TestData p ->
-  WithValidator p () ->
+  Validator ->
+  WithValidator 'ForSpending () ->
   TestTree
-withValidator name td (WithValidator comp) =
-  case evalRWS comp td () of
+withValidator name val (WithSpending comp) =
+  case evalRWS comp val () of
     ((), tests) -> testGroup name . toList $ tests
 
-{- | Specify that, in the given context, the validation should succeed.
+{- | Given the name for the tests, a 'MintingPolicy', and a collection of
+ minting-related tests, execute all of them as a 'TestTree'.
+
+ = Usage
+
+ > myTests :: TestTree
+ > myTests = withMintingPolicy "Testing my minting" mp $ do
+ >    shouldValidate "Valid case" validData validContext
+ >    shouldn'tValidate "Invalid context" validData invalidContext
+ >    shouldn'tValidate "Invalid data" invalidData validContext
+ >    shouldn'tValidate "Everything is bad" invalidData invalidContext
+ >    ...
+
+ = Important note
+
+ Unless your 'MintingPolicy' has been prepared using 'toTestMintingPolicy',
+ this will likely not behave as intended.
+
+ @since 3.0
+-}
+withMintingPolicy ::
+  String ->
+  MintingPolicy ->
+  WithValidator 'ForMinting () ->
+  TestTree
+withMintingPolicy name mp (WithMinting comp) =
+  case evalRWS comp mp () of
+    ((), tests) -> testGroup name . toList $ tests
+
+{- | Specify that, given this test data and context, the validation should
+ succeed.
 
  @since 3.0
 -}
@@ -274,14 +345,18 @@ shouldValidate ::
   forall (p :: Purpose).
   (Typeable p) =>
   String ->
+  TestData p ->
   ContextBuilder p ->
   WithValidator p ()
-shouldValidate name cb = WithValidator $ do
-  tt <- asks (singleTest name . ValidatorTest Pass cb)
-  tell . Seq.singleton $ tt
+shouldValidate name td cb = case td of
+  SpendingTest {} -> WithSpending $ do
+    tt <- asks (singleTest name . Spender Pass td cb)
+    tell . Seq.singleton $ tt
+  MintingTest {} -> WithMinting $ do
+    tt <- asks (singleTest name . Minter Pass td cb)
+    tell . Seq.singleton $ tt
 
-{- | Specify that, in the given context, the inputs should parse, but the
- validation should fail.
+{- | Specify that, given this test data and context, the validation should fail.
 
  @since 3.0
 -}
@@ -289,11 +364,16 @@ shouldn'tValidate ::
   forall (p :: Purpose).
   (Typeable p) =>
   String ->
+  TestData p ->
   ContextBuilder p ->
   WithValidator p ()
-shouldn'tValidate name cb = WithValidator $ do
-  tt <- asks (singleTest name . ValidatorTest Fail cb)
-  tell . Seq.singleton $ tt
+shouldn'tValidate name td cb = case td of
+  SpendingTest {} -> WithSpending $ do
+    tt <- asks (singleTest name . Spender Fail td cb)
+    tell . Seq.singleton $ tt
+  MintingTest {} -> WithMinting $ do
+    tt <- asks (singleTest name . Minter Fail td cb)
+    tell . Seq.singleton $ tt
 
 {- | The transaction fee used for the tests.
 
@@ -310,13 +390,9 @@ newtype Fee = Fee Value
 -- | @since 3.0
 instance IsOption Fee where
   defaultValue = Fee mempty
-
   parseValue = const Nothing
-
   optionName = Tagged "fee"
-
   optionHelp = Tagged "CLI PASSING NOT SUPPORTED"
-
   showDefaultValue = Just . show
 
 {- | Valid time range for tests.
@@ -334,13 +410,9 @@ newtype TimeRange = TimeRange (Interval POSIXTime)
 -- | @since 3.0
 instance IsOption TimeRange where
   defaultValue = TimeRange Interval.always
-
   parseValue = const Nothing
-
   optionName = Tagged "time-range"
-
   optionHelp = Tagged "CLI PASSING NOT SUPPORTED"
-
   showDefaultValue = Just . show
 
 {- | The 'TxId' whose inputs should be consumed.
@@ -359,13 +431,9 @@ newtype TestTxId = TestTxId TxId
 -- | @since 3.0
 instance IsOption TestTxId where
   defaultValue = TestTxId . TxId $ "abcd"
-
   parseValue = const Nothing
-
   optionName = Tagged "tx-id"
-
   optionHelp = Tagged "CLI PASSING NOT SUPPORTED"
-
   showDefaultValue = const Nothing
 
 {- | The 'CurrencySymbol' used in the tests.
@@ -389,13 +457,9 @@ newtype TestCurrencySymbol = TestCurrencySymbol CurrencySymbol
 -- | @since 3.0
 instance IsOption TestCurrencySymbol where
   defaultValue = "ff"
-
   parseValue = const Nothing
-
   optionName = Tagged "currency-symbol"
-
   optionHelp = Tagged "CLI PASSING NOT SUPPORTED"
-
   showDefaultValue = const Nothing
 
 {- | Validator address during testing.
@@ -419,33 +483,40 @@ newtype TestValidatorHash = TestValidatorHash ValidatorHash
 -- | @since 3.0
 instance IsOption TestValidatorHash where
   defaultValue = "90ab"
-
   parseValue = const Nothing
-
   optionName = Tagged "validator-hash"
-
   optionHelp = Tagged "CLI PASSING NOT SUPPORTED"
-
   showDefaultValue = const Nothing
 
 -- Helpers
 
 data Outcome = Fail | Pass
 
-data ValidatorTest (p :: Purpose)
-  = ValidatorTest Outcome (ContextBuilder p) (TestData p)
+data ValidatorTest (p :: Purpose) where
+  Spender ::
+    Outcome ->
+    TestData 'ForSpending ->
+    ContextBuilder 'ForSpending ->
+    Validator ->
+    ValidatorTest 'ForSpending
+  Minter ::
+    Outcome ->
+    TestData 'ForMinting ->
+    ContextBuilder 'ForMinting ->
+    MintingPolicy ->
+    ValidatorTest 'ForMinting
 
 instance (Typeable p) => IsTest (ValidatorTest p) where
-  run opts (ValidatorTest expected cb td) _ = pure $ case td of
-    SpendingTest validator d r val ->
-      let context = compileSpending conf cb d val
+  run opts vt _ = pure $ case vt of
+    Spender expected td@(SpendingTest d r v) cb val ->
+      let context = compileSpending conf cb d v
           context' = Context . toBuiltinData $ context
           d' = Datum . toBuiltinData $ d
           r' = Redeemer . toBuiltinData $ r
-       in case runScript context' validator d' r' of
+       in case runScript context' val d' r' of
             Left err -> testFailed . formatScriptError $ err
             Right (_, logs) -> deliverResult expected logs conf context td
-    MintingTest mp r ->
+    Minter expected td@(MintingTest r) cb mp ->
       let context = compileMinting conf cb
           context' = Context . toBuiltinData $ context
           r' = Redeemer . toBuiltinData $ r
@@ -532,14 +603,14 @@ deliverResult expected logs conf sc td =
         $+$ hang "Logs" 4 dumpLogs
     dumpInputs :: Doc
     dumpInputs = case td of
-      SpendingTest _ d r v ->
+      SpendingTest d r v ->
         "Datum"
           $+$ ppDoc d
           $+$ "Redeemer"
           $+$ ppDoc r
           $+$ "Value"
           $+$ ppDoc v
-      MintingTest _ r ->
+      MintingTest r ->
         "Redeemer" $+$ ppDoc r
     dumpLogs :: Doc
     dumpLogs = vcat . fmap go . zip [1 ..] $ logs
