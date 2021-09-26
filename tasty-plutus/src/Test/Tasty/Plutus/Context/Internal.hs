@@ -46,17 +46,19 @@ import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 
-{- | Describes what kind of validator this is meant to test. Directly
+{- | Describes what kind of script this is meant to test. Directly
  corresponds to 'ScriptPurpose'.
 
  @since 1.0
 -}
 data Purpose
-  = -- | Corresponds to 'Plutus.V1.Ledger.Contexts.Minting'.
+  = -- | Corresponds to 'Plutus.V1.Ledger.Contexts.Minting'. This tag applies
+    -- to minting-policy-related structures and functions.
     --
     -- @since 1.0
     ForMinting
-  | -- | Corresponds to 'Plutus.V1.Ledger.Contexts.Spending'.
+  | -- | Corresponds to 'Plutus.V1.Ledger.Contexts.Spending'. This tag applies
+    -- to validator-related structures and functions.
     --
     -- @since 1.0
     ForSpending

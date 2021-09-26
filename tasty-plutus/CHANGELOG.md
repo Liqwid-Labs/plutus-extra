@@ -4,6 +4,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0)
 
 ## Unreleased
 
+## 3.0 -- 2021-09-27
+
 ### Added
 
 * `paysLovelaceToPubKey`, `paysLovelaceToWallet`.
@@ -20,6 +22,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0)
 * Testing API now supports minting, and has been reworked with that in mind.
 * Significant modifications to the entire testing API to use Plutus' own CEK
   interpreter.
+* `WithValidator` is now `WithScript`.
+* `Test.Tasty.Plutus.Validator.Unit` is now `Test.Tasty.Plutus.Script.Unit`.
 
 ### Removed
 

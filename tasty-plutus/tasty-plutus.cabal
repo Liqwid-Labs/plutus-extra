@@ -46,7 +46,7 @@ library
   import:          lang
   exposed-modules:
     Test.Tasty.Plutus.Context
-    Test.Tasty.Plutus.Validator.Unit
+    Test.Tasty.Plutus.Script.Unit
 
   other-modules:   Test.Tasty.Plutus.Context.Internal
   build-depends:

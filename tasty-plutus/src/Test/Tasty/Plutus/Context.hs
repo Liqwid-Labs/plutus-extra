@@ -6,7 +6,7 @@
  Portability: GHC only
  Stability: Experimental
 
- An interface for building up Plutus validator contexts for testing purposes.
+ An interface for building up Plutus script contexts for testing purposes.
 -}
 module Test.Tasty.Plutus.Context (
   -- * Types
@@ -123,9 +123,8 @@ addDatum = datum . toBuiltinData
  @since 3.0
 -}
 minting ::
-  forall (p :: Internal.Purpose).
   Internal.Minting ->
-  Internal.ContextBuilder p
+  Internal.ContextBuilder 'Internal.ForMinting
 minting =
   Internal.ContextBuilder mempty mempty mempty mempty . Seq.singleton
 
@@ -268,10 +267,9 @@ spendsFromOther hash v d =
  @since 3.0
 -}
 mintsWithSelf ::
-  forall (p :: Internal.Purpose).
   TokenName ->
   Integer ->
-  Internal.ContextBuilder p
+  Internal.ContextBuilder 'Internal.ForMinting
 mintsWithSelf tn = minting . Internal.OwnMint tn
 
 {- | Indicate that someone must mint the given 'Value'.
@@ -279,9 +277,8 @@ mintsWithSelf tn = minting . Internal.OwnMint tn
  @since 3.0
 -}
 mintsValue ::
-  forall (p :: Internal.Purpose).
   Value ->
-  Internal.ContextBuilder p
+  Internal.ContextBuilder 'Internal.ForMinting
 mintsValue = minting . Internal.OtherMint
 
 -- Helpers

@@ -1,17 +1,17 @@
 {- |
- Module: Test.Tasty.Plutus.Validator.Unit
+ Module: Test.Tasty.Plutus.Script.Unit
  Copyright: (C) MLabs 2021
  License: Apache 2.0
  Maintainer: Koz Ross <koz@mlabs.city>
  Portability: GHC only
  Stability: Experimental
 
- A unit-test-like interface for validator testing.
+ A unit-test-like interface for validator and minting policy testing.
 -}
-module Test.Tasty.Plutus.Validator.Unit (
+module Test.Tasty.Plutus.Script.Unit (
   -- * Validator context types
   TestData (..),
-  WithValidator,
+  WithScript,
 
   -- * Wrappers
   toTestValidator,
@@ -212,7 +212,7 @@ data TestData (p :: Purpose) where
 
 {- | Provides a monadic API for composing tests against the same validator or
  minting policy. While it has all the capabilities of a monad, you mostly
- won't need them. The intended usage is:
+ won't need them. An example of the intended usage is:
 
  > withValidator "Testing my validator" myValidator $ do
  >    shouldValidate "Valid case" validData validContext
@@ -221,35 +221,37 @@ data TestData (p :: Purpose) where
  >    shouldn'tValidate "Everything is bad" invalidData invalidContext
  >    ...
 
+ 'withMintingPolicy' works similarly.
+
  @since 3.0
 -}
-data WithValidator (p :: Purpose) (a :: Type) where
+data WithScript (p :: Purpose) (a :: Type) where
   WithSpending ::
     RWS Validator (Seq TestTree) () a ->
-    WithValidator 'ForSpending a
+    WithScript 'ForSpending a
   WithMinting ::
     RWS MintingPolicy (Seq TestTree) () a ->
-    WithValidator 'ForMinting a
+    WithScript 'ForMinting a
 
 -- | @since 1.0
-deriving stock instance Functor (WithValidator p)
+deriving stock instance Functor (WithScript p)
 
 -- | @since 1.0
-instance Applicative (WithValidator 'ForSpending) where
+instance Applicative (WithScript 'ForSpending) where
   {-# INLINEABLE pure #-}
   pure = WithSpending . pure
   {-# INLINEABLE (<*>) #-}
   WithSpending fs <*> WithSpending xs = WithSpending (fs <*> xs)
 
 -- | @since 1.0
-instance Applicative (WithValidator 'ForMinting) where
+instance Applicative (WithScript 'ForMinting) where
   {-# INLINEABLE pure #-}
   pure = WithMinting . pure
   {-# INLINEABLE (<*>) #-}
   WithMinting fs <*> WithMinting xs = WithMinting (fs <*> xs)
 
 -- | @since 1.0
-instance Monad (WithValidator 'ForSpending) where
+instance Monad (WithScript 'ForSpending) where
   {-# INLINEABLE (>>=) #-}
   WithSpending xs >>= f = WithSpending $ do
     x <- xs
@@ -257,7 +259,7 @@ instance Monad (WithValidator 'ForSpending) where
     ys
 
 -- | @since 1.0
-instance Monad (WithValidator 'ForMinting) where
+instance Monad (WithScript 'ForMinting) where
   {-# INLINEABLE (>>=) #-}
   WithMinting xs >>= f = WithMinting $ do
     x <- xs
@@ -265,14 +267,14 @@ instance Monad (WithValidator 'ForMinting) where
     ys
 
 -- | @since 3.0
-instance MonadReader Validator (WithValidator 'ForSpending) where
+instance MonadReader Validator (WithScript 'ForSpending) where
   {-# INLINEABLE ask #-}
   ask = WithSpending ask
   {-# INLINEABLE local #-}
   local f (WithSpending comp) = WithSpending . local f $ comp
 
 -- | @since 3.0
-instance MonadReader MintingPolicy (WithValidator 'ForMinting) where
+instance MonadReader MintingPolicy (WithScript 'ForMinting) where
   {-# INLINEABLE ask #-}
   ask = WithMinting ask
   {-# INLINEABLE local #-}
@@ -301,7 +303,7 @@ instance MonadReader MintingPolicy (WithValidator 'ForMinting) where
 withValidator ::
   String ->
   Validator ->
-  WithValidator 'ForSpending () ->
+  WithScript 'ForSpending () ->
   TestTree
 withValidator name val (WithSpending comp) =
   case evalRWS comp val () of
@@ -330,7 +332,7 @@ withValidator name val (WithSpending comp) =
 withMintingPolicy ::
   String ->
   MintingPolicy ->
-  WithValidator 'ForMinting () ->
+  WithScript 'ForMinting () ->
   TestTree
 withMintingPolicy name mp (WithMinting comp) =
   case evalRWS comp mp () of
@@ -347,7 +349,7 @@ shouldValidate ::
   String ->
   TestData p ->
   ContextBuilder p ->
-  WithValidator p ()
+  WithScript p ()
 shouldValidate name td cb = case td of
   SpendingTest {} -> WithSpending $ do
     tt <- asks (singleTest name . Spender Pass td cb)
@@ -366,7 +368,7 @@ shouldn'tValidate ::
   String ->
   TestData p ->
   ContextBuilder p ->
-  WithValidator p ()
+  WithScript p ()
 shouldn'tValidate name td cb = case td of
   SpendingTest {} -> WithSpending $ do
     tt <- asks (singleTest name . Spender Fail td cb)
