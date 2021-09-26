@@ -18,6 +18,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0)
   `Purpose`s.
 * `InputType` and `OutputType` unified into `ExternalType`.
 * Testing API now supports minting, and has been reworked with that in mind.
+* Significant modifications to the entire testing API to use Plutus' own CEK
+  interpreter.
 
 ### Removed
 

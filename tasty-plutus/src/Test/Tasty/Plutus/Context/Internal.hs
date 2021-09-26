@@ -132,9 +132,9 @@ data TransactionConfig = TransactionConfig
  You can use the 'Semigroup' instance of this type to build up larger
  contexts. For example:
 
- > let cb = 'paysToWallet' aWallet someValue <>
- >          'signedWith' aHash <>
- >          'tagged' aUniqueTag
+ > let cb = paysToWallet aWallet someValue <>
+ >          signedWith aHash <>
+ >          tagged aUniqueTag
 
  @since 1.0
 -}

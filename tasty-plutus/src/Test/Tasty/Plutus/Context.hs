@@ -129,7 +129,11 @@ minting ::
 minting =
   Internal.ContextBuilder mempty mempty mempty mempty . Seq.singleton
 
--- | @since 1.0
+{- | Indicate that a payment must happen to the given public key, worth the
+ given amount.
+
+ @since 1.0
+-}
 paysToPubKey ::
   forall (p :: Internal.Purpose).
   PubKeyHash ->
@@ -138,7 +142,11 @@ paysToPubKey ::
 paysToPubKey pkh =
   output . Internal.Output (Internal.PubKeyType pkh)
 
--- | @since 1.0
+{- | Indicate that a payment must happen to the given 'Wallet', worth the
+ given amount.
+
+ @since 1.0
+-}
 paysToWallet ::
   forall (p :: Internal.Purpose).
   Wallet ->
@@ -146,7 +154,10 @@ paysToWallet ::
   Internal.ContextBuilder p
 paysToWallet wallet = paysToPubKey (walletPubKeyHash wallet)
 
--- | @since 1.0
+{- | Indicate that the script being tested must pay itself the given amount.
+
+ @since 1.0
+-}
 paysSelf ::
   forall (p :: Internal.Purpose) (a :: Type).
   (ToData a) =>
@@ -156,7 +167,11 @@ paysSelf ::
 paysSelf v dt =
   output . Internal.Output (Internal.OwnType . toBuiltinData $ dt) $ v
 
--- | @since 1.0
+{- | Indicate that the script being tested must pay another script the given
+ amount.
+
+ @since 1.0
+-}
 paysOther ::
   forall (p :: Internal.Purpose) (a :: Type).
   (ToData a) =>
@@ -167,7 +182,10 @@ paysOther ::
 paysOther hash v dt =
   output . Internal.Output (Internal.ScriptType hash . toBuiltinData $ dt) $ v
 
--- | @since 3.0
+{- | As 'paysToPubKey', but using Lovelace.
+
+ @since 3.0
+-}
 paysLovelaceToPubKey ::
   forall (p :: Internal.Purpose).
   PubKeyHash ->
@@ -175,7 +193,10 @@ paysLovelaceToPubKey ::
   Internal.ContextBuilder p
 paysLovelaceToPubKey pkh = paysToPubKey pkh . lovelaceValueOf
 
--- | @since 3.0
+{- | As 'paysToWallet', but using Lovelace.
+
+ @since 3.0
+-}
 paysLovelaceToWallet ::
   forall (p :: Internal.Purpose).
   Wallet ->
@@ -183,7 +204,10 @@ paysLovelaceToWallet ::
   Internal.ContextBuilder p
 paysLovelaceToWallet wallet = paysToWallet wallet . lovelaceValueOf
 
--- | @since 1.0
+{- | Indicate that the given amount must be spent from the given public key.
+
+ @since 1.0
+-}
 spendsFromPubKey ::
   forall (p :: Internal.Purpose).
   PubKeyHash ->
@@ -192,7 +216,10 @@ spendsFromPubKey ::
 spendsFromPubKey pkh =
   input . Internal.Input (Internal.PubKeyType pkh)
 
--- | @since 1.0
+{- | As 'spendsFromPubKey', with an added signature.
+
+ @since 1.0
+-}
 spendsFromPubKeySigned ::
   forall (p :: Internal.Purpose).
   PubKeyHash ->
@@ -200,7 +227,10 @@ spendsFromPubKeySigned ::
   Internal.ContextBuilder p
 spendsFromPubKeySigned pkh v = spendsFromPubKey pkh v <> signedWith pkh
 
--- | @since 1.0
+{- | Indicate that the given amount must be spent from the given 'Wallet'.
+
+ @since 1.0
+-}
 spendsFromWallet ::
   forall (p :: Internal.Purpose).
   Wallet ->
@@ -208,7 +238,10 @@ spendsFromWallet ::
   Internal.ContextBuilder p
 spendsFromWallet wallet = spendsFromPubKey (walletPubKeyHash wallet)
 
--- | @since 1.0
+{- | As 'spendsFromWallet', with an added signature.
+
+ @since 1.0
+-}
 spendsFromWalletSigned ::
   forall (p :: Internal.Purpose).
   Wallet ->
@@ -216,7 +249,10 @@ spendsFromWalletSigned ::
   Internal.ContextBuilder p
 spendsFromWalletSigned wallet = spendsFromPubKeySigned (walletPubKeyHash wallet)
 
--- | @since 1.0
+{- | Indicate that the given amount must be spent from another script.
+
+ @since 1.0
+-}
 spendsFromOther ::
   forall (p :: Internal.Purpose) (datum :: Type).
   (ToData datum) =>
@@ -227,7 +263,10 @@ spendsFromOther ::
 spendsFromOther hash v d =
   input . Internal.Input (Internal.ScriptType hash . toBuiltinData $ d) $ v
 
--- | @since 3.0
+{- | Indicate that an amount of a given token must be minted.
+
+ @since 3.0
+-}
 mintsWithSelf ::
   forall (p :: Internal.Purpose).
   TokenName ->
@@ -235,7 +274,10 @@ mintsWithSelf ::
   Internal.ContextBuilder p
 mintsWithSelf tn = minting . Internal.OwnMint tn
 
--- | @since 3.0
+{- | Indicate that someone must mint the given 'Value'.
+
+ @since 3.0
+-}
 mintsValue ::
   forall (p :: Internal.Purpose).
   Value ->
