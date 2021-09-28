@@ -25,6 +25,7 @@ module Test.Tasty.Plutus.Context (
   output,
   signedWith,
   tagged,
+  validatesIn,
 
   -- ** Paying
   paysToPubKey,
@@ -58,6 +59,7 @@ import Ledger.Address (pubKeyHashAddress, scriptHashAddress)
 import Ledger.Crypto (PubKeyHash, pubKeyHash)
 import Ledger.Scripts (Datum (Datum), DatumHash, ValidatorHash, datumHash)
 import Ledger.Value (Value (Value))
+import Plutus.V1.Ledger.Api (POSIXTimeRange)
 import Plutus.V1.Ledger.Contexts (
   ScriptContext (ScriptContext),
   ScriptPurpose (Spending),
@@ -193,6 +195,21 @@ data Output
       Show
     )
 
+{-- | A valid time range for a transaction. -}
+newtype ValidRange = ValidRange POSIXTimeRange
+  deriving stock (Show)
+
+-- | Combine ValidRanges into a new range with the smallest interval that can
+--   be produced from the lower and upper bounds. This ensures that infinite
+--   ranges behave as identity values since they have no effect on the combined 
+--   range.
+instance Semigroup ValidRange where
+  ValidRange (Interval.Interval lb ub) <> ValidRange (Interval.Interval lb' ub') =
+    ValidRange (Interval.Interval (max lb lb') (min ub ub'))
+
+instance Monoid ValidRange where
+  mempty = ValidRange Interval.always
+
 {- | A way to incrementally build up a script context.
 
  It is tagged with a 'Purpose' as a marker for what kind of script it's
@@ -213,6 +230,7 @@ data ContextBuilder (p :: Purpose) where
     Seq Output ->
     Seq PubKeyHash ->
     Seq BuiltinData ->
+    ValidRange ->
     ContextBuilder 'ForSpending
 
 -- | @since 1.0
@@ -221,36 +239,40 @@ deriving stock instance Show (ContextBuilder p)
 -- | @since 1.0
 instance Semigroup (ContextBuilder p) where
   {-# INLINEABLE (<>) #-}
-  SpendingBuilder is os pkhs ts <> SpendingBuilder is' os' pkhs' ts' =
-    SpendingBuilder (is <> is') (os <> os') (pkhs <> pkhs') (ts <> ts')
+  SpendingBuilder is os pkhs ts vr <> SpendingBuilder is' os' pkhs' ts' vr' =
+    SpendingBuilder (is <> is') (os <> os') (pkhs <> pkhs') (ts <> ts') (vr <> vr')
 
 {- | Single-input context.
 
  @since 1.0
 -}
 input :: Input -> ContextBuilder 'ForSpending
-input x = SpendingBuilder (Seq.singleton x) mempty mempty mempty
+input x = SpendingBuilder (Seq.singleton x) mempty mempty mempty mempty
 
 {- | Single-output context.
 
  @since 1.0
 -}
 output :: Output -> ContextBuilder 'ForSpending
-output x = SpendingBuilder mempty (Seq.singleton x) mempty mempty
+output x = SpendingBuilder mempty (Seq.singleton x) mempty mempty mempty
 
 {- | Context with one signature.
 
  @since 1.0
 -}
 signedWith :: PubKeyHash -> ContextBuilder 'ForSpending
-signedWith pkh = SpendingBuilder mempty mempty (Seq.singleton pkh) mempty
+signedWith pkh = SpendingBuilder mempty mempty (Seq.singleton pkh) mempty mempty
 
 {- | Context with one tag.
 
  @since 1.0
 -}
 tagged :: BuiltinData -> ContextBuilder 'ForSpending
-tagged = SpendingBuilder mempty mempty mempty . Seq.singleton
+tagged tag = SpendingBuilder mempty mempty mempty (Seq.singleton tag) mempty
+
+{- | Context with the specified transaction valid range. -}
+validatesIn :: POSIXTimeRange -> ContextBuilder 'ForSpending
+validatesIn ptr = SpendingBuilder mempty mempty mempty mempty (ValidRange ptr)
 
 -- | @since 1.0
 paysToPubKey :: PubKeyHash -> Value -> ContextBuilder 'ForSpending
@@ -342,7 +364,7 @@ compile ::
   (FromData datum, FromData redeemer) =>
   ContextBuilder p ->
   Validation [DecodeFailure] (Map Integer (datum, redeemer, ScriptContext))
-compile (SpendingBuilder is os pkhs tags) =
+compile (SpendingBuilder is os pkhs tags (ValidRange vr)) =
   iwither go . Map.fromAscList $ indexedInputs
   where
     indexedInputs :: [(Integer, Input)]
@@ -357,7 +379,7 @@ compile (SpendingBuilder is os pkhs tags) =
         Just dat' -> case fromBuiltinData @redeemer red of
           Nothing -> Failure [BadRedeemerDecode ix dat]
           Just red' -> pure $ do
-            let ref = TxOutRef (TxId "testSpendingTxId") ix
+            let ref = TxOutRef (TxId "testTxId") ix
             let purpose = Spending ref
             let info = mkTxInfo
             pure (dat', red', ScriptContext info purpose)
@@ -371,7 +393,7 @@ compile (SpendingBuilder is os pkhs tags) =
         (Value AssocMap.empty)
         mempty
         mempty
-        Interval.always
+        vr
         (toList pkhs)
         mkInfoData
         (TxId "testSpendingTx")
