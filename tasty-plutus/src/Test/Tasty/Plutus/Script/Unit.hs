@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-specialize #-}
+
 {- |
  Module: Test.Tasty.Plutus.Script.Unit
  Copyright: (C) MLabs 2021
