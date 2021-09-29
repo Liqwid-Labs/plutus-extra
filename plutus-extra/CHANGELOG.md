@@ -1,5 +1,13 @@
 # Revision history for plutus-extra
 
+## 2.0 - 2021-09-30
+
+### Changed
+
+* Plutus is at commit `58c093a49eb7a369865e361179d649264fc817a4`.
+
+# Legacy history
+
 ## 0.1.0.0 -- YYYY-mm-dd
 
 - First version. Released on an unsuspecting world.
@@ -29,6 +37,10 @@
 * Version number(s) fit the style guide now.
 
 ## 1.1 -- 2021-09-13
+
 #### Added
+
 * New test assertions in `Plutus.Contract.Test.Extra` for checking UTxOs at
   address computed from the state of `EmulatorTrace`.
+
+

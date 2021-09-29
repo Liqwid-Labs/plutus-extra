@@ -4,6 +4,10 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0)
 
 ## Unreleased
 
+### Changed
+
+* Plutus is now on commit `58c093a49eb7a369865e361179d649264fc817a4`.
+
 ## 3.0 -- 2021-09-27
 
 ### Added
