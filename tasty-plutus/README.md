@@ -5,11 +5,14 @@
 A collection of utilities for testing Plutus-based code, integrating with the
 [`tasty`](https://hackage.haskell.org/package/tasty) testing framework.
 
-Currently, we have the following:
+## So what can this do?
 
-* Validator testing (based on [this
-  sketch](https://github.com/input-output-hk/plutus/issues/3360#issuecomment-891643931))
-  for spending scripts
+We currently have the ability to test a `Validator` or `MintingPolicy`, based on
+[the techniques described here](https://github.com/input-output-hk/plutus/issues/3360#issuecomment-891643931). 
+However, in addition to being more convenient, we use `evaluateScript` along
+with custom testing hooks. Since `evaluateScript` uses Plutus's own CEK
+evaluator, it is more precise, and will also catch issues of Plutus compilation
+(as the tests will refuse to compile).
 
 ## What are the goals of this project?
 

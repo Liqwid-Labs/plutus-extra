@@ -1,5 +1,15 @@
 # Revision history for plutus-extra
 
+This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
+
+## 2.0 -- 2021-10-04
+
+### Changed
+
+* Plutus bumped to `58c093a49eb7a369865e361179d649264fc817a4`.
+
+# Legacy history
+
 ## 0.1.0.0 -- YYYY-mm-dd
 
 - First version. Released on an unsuspecting world.
