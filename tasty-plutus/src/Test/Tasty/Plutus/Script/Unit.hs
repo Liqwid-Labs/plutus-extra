@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -fno-specialize #-}
-
 {- |
  Module: Test.Tasty.Plutus.Script.Unit
  Copyright: (C) MLabs 2021
@@ -145,6 +143,11 @@ import Type.Reflection (Typeable)
  >                                          `applyCode`
  >                                         liftCode arg1
  >                                       )
+
+ = Note on compilation
+
+ Ensure that you are compiling on at least @-O1@. If you don't do this, you
+ will get errors about 'toTestValidator' not being INLINEABLE.
 
  @since 3.0
 -}

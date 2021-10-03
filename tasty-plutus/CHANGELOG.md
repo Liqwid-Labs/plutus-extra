@@ -1,10 +1,10 @@
 # Revision history for `tasty-plutus`
 
-This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0)
+This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
-## 3.0 -- 2021-09-27
+## 3.0 -- 2021-10-04
 
 ### Added
 
@@ -24,6 +24,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0)
   interpreter.
 * `WithValidator` is now `WithScript`.
 * `Test.Tasty.Plutus.Validator.Unit` is now `Test.Tasty.Plutus.Script.Unit`.
+* Plutus bumped to `58c093a49eb7a369865e361179d649264fc817a4`.
 
 ### Removed
 

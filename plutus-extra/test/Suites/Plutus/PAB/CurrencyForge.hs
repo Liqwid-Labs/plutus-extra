@@ -16,11 +16,8 @@ import Plutus.PAB.CurrencyForge qualified as CurrencyForge
 import Plutus.PAB.OutputBus (OutputBus (..))
 import Plutus.Trace.Emulator (ContractInstanceTag, activateContractWallet, waitNSlots, walletInstanceTag)
 import Test.Tasty
+import Wallet.Emulator ()
 import Prelude
-
-w1, w2 :: Wallet
-w1 = Wallet 1
-w2 = Wallet 2
 
 t1 :: ContractInstanceTag
 t1 = walletInstanceTag w1

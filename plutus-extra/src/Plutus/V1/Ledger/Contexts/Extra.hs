@@ -230,8 +230,8 @@ getAllOutputsWithDatum ::
   Contexts.ScriptContext ->
   [(Contexts.TxOut, datum)]
 getAllOutputsWithDatum
-  Contexts.ScriptContext{scriptContextTxInfo=txInfo} =
-  mapMaybe (parseDatum txInfo) (Contexts.txInfoOutputs txInfo)
+  Contexts.ScriptContext {scriptContextTxInfo = txInfo} =
+    mapMaybe (parseDatum txInfo) (Contexts.txInfoOutputs txInfo)
 
 {-# INLINEABLE getScriptOutputsWithDatum #-}
 
@@ -248,8 +248,8 @@ getScriptOutputsWithDatum ::
   Contexts.ScriptContext ->
   [(Contexts.TxOut, datum)]
 getScriptOutputsWithDatum
-  sc@Contexts.ScriptContext{scriptContextTxInfo=txInfo} =
-  mapMaybe (parseDatum txInfo) (Contexts.getContinuingOutputs sc)
+  sc@Contexts.ScriptContext {scriptContextTxInfo = txInfo} =
+    mapMaybe (parseDatum txInfo) (Contexts.getContinuingOutputs sc)
 
 --------------------------------------------------------------------------------
 
