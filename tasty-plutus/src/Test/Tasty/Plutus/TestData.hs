@@ -20,6 +20,7 @@ module Test.Tasty.Plutus.TestData (
   fromArbitraryMinting,
 ) where
 
+import Data.Semigroup (stimes, stimesIdempotent)
 import Data.Kind (Type)
 import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.IsData.Class (FromData, ToData)
@@ -65,6 +66,17 @@ data Example = Good | Bad
       Show
     )
 
+-- | \'Maximal badness\': gives 'Bad' when any argument is 'Bad'.
+--
+-- @since 3.1
+instance Semigroup Example where
+  {-# INLINEABLE (<>) #-}
+  Bad <> _ = Bad
+  _ <> Bad = Bad
+  _ <> _ = Good
+  {-# INLINEABLE stimes #-}
+  stimes = stimesIdempotent
+
 {- | A reification of 'Arbitrary'. Consists of a combination of generator and
  shrinker.
 
@@ -100,6 +112,13 @@ static x = Methodology (pure x) (const [])
 data Generator (p :: Purpose) where
   -- | @since 3.1
   GenForSpending ::
+    ( ToData datum
+    , ToData redeemer
+    , FromData datum
+    , FromData redeemer
+    , Show datum
+    , Show redeemer
+    ) =>
     (datum -> redeemer -> Value -> Example) ->
     Methodology datum ->
     Methodology redeemer ->
@@ -107,6 +126,10 @@ data Generator (p :: Purpose) where
     Generator 'ForSpending
   -- | @since 3.1
   GenForMinting ::
+    ( ToData redeemer,
+      FromData redeemer,
+      Show redeemer
+    ) => 
     (redeemer -> Example) ->
     Methodology redeemer ->
     Generator 'ForMinting
@@ -118,7 +141,14 @@ data Generator (p :: Purpose) where
 -}
 fromArbitrarySpending ::
   forall (datum :: Type) (redeemer :: Type).
-  (Arbitrary datum, Arbitrary redeemer) =>
+  (ToData datum,
+    FromData datum,
+    Arbitrary datum,
+    Show datum,
+    ToData redeemer,
+    FromData redeemer,
+    Show redeemer,
+    Arbitrary redeemer) =>
   (datum -> redeemer -> Value -> Example) ->
   Methodology Value ->
   Generator 'ForSpending
@@ -130,7 +160,10 @@ fromArbitrarySpending f = GenForSpending f fromArbitrary fromArbitrary
 -}
 fromArbitraryMinting ::
   forall (redeemer :: Type).
-  (Arbitrary redeemer) =>
+  (ToData redeemer,
+    FromData redeemer,
+    Show redeemer,
+    Arbitrary redeemer) =>
   (redeemer -> Example) ->
   Generator 'ForMinting
 fromArbitraryMinting f = GenForMinting f fromArbitrary

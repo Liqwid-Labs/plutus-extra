@@ -60,7 +60,7 @@ import Test.Tasty.Options (
   OptionDescription (Option),
   lookupOption,
  )
-import Test.Tasty.Plutus.Context.Internal (
+import Test.Tasty.Plutus.Internal (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
   TransactionConfig (
@@ -71,10 +71,10 @@ import Test.Tasty.Plutus.Context.Internal (
     testTxId,
     testValidatorHash
   ),
+  WithScript (WithMinting, WithSpending),
   compileMinting,
   compileSpending,
  )
-import Test.Tasty.Plutus.Internal (WithScript (WithMinting, WithSpending))
 import Test.Tasty.Plutus.Options (
   Fee (Fee),
   TestCurrencySymbol (TestCurrencySymbol),

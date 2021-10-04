@@ -17,8 +17,10 @@ import Plutus.V1.Ledger.Scripts (MintingPolicy, Validator)
 import PlutusTx.Builtins (BuiltinData, BuiltinString, appendString, trace)
 import PlutusTx.IsData.Class (FromData (fromBuiltinData))
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Plutus.Context.Internal (Purpose (ForMinting, ForSpending))
-import Test.Tasty.Plutus.Internal (WithScript (WithMinting, WithSpending))
+import Test.Tasty.Plutus.Internal (
+  Purpose (ForMinting, ForSpending),
+  WithScript (WithMinting, WithSpending),
+ )
 import Prelude
 
 {- | Given the name for the tests, a 'Validator', and a collection of

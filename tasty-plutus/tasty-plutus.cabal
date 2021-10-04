@@ -47,14 +47,12 @@ library
   exposed-modules:
     Test.Tasty.Plutus.Context
     Test.Tasty.Plutus.Options
+    Test.Tasty.Plutus.Script.Property
     Test.Tasty.Plutus.Script.Unit
     Test.Tasty.Plutus.TestData
     Test.Tasty.Plutus.WithScript
 
-  other-modules:
-    Test.Tasty.Plutus.Context.Internal
-    Test.Tasty.Plutus.Internal
-
+  other-modules:   Test.Tasty.Plutus.Internal
   build-depends:
     , base               ^>=4.14
     , containers         ^>=0.6.2.1

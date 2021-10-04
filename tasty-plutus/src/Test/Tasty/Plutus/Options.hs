@@ -4,6 +4,8 @@ module Test.Tasty.Plutus.Options (
   TestTxId (..),
   TestCurrencySymbol (..),
   TestValidatorHash (..),
+  PropertyTestCount,
+  PropertyMaxSize,
 ) where
 
 import Data.Tagged (Tagged (Tagged))
@@ -23,6 +25,7 @@ import Test.Tasty.Options (
     showDefaultValue
   ),
  )
+import Test.Tasty.Plutus.Internal (PropertyTestCount, PropertyMaxSize)
 import Prelude
 
 {- | The transaction fee used for the tests.
