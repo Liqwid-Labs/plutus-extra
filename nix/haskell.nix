@@ -56,8 +56,16 @@ in pkgs.haskell-nix.cabalProject rec {
       sources.plutus.sha256;
 
     # michaelpj/flat
-    "https://github.com/michaelpj/flat.git"."${sources.flat.rev}" =
+    "https://github.com/Quid2/flat.git"."${sources.flat.rev}" =
       sources.flat.sha256;
+
+    # input-output-hk/cardano-addresses
+    "https://github.com/input-output-hk/cardano-addresses"."${sources.cardano-addresses.rev}" = 
+      sources.cardano-addresses.sha256;
+
+    # input-output-hk/cardano-wallet
+    "https://github.com/input-output-hk/cardano-wallet"."${sources.cardano-wallet.rev}" = 
+      sources.cardano-wallet.sha256;
 
     # shmish111/purescript-bridge
     "https://github.com/shmish111/purescript-bridge.git"."${sources.purescript-bridge.rev}" =
@@ -76,7 +84,7 @@ in pkgs.haskell-nix.cabalProject rec {
       sources.cardano-crypto.sha256;
 
     # input-output-hk/cardano-ledger-specs
-    "https://github.com/input-output-hk/cardano-ledger-specs"."${sources.cardano-ledger-specs.rev}" =
+    "https://github.com/raduom/cardano-ledger-specs"."${sources.cardano-ledger-specs.rev}" =
       sources.cardano-ledger-specs.sha256;
 
     # input-output-hk/cardano-prelude

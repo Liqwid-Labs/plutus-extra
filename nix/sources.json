@@ -11,16 +11,28 @@
         "url": "https://github.com/input-output-hk/Win32-network/archive/3825d3abf75f83f406c1f7161883c438dac7277d.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
+    "cardano-addresses": {
+        "branch": "master",
+        "description": "Addresses and mnemonic manipulation & derivations",
+        "homepage": "",
+        "owner": "input-output-hk",
+        "repo": "cardano-addresses",
+        "rev": "d2f86caa085402a953920c6714a0de6a50b655ec",
+        "sha256": "0p6jbnd7ky2yf7bwb1350k8880py8dgqg39k49q02a6ij4ld01ay",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-addresses/archive/d2f86caa085402a953920c6714a0de6a50b655ec.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
     "cardano-base": {
         "branch": "master",
         "description": "Code used throughout the Cardano eco-system",
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "cardano-base",
-        "rev": "cb0f19c85e5bb5299839ad4ed66af6fa61322cc4",
-        "sha256": "0dnkfqcvbifbk3m5pg8kyjqjy0zj1l4vd23p39n6ym4q0bnib1cq",
+        "rev": "592aa61d657ad5935a33bace1243abce3728b643",
+        "sha256": "1bgq3a2wfdz24jqfwylcc6jjg5aji8dpy5gjkhpnmkkvgcr2rkyb",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/cardano-base/archive/cb0f19c85e5bb5299839ad4ed66af6fa61322cc4.tar.gz",
+        "url": "https://github.com/input-output-hk/cardano-base/archive/592aa61d657ad5935a33bace1243abce3728b643.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "cardano-crypto": {
@@ -41,10 +53,10 @@
         "homepage": "",
         "owner": "input-output-hk",
         "repo": "cardano-ledger-specs",
-        "rev": "d5b184a820853c7ba202efd615b8fadca1acb52c",
-        "sha256": "04k5p6qwmfdza65gl5319r1ahdfwjnyqgzpfxdx0x2g5jcbimar4",
+        "rev": "ef6bb99782d61316da55470620c7da994cc352b2",
+        "sha256": "0z2818kwiwv7smz0ff8wr4zb405pymgd12zm32asas0mp5bqxkin",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/cardano-ledger-specs/archive/d5b184a820853c7ba202efd615b8fadca1acb52c.tar.gz",
+        "url": "https://github.com/input-output-hk/cardano-ledger-specs/archive/ef6bb99782d61316da55470620c7da994cc352b2.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "cardano-node": {
@@ -53,10 +65,10 @@
         "homepage": "https://cardano.org",
         "owner": "input-output-hk",
         "repo": "cardano-node",
-        "rev": "ed11e8b6429d4af1cb2539460e5cb2283a06b2dc",
-        "sha256": "1wvr3zzl37i1fn5y9ni027rqw5bhh25z1bacvcaapxxjgdn38lbq",
+        "rev": "191b91eec3c7d845a55347781329d50bf36871d7",
+        "sha256": "1y0a80fmrqf7561yqp4p2vx36yrhh83222b01sall2rk791y4yf0",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/cardano-node/archive/ed11e8b6429d4af1cb2539460e5cb2283a06b2dc.tar.gz",
+        "url": "https://github.com/input-output-hk/cardano-node/archive/191b91eec3c7d845a55347781329d50bf36871d7.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "cardano-prelude": {
@@ -69,6 +81,18 @@
         "sha256": "02jddik1yw0222wd6q0vv10f7y8rdgrlqaiy83ph002f9kjx7mh6",
         "type": "tarball",
         "url": "https://github.com/input-output-hk/cardano-prelude/archive/fd773f7a58412131512b9f694ab95653ac430852.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "cardano-wallet": {
+        "branch": "master",
+        "description": "HTTP server & command-line for managing UTxOs and HD wallets in Cardano.",
+        "homepage": "",
+        "owner": "input-output-hk",
+        "repo": "cardano-wallet",
+        "rev": "ae7569293e94241ef6829139ec02bd91abd069df",
+        "sha256": "1mv1dhpkdj9ridm1fvq6jc85qs6zvbp172228rq72gyawjwrgvi6",
+        "type": "tarball",
+        "url": "https://github.com/input-output-hk/cardano-wallet/archive/ae7569293e94241ef6829139ec02bd91abd069df.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "flat": {
@@ -125,10 +149,10 @@
         "homepage": null,
         "owner": "input-output-hk",
         "repo": "iohk-monitoring-framework",
-        "rev": "808724ff8a19a33d0ed06f9ef59fbd900b08553c",
-        "sha256": "0298dpl29gxzs9as9ha6y0w18hqwc00ipa3hzkxv7nlfrjjz8hmz",
+        "rev": "46f994e216a1f8b36fe4669b47b2a7011b0e153c",
+        "sha256": "1il8fx3misp3650ryj368b3x95ksz01zz3x0z9k00807j93d0ka0",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/iohk-monitoring-framework/archive/808724ff8a19a33d0ed06f9ef59fbd900b08553c.tar.gz",
+        "url": "https://github.com/input-output-hk/iohk-monitoring-framework/archive/46f994e216a1f8b36fe4669b47b2a7011b0e153c.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "niv": {
@@ -173,10 +197,10 @@
         "homepage": "",
         "owner": "input-output-hk",
         "repo": "ouroboros-network",
-        "rev": "877ce057ff6fb086474c8eaad53f2b7f0e0fce6b",
-        "sha256": "1kp0qysfy3hl96a3a61rijascq36f1imh3z4jy0vyiygb6qrv47z",
+        "rev": "5d37a927046bc7da2887830d8e35cf604622ce09",
+        "sha256": "1620zcnivgm1wp1kq3vqc44g77lv7dalzgywc96qsblf1sv9fw3p",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/ouroboros-network/archive/877ce057ff6fb086474c8eaad53f2b7f0e0fce6b.tar.gz",
+        "url": "https://github.com/input-output-hk/ouroboros-network/archive/5d37a927046bc7da2887830d8e35cf604622ce09.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "plutus": {
@@ -185,10 +209,10 @@
         "homepage": "",
         "owner": "input-output-hk",
         "repo": "plutus",
-        "rev": "289ac956a33c14fe1d75d6c0a6d6100f96a7d22c",
-        "sha256": "0jsdsbw451cc59zdxb4s6l143ysvb37xibbi9ymzhgc27g90p17z",
+        "rev": "58c093a49eb7a369865e361179d649264fc817a4",
+        "sha256": "156lprrnz4hivagzsbsw3dfqsdpdrvkf2qijf7n0jh9xx2g21pz4",
         "type": "tarball",
-        "url": "https://github.com/input-output-hk/plutus/archive/289ac956a33c14fe1d75d6c0a6d6100f96a7d22c.tar.gz",
+        "url": "https://github.com/input-output-hk/plutus/archive/58c093a49eb7a369865e361179d649264fc817a4.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     },
     "purescript-bridge": {
