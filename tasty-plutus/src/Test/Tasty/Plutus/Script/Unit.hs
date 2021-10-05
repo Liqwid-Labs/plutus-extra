@@ -74,6 +74,7 @@ import Test.Tasty.Plutus.Internal (
   WithScript (WithMinting, WithSpending),
   compileMinting,
   compileSpending,
+  ourStyle,
  )
 import Test.Tasty.Plutus.Options (
   Fee (Fee),
@@ -98,12 +99,10 @@ import Test.Tasty.Providers (
  )
 import Text.PrettyPrint (
   Doc,
-  Style (lineLength),
   colon,
   hang,
   int,
   renderStyle,
-  style,
   text,
   vcat,
   ($+$),
@@ -279,9 +278,6 @@ deliverResult expected logs conf sc td =
     dumpLogs = vcat . fmap go . zip [1 ..] $ logs
     go :: (Int, Text) -> Doc
     go (ix, line) = (int ix <> colon) <+> (text . show $ line)
-
-ourStyle :: Style
-ourStyle = style {lineLength = 80}
 
 formatScriptError :: ScriptError -> String
 formatScriptError =

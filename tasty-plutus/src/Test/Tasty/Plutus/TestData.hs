@@ -20,8 +20,8 @@ module Test.Tasty.Plutus.TestData (
   fromArbitraryMinting,
 ) where
 
-import Data.Semigroup (stimes, stimesIdempotent)
 import Data.Kind (Type)
+import Data.Semigroup (stimes, stimesIdempotent)
 import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.IsData.Class (FromData, ToData)
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
@@ -66,9 +66,10 @@ data Example = Good | Bad
       Show
     )
 
--- | \'Maximal badness\': gives 'Bad' when any argument is 'Bad'.
---
--- @since 3.1
+{- | \'Maximal badness\': gives 'Bad' when any argument is 'Bad'.
+
+ @since 3.1
+-}
 instance Semigroup Example where
   {-# INLINEABLE (<>) #-}
   Bad <> _ = Bad
@@ -126,10 +127,10 @@ data Generator (p :: Purpose) where
     Generator 'ForSpending
   -- | @since 3.1
   GenForMinting ::
-    ( ToData redeemer,
-      FromData redeemer,
-      Show redeemer
-    ) => 
+    ( ToData redeemer
+    , FromData redeemer
+    , Show redeemer
+    ) =>
     (redeemer -> Example) ->
     Methodology redeemer ->
     Generator 'ForMinting
@@ -141,14 +142,15 @@ data Generator (p :: Purpose) where
 -}
 fromArbitrarySpending ::
   forall (datum :: Type) (redeemer :: Type).
-  (ToData datum,
-    FromData datum,
-    Arbitrary datum,
-    Show datum,
-    ToData redeemer,
-    FromData redeemer,
-    Show redeemer,
-    Arbitrary redeemer) =>
+  ( ToData datum
+  , FromData datum
+  , Arbitrary datum
+  , Show datum
+  , ToData redeemer
+  , FromData redeemer
+  , Show redeemer
+  , Arbitrary redeemer
+  ) =>
   (datum -> redeemer -> Value -> Example) ->
   Methodology Value ->
   Generator 'ForSpending
@@ -160,10 +162,11 @@ fromArbitrarySpending f = GenForSpending f fromArbitrary fromArbitrary
 -}
 fromArbitraryMinting ::
   forall (redeemer :: Type).
-  (ToData redeemer,
-    FromData redeemer,
-    Show redeemer,
-    Arbitrary redeemer) =>
+  ( ToData redeemer
+  , FromData redeemer
+  , Show redeemer
+  , Arbitrary redeemer
+  ) =>
   (redeemer -> Example) ->
   Generator 'ForMinting
 fromArbitraryMinting f = GenForMinting f fromArbitrary

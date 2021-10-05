@@ -9,21 +9,31 @@ module Test.Tasty.Plutus.Internal (
   TransactionConfig (..),
   compileSpending,
   compileMinting,
-  PropertyTestCount(..),
-  PropertyMaxSize(..),
+  PropertyTestCount (..),
+  PropertyMaxSize (..),
+  ourStyle,
+  ScriptResult (..),
+  testValidatorScript,
+  testMintingPolicyScript,
 ) where
 
-import Data.Tagged (Tagged (Tagged))
-import Text.Read (readMaybe)
-import Test.Tasty.Options (IsOption (defaultValue, parseValue,
-                                     optionName, optionHelp, showDefaultValue))
 import Control.Monad.RWS.Strict (RWS)
 import Control.Monad.Reader (MonadReader (ask, local))
 import Data.Kind (Type)
 import Data.Maybe (mapMaybe)
 import Data.Sequence (Seq)
+import Data.Tagged (Tagged (Tagged))
+import Data.Text (Text)
+import Data.Text qualified as Text
 import GHC.Exts (toList)
-import Ledger.Scripts (datumHash)
+import Ledger.Scripts (
+  Context,
+  Redeemer,
+  ScriptError,
+  datumHash,
+  runMintingPolicyScript,
+  runScript,
+ )
 import Plutus.V1.Ledger.Address (pubKeyHashAddress, scriptHashAddress)
 import Plutus.V1.Ledger.Contexts (
   ScriptContext (ScriptContext),
@@ -60,7 +70,19 @@ import Plutus.V1.Ledger.Value (CurrencySymbol, TokenName, Value)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
+import Safe (lastMay)
 import Test.Tasty (TestTree)
+import Test.Tasty.Options (
+  IsOption (
+    defaultValue,
+    optionHelp,
+    optionName,
+    parseValue,
+    showDefaultValue
+  ),
+ )
+import Text.PrettyPrint (Style (lineLength), style)
+import Text.Read (readMaybe)
 import Prelude
 
 {- | Provides a monadic API for composing tests against the same validator or
@@ -354,14 +376,15 @@ toTxOut valHash (Output typ v) = case typ of
   OwnType dat ->
     TxOut (scriptHashAddress valHash) v . justDatumHash $ dat
 
--- | The number of property tests to run.
---
--- This defaults to 1000. When passing this via CLI, use a positive integer
--- only, and ensure that it's in bounds for 'Int'.
---
--- @since 3.1
+{- | The number of property tests to run.
+
+ This defaults to 1000. When passing this via CLI, use a positive integer
+ only, and ensure that it's in bounds for 'Int'.
+
+ @since 3.1
+-}
 newtype PropertyTestCount = PropertyTestCount Int
-  deriving stock 
+  deriving stock
     ( -- | @since 3.1
       Show
     )
@@ -372,7 +395,7 @@ instance IsOption PropertyTestCount where
   parseValue s = PropertyTestCount <$> (readMaybe s >>= go)
     where
       go :: Int -> Maybe Int
-      go i = case signum i of 
+      go i = case signum i of
         (-1) -> Nothing
         0 -> Nothing
         _ -> Just i
@@ -380,17 +403,18 @@ instance IsOption PropertyTestCount where
   optionHelp = Tagged "Number of property tests to run."
   showDefaultValue (PropertyTestCount i) = Just . show $ i
 
--- | The maximum size given to generators for properties.
---
--- This defaults to 100 (same as QuickCheck). When passing this via CLI, use a
--- positive integer only, and ensure that it's in bounds for 'Int'.
---
--- @since 3.1
+{- | The maximum size given to generators for properties.
+
+ This defaults to 100 (same as QuickCheck). When passing this via CLI, use a
+ positive integer only, and ensure that it's in bounds for 'Int'.
+
+ @since 3.1
+-}
 newtype PropertyMaxSize = PropertyMaxSize Int
-  deriving stock (
-    -- | @since 3.1
-    Show
-  )
+  deriving stock
+    ( -- | @since 3.1
+      Show
+    )
 
 -- | @since 3.1
 instance IsOption PropertyMaxSize where
@@ -405,3 +429,43 @@ instance IsOption PropertyMaxSize where
   optionName = Tagged "property-max-size"
   optionHelp = Tagged "Maximum size for generators used for property tests."
   showDefaultValue (PropertyMaxSize i) = Just . show $ i
+
+ourStyle :: Style
+ourStyle = style {lineLength = 80}
+
+-- The result of parsing a log from a script emulation
+data ScriptResult
+  = ScriptPassed
+  | ScriptFailed
+  | NoOutcome
+  | ParseFailed Text
+  | InternalError Text
+  deriving stock (Eq, Show)
+
+testValidatorScript ::
+  Context ->
+  Validator ->
+  Datum ->
+  Redeemer ->
+  Either ScriptError ScriptResult
+testValidatorScript ctx val d r = case runScript ctx val d r of
+  Left err -> Left err
+  Right (_, logs) -> Right . parseLogs $ logs
+
+testMintingPolicyScript ::
+  Context ->
+  MintingPolicy ->
+  Redeemer ->
+  Either ScriptError ScriptResult
+testMintingPolicyScript ctx mp r = case runMintingPolicyScript ctx mp r of
+  Left err -> Left err
+  Right (_, logs) -> Right . parseLogs $ logs
+
+parseLogs :: [Text] -> ScriptResult
+parseLogs logs = case lastMay logs >>= Text.stripPrefix "tasty-plutus: " of
+  Nothing -> NoOutcome
+  Just "Pass" -> ScriptPassed
+  Just "Fail" -> ScriptFailed
+  Just t -> case Text.stripPrefix "Parse failed: " t of
+    Nothing -> InternalError t
+    Just t' -> ParseFailed t'

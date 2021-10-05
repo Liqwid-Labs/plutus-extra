@@ -25,7 +25,7 @@ import Test.Tasty.Options (
     showDefaultValue
   ),
  )
-import Test.Tasty.Plutus.Internal (PropertyTestCount, PropertyMaxSize)
+import Test.Tasty.Plutus.Internal (PropertyMaxSize, PropertyTestCount)
 import Prelude
 
 {- | The transaction fee used for the tests.
