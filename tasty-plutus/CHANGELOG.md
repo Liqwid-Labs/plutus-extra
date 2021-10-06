@@ -4,6 +4,26 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 3.1 -- 2021-10-06
+
+### Added
+
+* Support for QuickCheck-based property testing.
+* Multiple new modules.
+* Additional `tasty` options to control property-based execution.
+* More examples in documentation.
+
+### Changed
+
+* Multiple definitions moved to own modules from `Unit`. `Unit` still re-exports
+  these temporarily for backwards compatibility.
+* Only one `Internal` module containing everything that needs hiding.
+
+### Deleted
+
+* `Test.Tasty.Plutus.Context.Internal` module (now merged into
+  `Test.Tasty.Plutus.Internal`).
+
 ## 3.0 -- 2021-10-04
 
 ### Added
