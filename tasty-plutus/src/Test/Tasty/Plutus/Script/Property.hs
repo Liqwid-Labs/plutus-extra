@@ -1,3 +1,5 @@
+{-# LANGUAGE Trustworthy #-}
+
 {- |
  Module: Test.Tasty.Plutus.Script.Property
  Copyright: (C) MLabs 2021
@@ -7,6 +9,23 @@
  Stability: Experimental
 
  Generates QuickCheck property tests for validator and minting policy testing.
+
+ = Example usage
+
+ > myProperties :: TestTree
+ > myProperties = withValidator "Property testing my spending" myValidator $ do
+ >   scriptProperty "Some property" myGenerator mkContext
+ >   scriptProperty "Some other property" anotherGenerator mkContext
+ >   ...
+
+ = Note
+
+ In general, we assume that the 'ContextBuilder' is kept (fairly) stable; the
+ goal of 'scriptProperty' is to test behaviour under changing 'TestData' (aka,
+ inputs). However, frequently, there is a need to know about what kind of
+ inputs we have to make a context that even makes sense at all, regardless of
+ whether the inputs are \'good\' or not. Therefore, we provide a \'hook\' into
+ this system for when it's needed.
 -}
 module Test.Tasty.Plutus.Script.Property (
   scriptProperty,
@@ -107,7 +126,18 @@ import Text.Show.Pretty (ppDoc)
 import Type.Reflection (Typeable)
 import Prelude
 
--- | @since 3.1
+{- | Given a way of generating 'TestData', and converting a generated 'TestData'
+ into a 'ContextBuilder', check that:
+
+ * For any 'TestData' classified as 'Good', the script succeeds; and
+ * For any 'TestData' classified as 'Bad', the script fails.
+
+ This will also check /coverage/: specifically, the property will fail unless
+ the provided generation method produces roughly equal numbers of 'Good' and
+ 'Bad'-classified cases.
+
+ @since 3.1
+-}
 scriptProperty ::
   forall (p :: Purpose).
   String ->

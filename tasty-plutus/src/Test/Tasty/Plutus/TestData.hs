@@ -1,3 +1,5 @@
+{-# LANGUAGE Trustworthy #-}
+
 {- |
  Module: Test.Tasty.Plutus.TestData
  Copyright: (C) MLabs 2021

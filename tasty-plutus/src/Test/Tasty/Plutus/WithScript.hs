@@ -1,3 +1,13 @@
+{-# LANGUAGE Trustworthy #-}
+
+{- |
+ Module: Test.Tasty.Plutus.WithScript
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+-}
 module Test.Tasty.Plutus.WithScript (
   -- * Environment monad
   WithScript,
@@ -34,6 +44,7 @@ import Prelude
  >    shouldn'tValidate "Invalid context" validData invalidContext
  >    shouldn'tValidate "Invalid data" invalidData validContext
  >    shouldn'tValidate "Everything is bad" invalidData invalidContext
+ >    scriptProperty "Some property" myGenerator mkContext
  >    ...
 
  = Important note
@@ -63,6 +74,7 @@ withValidator name val (WithSpending comp) =
  >    shouldn'tValidate "Invalid context" validData invalidContext
  >    shouldn'tValidate "Invalid data" invalidData validContext
  >    shouldn'tValidate "Everything is bad" invalidData invalidContext
+ >    scriptProperty "Some property" myGenerator mkContext
  >    ...
 
  = Important note
@@ -88,7 +100,7 @@ withMintingPolicy name mp (WithMinting comp) =
 
  > testValidator :: Validator
  > testValidator = mkValidatorScript $
-      $$(compile [|| go ||]) `applyCode` $$(compile [|| myValidator ||])
+ >    $$(compile [|| go ||]) `applyCode` $$(compile [|| myValidator ||])
  >   where
  >    go = toTestValidator
 

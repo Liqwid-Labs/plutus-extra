@@ -94,6 +94,7 @@ import Prelude
  >    shouldn'tValidate "Invalid context" validData invalidContext
  >    shouldn'tValidate "Invalid data" invalidData validContext
  >    shouldn'tValidate "Everything is bad" invalidData invalidContext
+ >    scriptProperty "Some property" myGenerator mkContext
  >    ...
 
  'withMintingPolicy' works similarly.

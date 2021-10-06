@@ -46,6 +46,15 @@ extensible, scriptable, and provides a lot of solutions to 'boilerplate' around
 testing. `tasty-plutus` will use this whenever possible, and in general, try to
 be a 'good citizen' of the `tasty` universe.
 
+## Where do I begin?
+
+Start with `Test.Tasty.Plutus.Script.Unit` (for the unit-test-like interface)
+and `Test.Tasty.Plutus.Script.Property` (for the property-test-like interface).
+You will also need `Test.Tasty.Plutus.WithScript` (to create runnable tests),
+`Test.Tasty.Plutus.TestData` and `Test.Tasty.Plutus.Context` (to construct
+inputs), and possibly `Test.Tasty.Plutus.Options` if you need fine-grained
+control over the `tasty`-compatible options we provide.
+
 ## What can I do with this?
 
 The code is licensed under Apache 2.0; check the LICENSE.md file for details.

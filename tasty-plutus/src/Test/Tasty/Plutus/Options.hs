@@ -1,9 +1,25 @@
+{-# LANGUAGE Trustworthy #-}
+
+{- |
+ Module: Test.Tasty.Plutus.Options
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ A collection of options for the tests provided by this package. Includes
+ both options for unit and property tests.
+-}
 module Test.Tasty.Plutus.Options (
+  -- * Plutus options
   Fee (..),
   TimeRange (..),
   TestTxId (..),
   TestCurrencySymbol (..),
   TestValidatorHash (..),
+
+  -- * Property test options
   PropertyTestCount,
   PropertyMaxSize,
 ) where

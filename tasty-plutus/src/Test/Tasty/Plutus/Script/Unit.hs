@@ -1,3 +1,5 @@
+{-# LANGUAGE Trustworthy #-}
+
 {- |
  Module: Test.Tasty.Plutus.Script.Unit
  Copyright: (C) MLabs 2021
@@ -7,6 +9,25 @@
  Stability: Experimental
 
  A unit-test-like interface for validator and minting policy testing.
+
+ = Example usage
+
+ > myTests :: TestTree
+ > myTests = withValidator "Testing my spending" myValidator $ do
+ >    shouldValidate "Valid case" validData validContext
+ >    shouldn'tValidate "Invalid context" validData invalidContext
+ >    shouldn'tValidate "Invalid data" invalidData validContext
+ >    shouldn'tValidate "Everything is bad" invalidData invalidContext
+ >    ...
+
+ = Note
+
+ This re-exports multiple definitions for backwards-compatibility reasons.
+ Many of these will disappear on the next major version bump: the only definitions
+ that are guaranteed to remain are:
+
+ * 'shouldValidate'
+ * 'shouldn'tValidate'
 -}
 module Test.Tasty.Plutus.Script.Unit (
   -- * Validator context types
