@@ -116,9 +116,12 @@ import Test.Tasty.Providers (
  )
 import Text.PrettyPrint (
   Doc,
+  colon,
   hang,
+  int,
   renderStyle,
   text,
+  vcat,
   ($+$),
   (<+>),
  )
@@ -258,10 +261,11 @@ spenderProperty val tc mkCB (ex, d, r, v) =
       context' = Context . toBuiltinData $ context
       d' = Datum . toBuiltinData $ d
       r' = Redeemer . toBuiltinData $ r
-   in checkCoverage . cover 0.5 (ex == Good) "good" $
-        case testValidatorScript context' val d' r' of
-          Left err -> counterexample (formatError err) False
-          Right res -> produceResult ex res context td
+   in checkCoverage
+        . cover 0.5 (ex == Good) "good"
+        . produceResult ex tc context
+        . testValidatorScript context' val d'
+        $ r'
 
 prettySpender ::
   forall (datum :: Type) (redeemer :: Type).
@@ -296,10 +300,12 @@ minterProperty mp tc mkCB (ex, r) =
       context = compileMinting tc . mkCB $ td
       context' = Context . toBuiltinData $ context
       r' = Redeemer . toBuiltinData $ r
-   in checkCoverage . cover 0.5 (ex == Good) "good" $
-        case testMintingPolicyScript context' mp r' of
-          Left err -> counterexample (formatError err) False
-          Right res -> produceResult ex res context td
+   in checkCoverage
+        . cover 0.5 (ex == Good) "good"
+        . produceResult ex tc context
+        . testMintingPolicyScript context' mp
+        $ r'
+
 prettyMinter ::
   forall (redeemer :: Type).
   (Show redeemer) =>
@@ -366,60 +372,66 @@ mintingTupleShrink f mRed (ex, r) = do
   guard (f r == ex)
   pure (ex, r')
 
-formatError :: ScriptError -> String
-formatError = renderStyle ourStyle . ppDoc
-
 produceResult ::
-  forall (p :: Purpose).
   Example ->
-  ScriptResult ->
+  TransactionConfig ->
   ScriptContext ->
-  TestData p ->
+  Either ScriptError ([Text], ScriptResult) ->
   Property
-produceResult ex res sc td = case (ex, res) of
-  (Good, ScriptPassed) -> property True
-  (Bad, ScriptFailed) -> property True
-  (Good, ScriptFailed) -> counterexample unexpectedFailure False
-  (Bad, ScriptPassed) -> counterexample unexpectedSuccess False
-  (_, ParseFailed what) -> counterexample (parseFailure what) False
-  (_, InternalError what) -> counterexample (internalErr what) False
-  (_, NoOutcome) -> counterexample noOutcome False
+produceResult ex tc sc = \case
+  Left err -> counterexample (scriptError err) False
+  Right (logs, res) -> case res of
+    ParseFailed what -> counterexample (parseFailure logs what) False
+    InternalError what -> counterexample (internalErr logs what) False
+    NoOutcome -> counterexample (noOutcome logs) False
+    ScriptPassed -> case ex of
+      Good -> property True
+      Bad -> counterexample (unexpectedFailure logs) False
+    ScriptFailed -> case ex of
+      Good -> counterexample (unexpectedSuccess logs) False
+      Bad -> property True
   where
-    unexpectedSuccess :: String
-    unexpectedSuccess =
+    scriptError :: ScriptError -> String
+    scriptError err =
       renderStyle ourStyle $
-        "A good case failed unexpectedly" $+$ dumpState
-    unexpectedFailure :: String
-    unexpectedFailure =
+        "Script errored"
+          $+$ hang "Error" 4 (ppDoc err)
+          $+$ dumpState'
+    parseFailure :: [Text] -> Text -> String
+    parseFailure logs what =
       renderStyle ourStyle $
-        "A bad case succeeded unexpectedly" $+$ dumpState
-    noOutcome :: String
-    noOutcome =
+        ((text . show $ what) <+> "did not parse")
+          $+$ dumpState logs
+    internalErr :: [Text] -> Text -> String
+    internalErr logs msg =
+      renderStyle ourStyle $
+        ("Internal error:" <+> (text . show $ msg))
+          $+$ dumpState logs
+    noOutcome :: [Text] -> String
+    noOutcome logs =
       renderStyle ourStyle $
         "No outcome from run"
-          $+$ dumpState
+          $+$ dumpState logs
           $+$ ""
           $+$ "Did you forget to use toTestValidator or toTestMintingPolicy?"
-    parseFailure :: Text -> String
-    parseFailure what =
+    unexpectedFailure :: [Text] -> String
+    unexpectedFailure logs =
       renderStyle ourStyle $
-        ((text . show $ what) <+> "did not parse") $+$ dumpState
-    internalErr :: Text -> String
-    internalErr msg =
+        "A good case failed unexpectedly"
+          $+$ dumpState logs
+    unexpectedSuccess :: [Text] -> String
+    unexpectedSuccess logs =
       renderStyle ourStyle $
-        ("Internal error:" <+> (text.show $ msg)) $+$ dumpState
-    dumpState :: Doc
-    dumpState =
+        "A bad case succeeded unexpectedly"
+          $+$ dumpState logs
+    dumpState :: [Text] -> Doc
+    dumpState logs = dumpState' $+$ dumpLogs logs
+    dumpState' :: Doc
+    dumpState' =
       ""
         $+$ hang "Context" 4 (ppDoc sc)
-        $+$ hang "Inputs" 4 dumpInputs
-    dumpInputs :: Doc
-    dumpInputs = case td of
-      SpendingTest d r v ->
-        "Datum"
-          $+$ ppDoc d
-          $+$ "Redeemer"
-          $+$ ppDoc r
-          $+$ "Value"
-          $+$ ppDoc v
-      MintingTest r -> "Redeemer" $+$ ppDoc r
+        $+$ hang "Config" 4 (ppDoc tc)
+    dumpLogs :: [Text] -> Doc
+    dumpLogs = hang "Logs" 4 . vcat . fmap go . zip [1 ..]
+    go :: (Int, Text) -> Doc
+    go (ix, line) = (int ix <> colon) <+> (text . show $ line)

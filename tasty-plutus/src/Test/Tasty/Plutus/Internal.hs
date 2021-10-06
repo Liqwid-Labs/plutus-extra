@@ -448,19 +448,19 @@ testValidatorScript ::
   Validator ->
   Datum ->
   Redeemer ->
-  Either ScriptError ScriptResult
+  Either ScriptError ([Text], ScriptResult)
 testValidatorScript ctx val d r = case runScript ctx val d r of
   Left err -> Left err
-  Right (_, logs) -> Right . parseLogs $ logs
+  Right (_, logs) -> Right . (logs,) . parseLogs $ logs
 
 testMintingPolicyScript ::
   Context ->
   MintingPolicy ->
   Redeemer ->
-  Either ScriptError ScriptResult
+  Either ScriptError ([Text], ScriptResult)
 testMintingPolicyScript ctx mp r = case runMintingPolicyScript ctx mp r of
   Left err -> Left err
-  Right (_, logs) -> Right . parseLogs $ logs
+  Right (_, logs) -> Right . (logs,) . parseLogs $ logs
 
 parseLogs :: [Text] -> ScriptResult
 parseLogs logs = case lastMay logs >>= Text.stripPrefix "tasty-plutus: " of
