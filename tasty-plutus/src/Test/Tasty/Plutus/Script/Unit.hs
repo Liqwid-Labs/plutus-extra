@@ -42,13 +42,78 @@ import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Exts (IsString, toList)
-import Ledger.Value (CurrencySymbol (CurrencySymbol), Value)
-import Plutus.V1.Ledger.Contexts (ScriptContext)
-import Plutus.V1.Ledger.Interval (Interval)
+import Ledger.Value (
+  CurrencySymbol (CurrencySymbol, unCurrencySymbol),
+  TokenName (unTokenName),
+  Value (getValue),
+ )
+import Plutus.V1.Ledger.Address (Address)
+import Plutus.V1.Ledger.Contexts (
+  ScriptContext (
+    scriptContextPurpose,
+    scriptContextTxInfo
+  ),
+  ScriptPurpose (Certifying, Minting, Rewarding, Spending),
+  TxInInfo (
+    txInInfoOutRef,
+    txInInfoResolved
+  ),
+  TxInfo (
+    txInfoDCert,
+    txInfoData,
+    txInfoFee,
+    txInfoId,
+    txInfoInputs,
+    txInfoMint,
+    txInfoOutputs,
+    txInfoSignatories,
+    txInfoValidRange,
+    txInfoWdrl
+  ),
+  TxOut (
+    txOutAddress,
+    txOutDatumHash,
+    txOutValue
+  ),
+  TxOutRef (
+    txOutRefId,
+    txOutRefIdx
+  ),
+ )
+import Plutus.V1.Ledger.Credential (
+  Credential (
+    PubKeyCredential,
+    ScriptCredential
+  ),
+  StakingCredential (
+    StakingHash,
+    StakingPtr
+  ),
+ )
+import Plutus.V1.Ledger.Crypto (PubKeyHash (getPubKeyHash))
+import Plutus.V1.Ledger.DCert (
+  DCert (
+    DCertDelegDeRegKey,
+    DCertDelegDelegate,
+    DCertDelegRegKey,
+    DCertGenesis,
+    DCertMir,
+    DCertPoolRegister,
+    DCertPoolRetire
+  ),
+ )
+import Plutus.V1.Ledger.Interval (
+  Closure,
+  Extended,
+  Interval,
+  LowerBound,
+  UpperBound,
+ )
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts (
   Context (Context),
-  Datum (Datum),
+  Datum (Datum, getDatum),
+  DatumHash (DatumHash),
   MintingPolicy,
   Redeemer (Redeemer),
   ScriptError,
@@ -57,8 +122,9 @@ import Plutus.V1.Ledger.Scripts (
   runMintingPolicyScript,
   runScript,
  )
-import Plutus.V1.Ledger.Time (POSIXTime)
-import Plutus.V1.Ledger.TxId (TxId (TxId))
+import Plutus.V1.Ledger.Time (POSIXTime (getPOSIXTime))
+import Plutus.V1.Ledger.TxId (TxId (TxId, getTxId))
+import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (
   BuiltinData,
   BuiltinString,
@@ -117,7 +183,8 @@ import Text.PrettyPrint (
   ($+$),
   (<+>),
  )
-import Text.Show.Pretty (ppDoc)
+import Text.Show.Pretty (ppDoc, valToDoc)
+import Text.Show.Pretty qualified as Pretty
 import Type.Reflection (Typeable)
 
 {- | A wrapper for validators. Use this to construct 'Validator's suitable for
@@ -604,7 +671,7 @@ deliverResult expected logs conf sc td =
     dumpState :: Doc
     dumpState =
       ""
-        $+$ hang "Context" 4 (ppDoc sc)
+        $+$ hang "Context" 4 (scToDoc sc)
         $+$ hang "Configuration" 4 (ppDoc conf)
         $+$ hang "Inputs" 4 dumpInputs
         $+$ hang "Logs" 4 dumpLogs
@@ -630,6 +697,192 @@ ourStyle = style {lineLength = 80}
 formatScriptError :: ScriptError -> String
 formatScriptError =
   renderStyle ourStyle . hang "Script execution error:" 4 . ppDoc
+
+-- ScriptContext unparsing breaks due to a non-standard Show instance somewhere
+-- in its guts. This works around that by building it up manually. - Koz
+scToDoc :: ScriptContext -> Doc
+scToDoc = valToDoc . go
+  where
+    go :: ScriptContext -> Pretty.Value
+    go sc =
+      let scTxInfo = scriptContextTxInfo sc
+          scPurpose = scriptContextPurpose sc
+       in Pretty.Rec
+            "ScriptContext"
+            [ ("scriptContextTxInfo", txInfoToVal scTxInfo)
+            , ("scriptContextTxInfo", purposeToVal scPurpose)
+            ]
+
+txInfoToVal :: TxInfo -> Pretty.Value
+txInfoToVal txi =
+  Pretty.Rec
+    "TxInfo"
+    [ ("txInfoInputs", Pretty.List . fmap txInInfoToVal . txInfoInputs $ txi)
+    , ("txInfoOutputs", Pretty.List . fmap txOutToVal . txInfoOutputs $ txi)
+    , ("txInfoFee", valueToVal . txInfoFee $ txi)
+    , ("txInfoMint", valueToVal . txInfoMint $ txi)
+    , ("txInfoDCert", Pretty.List . fmap dcertToVal . txInfoDCert $ txi)
+    , ("txInfoWdrl", Pretty.List . fmap sciToVal . txInfoWdrl $ txi)
+    , ("txInfoValidRange", timeRangeToVal . txInfoValidRange $ txi)
+    , ("txInfoSignatories", Pretty.List . fmap pkhToVal . txInfoSignatories $ txi)
+    , ("txInfoData", Pretty.List . fmap dhdToVal . txInfoData $ txi)
+    , ("txInfoId", txIdToVal . txInfoId $ txi)
+    ]
+
+purposeToVal :: ScriptPurpose -> Pretty.Value
+purposeToVal = \case
+  Minting cs -> Pretty.Con "Minting" [currencySymbolToVal cs]
+  Spending txOutRef -> Pretty.Con "Spending" [txOutRefToVal txOutRef]
+  Rewarding sc -> Pretty.Con "Rewarding" [scToVal sc]
+  Certifying dc -> Pretty.Con "Certifying" [dcertToVal dc]
+
+txInInfoToVal :: TxInInfo -> Pretty.Value
+txInInfoToVal tii =
+  Pretty.Rec
+    "TxInInfo"
+    [ ("txInInfoOutRef", txOutRefToVal . txInInfoOutRef $ tii)
+    , ("txInInfoResolved", txOutToVal . txInInfoResolved $ tii)
+    ]
+
+txOutToVal :: TxOut -> Pretty.Value
+txOutToVal txo =
+  Pretty.Rec
+    "TxOut"
+    [ ("txOutAddress", addressToVal . txOutAddress $ txo)
+    , ("txOutValue", valueToVal . txOutValue $ txo)
+    ,
+      ( "txOutDatumHash"
+      , maybe (Pretty.Con "Nothing" []) go
+          . txOutDatumHash
+          $ txo
+      )
+    ]
+  where
+    go :: DatumHash -> Pretty.Value
+    go dh = Pretty.Con "Just" [dhToVal dh]
+
+valueToVal :: Value -> Pretty.Value
+valueToVal val = Pretty.Con "Value" [mapToVal . getValue $ val]
+
+dcertToVal :: DCert -> Pretty.Value
+dcertToVal = \case
+  DCertDelegRegKey sc -> Pretty.Con "DCertDelegRegKey" [scToVal sc]
+  DCertDelegDeRegKey sc -> Pretty.Con "DCertDelegDeRegKey" [scToVal sc]
+  DCertDelegDelegate sc pkh ->
+    Pretty.Con "DCertDelegDelegate" [scToVal sc, pkhToVal pkh]
+  DCertPoolRegister poolId poolVFR ->
+    Pretty.Con "DCertPoolRegister" [pkhToVal poolId, pkhToVal poolVFR]
+  DCertPoolRetire pkh i ->
+    Pretty.Con "DCertPoolRetire" [pkhToVal pkh, integerToVal i]
+  DCertGenesis -> Pretty.Con "DCertGenesis" []
+  DCertMir -> Pretty.Con "DCertMir" []
+
+sciToVal :: (StakingCredential, Integer) -> Pretty.Value
+sciToVal (sc, i) = Pretty.Tuple [scToVal sc, integerToVal i]
+
+timeRangeToVal :: Interval POSIXTime -> Pretty.Value
+timeRangeToVal inter =
+  Pretty.Rec
+    "Interval"
+    [ ("ivFrom", lbToVal . Interval.ivFrom $ inter)
+    , ("ivTo", ubToVal . Interval.ivTo $ inter)
+    ]
+
+pkhToVal :: PubKeyHash -> Pretty.Value
+pkhToVal pkh =
+  Pretty.Con "PubKeyHash" [Pretty.String . show . getPubKeyHash $ pkh]
+
+dhdToVal :: (DatumHash, Datum) -> Pretty.Value
+dhdToVal (dh, d) = Pretty.Tuple [dhToVal dh, datumToVal d]
+
+txIdToVal :: TxId -> Pretty.Value
+txIdToVal ti =
+  Pretty.Con "TxId" [Pretty.String . show . getTxId $ ti]
+
+currencySymbolToVal :: CurrencySymbol -> Pretty.Value
+currencySymbolToVal cs =
+  Pretty.Con "CurrencySymbol" [Pretty.String . show . unCurrencySymbol $ cs]
+
+txOutRefToVal :: TxOutRef -> Pretty.Value
+txOutRefToVal tor =
+  Pretty.Rec
+    "TxOutRef"
+    [ ("txOutRefId", txIdToVal . txOutRefId $ tor)
+    , ("txOutRefIdx", integerToVal . txOutRefIdx $ tor)
+    ]
+
+scToVal :: StakingCredential -> Pretty.Value
+scToVal = \case
+  StakingHash cred -> Pretty.Con "StakingHash" [credToVal cred]
+  StakingPtr i1 i2 i3 ->
+    Pretty.Con "StakingPtr" [integerToVal i1, integerToVal i2, integerToVal i3]
+
+addressToVal :: Address -> Pretty.Value
+addressToVal _ = Pretty.Con "Address" []
+
+dhToVal :: DatumHash -> Pretty.Value
+dhToVal (DatumHash dh) =
+  Pretty.Con "DatumHash" [Pretty.String . show $ dh]
+
+mapToVal ::
+  AssocMap.Map CurrencySymbol (AssocMap.Map TokenName Integer) ->
+  Pretty.Value
+mapToVal m =
+  Pretty.Con "AssocMap" [Pretty.List . fmap go . AssocMap.toList $ m]
+  where
+    go :: (CurrencySymbol, AssocMap.Map TokenName Integer) -> Pretty.Value
+    go (cs, m') =
+      Pretty.Tuple
+        [ currencySymbolToVal cs
+        , Pretty.Con "AssocMap" [Pretty.List . fmap go2 . AssocMap.toList $ m']
+        ]
+    go2 :: (TokenName, Integer) -> Pretty.Value
+    go2 (tn, i) = Pretty.Tuple [tokenNameToVal tn, integerToVal i]
+
+integerToVal :: Integer -> Pretty.Value
+integerToVal i = case signum i of
+  (-1) -> Pretty.Neg . Pretty.Integer . show . abs $ i
+  _ -> Pretty.Integer . show . abs $ i
+
+lbToVal :: LowerBound POSIXTime -> Pretty.Value
+lbToVal (Interval.LowerBound ext clos) =
+  Pretty.Con "LowerBound" [extToVal ext, closToVal clos]
+
+ubToVal :: UpperBound POSIXTime -> Pretty.Value
+ubToVal (Interval.UpperBound ext clos) =
+  Pretty.Con "UpperBound" [extToVal ext, closToVal clos]
+
+datumToVal :: Datum -> Pretty.Value
+datumToVal d =
+  Pretty.Con "Datum" [Pretty.String . show . getDatum $ d]
+
+credToVal :: Credential -> Pretty.Value
+credToVal = \case
+  PubKeyCredential pkh ->
+    Pretty.Con "PubKeyCredential" [pkhToVal pkh]
+  ScriptCredential vh ->
+    Pretty.Con "ScriptCredential" [vhToVal vh]
+
+tokenNameToVal :: TokenName -> Pretty.Value
+tokenNameToVal tn =
+  Pretty.Con "TokenName" [Pretty.String . show . unTokenName $ tn]
+
+extToVal :: Extended POSIXTime -> Pretty.Value
+extToVal = \case
+  Interval.NegInf -> Pretty.Con "NegInf" []
+  Interval.Finite t -> Pretty.Con "Finite" [timeToVal t]
+  Interval.PosInf -> Pretty.Con "PosInf" []
+
+closToVal :: Closure -> Pretty.Value
+closToVal = Pretty.String . show
+
+vhToVal :: ValidatorHash -> Pretty.Value
+vhToVal (ValidatorHash vh) =
+  Pretty.Con "ValidatorHash" [Pretty.String . show $ vh]
+
+timeToVal :: POSIXTime -> Pretty.Value
+timeToVal t =
+  Pretty.Con "POSIXTime" [integerToVal . getPOSIXTime $ t]
 
 {-# INLINEABLE reportParseFailed #-}
 reportParseFailed :: BuiltinString -> ()
