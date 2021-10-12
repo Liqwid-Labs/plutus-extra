@@ -4,7 +4,8 @@
 
 A collection of Plutus-related helper libraries. Currently, we have:
 
-* `plutus-extra`, a collection of various extra bits; and
+* `plutus-extra`, a collection of various extra bits;
+* `plutus-pretty`, a collection of helpers for pretty-printing Plutus types; and
 * `tasty-plutus`, a testing framework for Plutus scripts.
 
 See the relevant sub-directories for more specific information.
