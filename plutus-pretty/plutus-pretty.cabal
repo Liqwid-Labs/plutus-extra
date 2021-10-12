@@ -1,6 +1,6 @@
 cabal-version:      3.0
-name:               tasty-plutus
-version:            3.1
+name:               plutus-pretty
+version:            1.0
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -45,29 +45,13 @@ common lang
 library
   import:          lang
   exposed-modules:
-    Test.Tasty.Plutus.Context
-    Test.Tasty.Plutus.Options
-    Test.Tasty.Plutus.Script.Property
-    Test.Tasty.Plutus.Script.Unit
-    Test.Tasty.Plutus.TestData
-    Test.Tasty.Plutus.WithScript
+    Plutus.V1.Pretty
+    Text.Show.Pretty.Extra
 
-  other-modules:   Test.Tasty.Plutus.Internal
   build-depends:
     , base               ^>=4.14
-    , containers         ^>=0.6.2.1
-    , mtl                ^>=2.2.2
-    , plutus-contract
-    , plutus-ledger
     , plutus-ledger-api
-    , plutus-pretty      ^>=1.0
     , plutus-tx
-    , pretty             ^>=1.1.3.6
     , pretty-show        ^>=1.10
-    , QuickCheck         ^>=2.14.2
-    , safe               ^>=0.3.19
-    , tagged             ^>=0.8.6.1
-    , tasty              ^>=1.4.1
-    , text               ^>=1.2.4.1
 
   hs-source-dirs:  src
