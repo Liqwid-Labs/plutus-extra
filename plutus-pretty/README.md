@@ -2,32 +2,24 @@
 
 ## What is this?
 
-## So what can this do?
+A collection of functionality to support use of
+[`pretty-show`](https://hackage.haskell.org/package/pretty-show-1.10) with
+Plutus types. This is a workaround for some types not having stock-derived
+`Show` instances, and also contains some helpers for working with `pretty-show`.
+
+## What can this do?
+
+We currently provide functions to convert various Plutus types to `Value`; see
+the `Plutus.V1.Pretty` module for details. We also provide two helper type
+classes (in a similar spirit to `Eq1` and such) in `Text.Show.Pretty.Extra`.
 
 ## What are the goals of this project?
 
-### Convenience
-
-Testing Plutus-based code can be a significant challenge. `tasty-plutus`, by a
-mixture of good integration with the `tasty` ecosystem and well-chosen testing
-APIs, aims to make it more straightforward. In particular, we want to codify
-folklore practices or discoveries and make them accessible to everyone.
-
-### Good failure reporting
-
-Knowing that a test failed is often far less useful than knowing _why_ it
-failed. To this end, `tasty-plutus` aims to give the most useful information it
-can about the context of the failures, and present it in a readable and concise
-way.
-
-### Integration with `tasty`
-
-The `tasty` test framework is well-supported for a range of testing types, is
-extensible, scriptable, and provides a lot of solutions to 'boilerplate' around
-testing. `tasty-plutus` will use this whenever possible, and in general, try to
-be a 'good citizen' of the `tasty` universe.
-
-## Where do I begin?
+We aim to provide manual `Value` conversions for those types which we need at
+the moment, as well as helpers which make this easier, again, on an as-needed
+basis. We may expand this in future to include more data types from Plutus if we
+find we need them, as well as more instances of our helper type classes, again,
+if we need them.
 
 ## What can I do with this?
 

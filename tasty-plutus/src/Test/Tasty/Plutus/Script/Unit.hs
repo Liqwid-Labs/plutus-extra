@@ -52,7 +52,6 @@ module Test.Tasty.Plutus.Script.Unit (
   TestValidatorHash (..),
 ) where
 
-import Plutus.V1.Pretty (scriptContextToValue)
 import Control.Monad.Reader (asks)
 import Control.Monad.Writer (tell)
 import Data.Proxy (Proxy (Proxy))
@@ -76,6 +75,7 @@ import Plutus.V1.Ledger.Scripts (
  )
 import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.TxId (TxId)
+import Plutus.V1.Pretty (scriptContextToValue)
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Safe (lastMay)
 import Test.Tasty.Options (

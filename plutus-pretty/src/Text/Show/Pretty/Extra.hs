@@ -1,3 +1,16 @@
+{-# LANGUAGE Trustworthy #-}
+
+{- |
+ Module: Text.Show.Pretty.Extra
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ Some helper type classes for \'lifting\' prettyprinting to various
+ higher-rank types.
+-}
 module Text.Show.Pretty.Extra (
   PrettyVal1 (..),
   PrettyVal2 (..),
@@ -17,7 +30,10 @@ import Text.Show.Pretty (
  )
 import Prelude
 
--- | @since 1.0
+{- | Indicates the ability to \'lift\' prettyprinting of one type argument.
+
+ @since 1.0
+-}
 class PrettyVal1 (f :: Type -> Type) where
   liftPrettyVal :: (a -> Value) -> f a -> Value
 
@@ -63,7 +79,10 @@ instance PrettyVal1 Extended where
     Finite x -> Con "Finite" [f x]
     PosInf -> Con "PosInf" []
 
--- | @since 1.0
+{- | Indicates the ability to \'lift\' prettyprinting of two type arguments.
+
+ @since 1.0
+-}
 class PrettyVal2 (f :: Type -> Type -> Type) where
   liftPrettyVal2 :: (a -> Value) -> (b -> Value) -> f a b -> Value
 

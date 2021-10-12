@@ -1,3 +1,16 @@
+{-# LANGUAGE Trustworthy #-}
+
+{- |
+ Module: Plutus.V1.Pretty
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ A collection of helper functions for converting Plutus types to
+ 'Pretty.Value'.
+-}
 module Plutus.V1.Pretty (
   scriptContextToValue,
   txInfoToValue,
