@@ -19,37 +19,11 @@
  >    shouldn'tValidate "Invalid data" invalidData validContext
  >    shouldn'tValidate "Everything is bad" invalidData invalidContext
  >    ...
-
- = Note
-
- This re-exports multiple definitions for backwards-compatibility reasons.
- Many of these will disappear on the next major version bump: the only definitions
- that are guaranteed to remain are:
-
- * 'shouldValidate'
- * 'shouldn'tValidate'
 -}
 module Test.Tasty.Plutus.Script.Unit (
-  -- * Validator context types
-  TestData (..),
-  WithScript,
-
-  -- * Wrappers
-  toTestValidator,
-  toTestMintingPolicy,
-
   -- * Testing API
-  withValidator,
-  withMintingPolicy,
   shouldValidate,
   shouldn'tValidate,
-
-  -- * Options
-  Fee (..),
-  TimeRange (..),
-  TestTxId (..),
-  TestCurrencySymbol (..),
-  TestValidatorHash (..),
 ) where
 
 import Control.Monad.Reader (asks)
@@ -106,12 +80,6 @@ import Test.Tasty.Plutus.Options (
   TimeRange (TimeRange),
  )
 import Test.Tasty.Plutus.TestData (TestData (MintingTest, SpendingTest))
-import Test.Tasty.Plutus.WithScript (
-  toTestMintingPolicy,
-  toTestValidator,
-  withMintingPolicy,
-  withValidator,
- )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
   Result,

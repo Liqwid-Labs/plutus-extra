@@ -4,6 +4,10 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+### Removed
+
+* Various re-exports from `Test.Tasty.Plutus.Script.Unit`.
+
 ## 3.1 -- 2021-10-06
 
 ### Added
