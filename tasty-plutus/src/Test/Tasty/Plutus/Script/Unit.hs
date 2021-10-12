@@ -144,21 +144,21 @@ shouldn'tValidate name td cb = case td of
 
 data Outcome = Fail | Pass
 
-data ValidatorTest (p :: Purpose) where
+data ScriptTest (p :: Purpose) where
   Spender ::
     Outcome ->
     TestData 'ForSpending ->
     ContextBuilder 'ForSpending ->
     Validator ->
-    ValidatorTest 'ForSpending
+    ScriptTest 'ForSpending
   Minter ::
     Outcome ->
     TestData 'ForMinting ->
     ContextBuilder 'ForMinting ->
     MintingPolicy ->
-    ValidatorTest 'ForMinting
+    ScriptTest 'ForMinting
 
-instance (Typeable p) => IsTest (ValidatorTest p) where
+instance (Typeable p) => IsTest (ScriptTest p) where
   run opts vt _ = pure $ case vt of
     Spender expected td@(SpendingTest d r v) cb val ->
       let context = compileSpending conf cb d v

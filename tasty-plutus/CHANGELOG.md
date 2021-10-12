@@ -8,6 +8,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 * Rename `paysSelf` and `paysOther` into `paysToSelf` and `paysToOther` for
   consistency.
+* Rename `ValidatorTest` to `ScriptTest`.
 
 ### Removed
 
