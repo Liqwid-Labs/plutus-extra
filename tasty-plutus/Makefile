@@ -41,19 +41,19 @@ ifdef FLAGS
 GHC_FLAGS = --ghc-options "$(FLAGS)"
 endif
 
-build: requires_nix_shell plutus-extra.cabal
+build: requires_nix_shell tasty-plutus.cabal
 	cabal v2-build $(GHC_FLAGS)
 
-watch: requires_nix_shell plutus-extra.cabal
+watch: requires_nix_shell tasty-plutus.cabal
 	while sleep 1; do find plutus-extra.cabal src test | entr -cd make build; done
 
-test: requires_nix_shell plutus-extra.cabal
+test: requires_nix_shell tasty-plutus.cabal
 	cabal v2-test
 
-ghci: requires_nix_shell plutus-extra.cabal
+ghci: requires_nix_shell tasty-plutus.cabal
 	cabal v2-repl $(GHC_FLAGS)
 
-coverage: plutus-extra.cabal
+coverage: tasty-plutus.cabal
 	nix-build --arg doCoverage true -A projectCoverageReport
 
 # Source dirs to run fourmolu on
