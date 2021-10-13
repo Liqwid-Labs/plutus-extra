@@ -21,7 +21,9 @@ module Test.Tasty.Plutus.Options (
 
   -- * Property test options
   PropertyTestCount,
+  testCount,
   PropertyMaxSize,
+  maxSize,
 ) where
 
 import Data.Tagged (Tagged (Tagged))
@@ -42,6 +44,7 @@ import Test.Tasty.Options (
   ),
  )
 import Test.Tasty.Plutus.Internal (PropertyMaxSize, PropertyTestCount)
+import Test.Tasty.Plutus.Options.QQ (maxSize, testCount)
 import Prelude
 
 {- | The transaction fee used for the tests.

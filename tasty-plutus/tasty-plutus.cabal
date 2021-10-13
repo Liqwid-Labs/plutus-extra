@@ -52,7 +52,10 @@ library
     Test.Tasty.Plutus.TestData
     Test.Tasty.Plutus.WithScript
 
-  other-modules:   Test.Tasty.Plutus.Internal
+  other-modules:
+    Test.Tasty.Plutus.Internal
+    Test.Tasty.Plutus.Options.QQ
+
   build-depends:
     , base               ^>=4.14
     , containers         ^>=0.6.2.1
@@ -68,6 +71,7 @@ library
     , safe               ^>=0.3.19
     , tagged             ^>=0.8.6.1
     , tasty              ^>=1.4.1
+    , template-haskell   ^>=2.16.0.0
     , text               ^>=1.2.4.1
 
   hs-source-dirs:  src
