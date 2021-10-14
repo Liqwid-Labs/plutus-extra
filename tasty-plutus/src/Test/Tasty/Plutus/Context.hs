@@ -1,3 +1,5 @@
+{-# LANGUAGE Trustworthy #-}
+
 {- |
  Module: Test.Tasty.Plutus.Context
  Copyright: (C) MLabs 2021
@@ -60,7 +62,7 @@ import Plutus.V1.Ledger.Scripts (ValidatorHash)
 import Plutus.V1.Ledger.Value (TokenName, Value)
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
-import Test.Tasty.Plutus.Context.Internal qualified as Internal
+import Test.Tasty.Plutus.Internal qualified as Internal
 import Wallet.Emulator.Types (Wallet, walletPubKey)
 
 {- | Single-input context.
