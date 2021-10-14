@@ -18,6 +18,7 @@ module Test.Tasty.Plutus.Options (
   TestTxId (..),
   TestCurrencySymbol (..),
   TestValidatorHash (..),
+  PlutusTracing (..),
 
   -- * Property test options
   PropertyTestCount,
@@ -37,11 +38,13 @@ import Plutus.V1.Ledger.TxId (TxId (TxId))
 import Test.Tasty.Options (
   IsOption (
     defaultValue,
+    optionCLParser,
     optionHelp,
     optionName,
     parseValue,
     showDefaultValue
   ),
+  mkFlagCLParser,
  )
 import Test.Tasty.Plutus.Internal (PropertyMaxSize, PropertyTestCount)
 import Test.Tasty.Plutus.Options.QQ (maxSize, testCount)
@@ -159,3 +162,31 @@ instance IsOption TestValidatorHash where
   optionName = Tagged "validator-hash"
   optionHelp = Tagged "CLI PASSING NOT SUPPORTED"
   showDefaultValue = const Nothing
+
+{- | Whether we should emit Plutus traces always, or only on test failure.
+
+ The default value is 'OnlyOnFail'. The option is controlled purely by a flag;
+ if you want to use it, pass @--always-trace@.
+
+ = Note
+
+ This only affects tests using the unit-test-like interface.
+
+ @since 3.0
+-}
+data PlutusTracing = Always | OnlyOnFail
+  deriving stock
+    ( -- | @since 3.1
+      Eq
+    , -- | @since 3.1
+      Show
+    )
+
+-- | @since 3.0
+instance IsOption PlutusTracing where
+  defaultValue = OnlyOnFail
+  parseValue = const (Just Always)
+  optionName = Tagged "always-trace"
+  optionHelp = Tagged "Always provide Plutus traces for unit tests."
+  showDefaultValue = const . Just $ "Only on failure"
+  optionCLParser = mkFlagCLParser mempty Always

@@ -100,6 +100,7 @@ import Test.Tasty.Plutus.Internal (
  )
 import Test.Tasty.Plutus.Options (
   Fee (Fee),
+  PlutusTracing (Always, OnlyOnFail),
   TestCurrencySymbol (TestCurrencySymbol),
   TestTxId (TestTxId),
   TestValidatorHash (TestValidatorHash),
@@ -199,14 +200,14 @@ instance (Typeable p) => IsTest (ValidatorTest p) where
           r' = Redeemer . toBuiltinData $ r
        in case runScript context' val d' r' of
             Left err -> testFailed . formatScriptError $ err
-            Right (_, logs) -> deliverResult expected logs conf context td
+            Right (_, logs) -> deliverResult shouldChat expected logs conf context td
     Minter expected td@(MintingTest r) cb mp ->
       let context = compileMinting conf cb
           context' = Context . toBuiltinData $ context
           r' = Redeemer . toBuiltinData $ r
        in case runMintingPolicyScript context' mp r' of
             Left err -> testFailed . formatScriptError $ err
-            Right (_, logs) -> deliverResult expected logs conf context td
+            Right (_, logs) -> deliverResult shouldChat expected logs conf context td
     where
       conf :: TransactionConfig
       conf =
@@ -227,6 +228,8 @@ instance (Typeable p) => IsTest (ValidatorTest p) where
       TestCurrencySymbol testCurrencySymbol' = lookupOption opts
       testValidatorHash' :: ValidatorHash
       TestValidatorHash testValidatorHash' = lookupOption opts
+      shouldChat :: PlutusTracing
+      shouldChat = lookupOption opts
   testOptions =
     Tagged
       [ Option @Fee Proxy
@@ -234,27 +237,36 @@ instance (Typeable p) => IsTest (ValidatorTest p) where
       , Option @TestTxId Proxy
       , Option @TestCurrencySymbol Proxy
       , Option @TestValidatorHash Proxy
+      , Option @PlutusTracing Proxy
       ]
 
 deliverResult ::
   forall (p :: Purpose).
+  PlutusTracing ->
   Outcome ->
   [Text] ->
   TransactionConfig ->
   ScriptContext ->
   TestData p ->
   Result
-deliverResult expected logs conf sc td =
+deliverResult shouldChat expected logs conf sc td =
   case (expected, lastMay logs >>= Text.stripPrefix "tasty-plutus: ") of
     (_, Nothing) -> testFailed noOutcome
     (Fail, Just "Pass") -> testFailed unexpectedSuccess
-    (Fail, Just "Fail") -> testPassed ""
-    (Pass, Just "Pass") -> testPassed ""
+    (Fail, Just "Fail") -> doPass
+    (Pass, Just "Pass") -> doPass
     (Pass, Just "Fail") -> testFailed unexpectedFailure
     (_, Just t) -> case Text.stripPrefix "Parse failed: " t of
       Nothing -> testFailed . internalError $ t
       Just t' -> testFailed . noParse $ t'
   where
+    doPass :: Result
+    doPass = testPassed $ case shouldChat of
+      Always ->
+        renderStyle ourStyle $
+          ""
+            $+$ hang "Logs" 4 dumpLogs
+      OnlyOnFail -> ""
     noOutcome :: String
     noOutcome =
       renderStyle ourStyle $

@@ -4,7 +4,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
-## 3.1 -- 2021-10-06
+## 3.1 -- 2021-10-14
 
 ### Added
 
@@ -13,6 +13,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * Additional `tasty` options to control property-based execution.
 * More examples in documentation.
 * Dependency on `plutus-pretty`.
+* New option for trace logs even on success for the unit-test-like interface.
 
 ### Changed
 
