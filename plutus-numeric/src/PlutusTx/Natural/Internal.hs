@@ -19,10 +19,10 @@ module PlutusTx.Natural.Internal (
   parity,
 ) where
 
+import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Control.Monad (guard)
 import Data.Aeson (FromJSON (parseJSON), ToJSON)
-
--- import Data.OpenApi.Internal.Schema qualified as OpenApi
+import Data.OpenApi.Schema qualified as OpenApi
 import PlutusTx.Builtins (matchData, unsafeDataAsI)
 import PlutusTx.IsData (
   FromData (fromBuiltinData),
@@ -62,7 +62,8 @@ newtype Natural = Natural Integer
       ToArgument
     , -- | @since 1.0
       Prelude.Eq
-      --    , OpenApi.ToSchema
+      -- | @since 1.0
+    , OpenApi.ToSchema
     )
     via Integer
   deriving stock
@@ -120,6 +121,11 @@ instance Enum Natural where
     | otherwise = Natural i
   {-# INLINEABLE fromEnum #-}
   fromEnum (Natural n) = n
+
+-- | @since 1.0
+instance Arbitrary Natural where
+  arbitrary = Natural . Prelude.abs Prelude.<$> arbitrary
+  shrink (Natural i) = Natural Prelude.<$> (Prelude.filter (> 0) . shrink $ i)
 
 {- | A demonstration of the parity of a number.
 
