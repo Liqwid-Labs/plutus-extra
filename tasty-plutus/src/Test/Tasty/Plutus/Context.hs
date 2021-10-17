@@ -9,6 +9,13 @@
  Stability: Experimental
 
  An interface for building up Plutus script contexts for testing purposes.
+
+ = Note on self-spending
+
+ Currently, if you need to set up a context for spending from the script itself,
+ you need to pass a `Value` to the 'Test.Tasty.Plutus.TestData.TestData' that
+ is used to run the test. This is counter-intuitive, and will be fixed in a
+ future release.
 -}
 module Test.Tasty.Plutus.Context (
   -- * Types
