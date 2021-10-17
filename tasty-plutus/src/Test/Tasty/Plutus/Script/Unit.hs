@@ -19,37 +19,11 @@
  >    shouldn'tValidate "Invalid data" invalidData validContext
  >    shouldn'tValidate "Everything is bad" invalidData invalidContext
  >    ...
-
- = Note
-
- This re-exports multiple definitions for backwards-compatibility reasons.
- Many of these will disappear on the next major version bump: the only definitions
- that are guaranteed to remain are:
-
- * 'shouldValidate'
- * 'shouldn'tValidate'
 -}
 module Test.Tasty.Plutus.Script.Unit (
-  -- * Validator context types
-  TestData (..),
-  WithScript,
-
-  -- * Wrappers
-  toTestValidator,
-  toTestMintingPolicy,
-
   -- * Testing API
-  withValidator,
-  withMintingPolicy,
   shouldValidate,
   shouldn'tValidate,
-
-  -- * Options
-  Fee (..),
-  TimeRange (..),
-  TestTxId (..),
-  TestCurrencySymbol (..),
-  TestValidatorHash (..),
 ) where
 
 import Control.Monad.Reader (asks)
@@ -107,12 +81,6 @@ import Test.Tasty.Plutus.Options (
   TimeRange (TimeRange),
  )
 import Test.Tasty.Plutus.TestData (TestData (MintingTest, SpendingTest))
-import Test.Tasty.Plutus.WithScript (
-  toTestMintingPolicy,
-  toTestValidator,
-  withMintingPolicy,
-  withValidator,
- )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
   Result,
@@ -177,21 +145,21 @@ shouldn'tValidate name td cb = case td of
 
 data Outcome = Fail | Pass
 
-data ValidatorTest (p :: Purpose) where
+data ScriptTest (p :: Purpose) where
   Spender ::
     Outcome ->
     TestData 'ForSpending ->
     ContextBuilder 'ForSpending ->
     Validator ->
-    ValidatorTest 'ForSpending
+    ScriptTest 'ForSpending
   Minter ::
     Outcome ->
     TestData 'ForMinting ->
     ContextBuilder 'ForMinting ->
     MintingPolicy ->
-    ValidatorTest 'ForMinting
+    ScriptTest 'ForMinting
 
-instance (Typeable p) => IsTest (ValidatorTest p) where
+instance (Typeable p) => IsTest (ScriptTest p) where
   run opts vt _ = pure $ case vt of
     Spender expected td@(SpendingTest d r v) cb val ->
       let context = compileSpending conf cb d v

@@ -38,8 +38,8 @@ module Test.Tasty.Plutus.Context (
   paysToWallet,
   paysLovelaceToPubKey,
   paysLovelaceToWallet,
-  paysSelf,
-  paysOther,
+  paysToSelf,
+  paysToOther,
 
   -- ** Spending
   spendsFromPubKey,
@@ -157,30 +157,30 @@ paysToWallet wallet = paysToPubKey (walletPubKeyHash wallet)
 
 {- | Indicate that the script being tested must pay itself the given amount.
 
- @since 1.0
+ @since 4.0
 -}
-paysSelf ::
+paysToSelf ::
   forall (p :: Internal.Purpose) (a :: Type).
   (ToData a) =>
   Value ->
   a ->
   Internal.ContextBuilder p
-paysSelf v dt =
+paysToSelf v dt =
   output . Internal.Output (Internal.OwnType . toBuiltinData $ dt) $ v
 
 {- | Indicate that the script being tested must pay another script the given
  amount.
 
- @since 1.0
+ @since 4.0
 -}
-paysOther ::
+paysToOther ::
   forall (p :: Internal.Purpose) (a :: Type).
   (ToData a) =>
   ValidatorHash ->
   Value ->
   a ->
   Internal.ContextBuilder p
-paysOther hash v dt =
+paysToOther hash v dt =
   output . Internal.Output (Internal.ScriptType hash . toBuiltinData $ dt) $ v
 
 {- | As 'paysToPubKey', but using Lovelace.
