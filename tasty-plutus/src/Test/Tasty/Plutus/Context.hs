@@ -129,11 +129,12 @@ addDatum = datum . toBuiltinData
 
 {- | Context with one minting.
 
- @since 3.0
+ @since 3.2
 -}
 minting ::
+  forall (p :: Internal.Purpose).
   Internal.Minting ->
-  Internal.ContextBuilder 'Internal.ForMinting
+  Internal.ContextBuilder p
 minting =
   Internal.ContextBuilder mempty mempty mempty mempty . Seq.singleton
 
@@ -273,21 +274,23 @@ spendsFromOther hash v d =
 
 {- | Indicate that an amount of a given token must be minted.
 
- @since 3.0
+ @since 3.2
 -}
 mintsWithSelf ::
+  forall (p :: Internal.Purpose).
   TokenName ->
   Integer ->
-  Internal.ContextBuilder 'Internal.ForMinting
+  Internal.ContextBuilder p
 mintsWithSelf tn = minting . Internal.OwnMint tn
 
 {- | Indicate that someone must mint the given 'Value'.
 
- @since 3.0
+ @since 3.2
 -}
 mintsValue ::
+  forall (p :: Internal.Purpose).
   Value ->
-  Internal.ContextBuilder 'Internal.ForMinting
+  Internal.ContextBuilder p
 mintsValue = minting . Internal.OtherMint
 
 -- Helpers

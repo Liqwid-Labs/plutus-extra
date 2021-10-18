@@ -4,6 +4,13 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 3.2 -- 2021-10-19
+
+### Changed
+
+* Minting-related `ContextBuilder` functionality is now polymorphic in its
+  `Purpose`.
+
 ## 3.1 -- 2021-10-14
 
 ### Added
