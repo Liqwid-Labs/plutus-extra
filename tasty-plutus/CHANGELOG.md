@@ -20,6 +20,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * Multiple definitions moved to own modules from `Unit`. `Unit` still re-exports
   these temporarily for backwards compatibility.
 * Only one `Internal` module containing everything that needs hiding.
+* `EvaluationError` no longer causes a test abort.
 
 ### Deleted
 
