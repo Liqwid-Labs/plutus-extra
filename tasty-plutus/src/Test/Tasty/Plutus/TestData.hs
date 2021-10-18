@@ -45,8 +45,17 @@ data TestData (p :: Purpose) where
     , Show datum
     , Show redeemer
     ) =>
+    -- | The input datum.
+    --
+    -- @since 3.0
     datum ->
+    -- | The input redeemer.
+    --
+    -- @since 3.0
     redeemer ->
+    -- | The value to be spent from the script.
+    --
+    -- @since 3.0
     Value ->
     TestData 'ForSpending
   -- | @since 3.0

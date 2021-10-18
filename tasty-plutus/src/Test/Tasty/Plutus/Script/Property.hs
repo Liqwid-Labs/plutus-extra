@@ -46,7 +46,11 @@ import Plutus.V1.Ledger.Scripts (
   Datum (Datum),
   MintingPolicy,
   Redeemer (Redeemer),
-  ScriptError,
+  ScriptError (
+    EvaluationError,
+    EvaluationException,
+    MalformedScript
+  ),
   Validator,
   ValidatorHash,
  )
@@ -379,7 +383,12 @@ produceResult ::
   Either ScriptError ([Text], ScriptResult) ->
   Property
 produceResult ex tc sc = \case
-  Left err -> counterexample (scriptError err) False
+  Left err -> case err of
+    EvaluationError logs _ -> case ex of
+      Good -> counterexample (unexpectedFailure logs) False
+      Bad -> property True
+    EvaluationException _ _ -> counterexample (scriptError err) False
+    MalformedScript _ -> counterexample (scriptError err) False
   Right (logs, res) -> case res of
     ParseFailed what -> counterexample (parseFailure logs what) False
     InternalError what -> counterexample (internalErr logs what) False
