@@ -41,7 +41,11 @@ import Plutus.V1.Ledger.Scripts (
   Datum (Datum),
   MintingPolicy,
   Redeemer (Redeemer),
-  ScriptError,
+  ScriptError (
+    EvaluationError,
+    EvaluationException,
+    MalformedScript
+  ),
   Validator,
   ValidatorHash,
   runMintingPolicyScript,
@@ -167,14 +171,14 @@ instance (Typeable p) => IsTest (ScriptTest p) where
           d' = Datum . toBuiltinData $ d
           r' = Redeemer . toBuiltinData $ r
        in case runScript context' val d' r' of
-            Left err -> testFailed . formatScriptError $ err
+            Left err -> handleError shouldChat expected conf context td err
             Right (_, logs) -> deliverResult shouldChat expected logs conf context td
     Minter expected td@(MintingTest r) cb mp ->
       let context = compileMinting conf cb
           context' = Context . toBuiltinData $ context
           r' = Redeemer . toBuiltinData $ r
        in case runMintingPolicyScript context' mp r' of
-            Left err -> testFailed . formatScriptError $ err
+            Left err -> handleError shouldChat expected conf context td err
             Right (_, logs) -> deliverResult shouldChat expected logs conf context td
     where
       conf :: TransactionConfig
@@ -208,6 +212,57 @@ instance (Typeable p) => IsTest (ScriptTest p) where
       , Option @PlutusTracing Proxy
       ]
 
+handleError ::
+  forall (p :: Purpose).
+  PlutusTracing ->
+  Outcome ->
+  TransactionConfig ->
+  ScriptContext ->
+  TestData p ->
+  ScriptError ->
+  Result
+handleError shouldChat expected conf sc td = \case
+  EvaluationError logs msg -> case expected of
+    Pass -> testFailed . unexpectedFailure msg $ logs
+    Fail -> testPassed $ case shouldChat of
+      Always ->
+        renderStyle ourStyle $
+          ""
+            $+$ hang "Logs" 4 (dumpLogs logs)
+      OnlyOnFail -> ""
+  EvaluationException name msg ->
+    testFailed . renderStyle ourStyle $
+      "Unexpected behaviour in script:" <+> text name
+        $+$ hang "Description" 4 (text msg)
+  MalformedScript msg ->
+    testFailed . renderStyle ourStyle $
+      "Script was malformed"
+        $+$ hang "Details" 4 (text msg)
+  where
+    unexpectedFailure :: String -> [Text] -> String
+    unexpectedFailure msg logs =
+      renderStyle ourStyle $
+        "Unexpected failure: " <+> text msg
+          $+$ dumpState logs
+    dumpState :: [Text] -> Doc
+    dumpState logs =
+      ""
+        $+$ hang "Context" 4 (valToDoc . scriptContextToValue $ sc)
+        $+$ hang "Configuration" 4 (ppDoc conf)
+        $+$ hang "Inputs" 4 dumpInputs
+        $+$ hang "Logs" 4 (dumpLogs logs)
+    dumpInputs :: Doc
+    dumpInputs = case td of
+      SpendingTest d r v ->
+        "Datum"
+          $+$ ppDoc d
+          $+$ "Redeemer"
+          $+$ ppDoc r
+          $+$ "Value"
+          $+$ ppDoc v
+      MintingTest r ->
+        "Redeemer" $+$ ppDoc r
+
 deliverResult ::
   forall (p :: Purpose).
   PlutusTracing ->
@@ -233,7 +288,7 @@ deliverResult shouldChat expected logs conf sc td =
       Always ->
         renderStyle ourStyle $
           ""
-            $+$ hang "Logs" 4 dumpLogs
+            $+$ hang "Logs" 4 (dumpLogs logs)
       OnlyOnFail -> ""
     noOutcome :: String
     noOutcome =
@@ -264,7 +319,7 @@ deliverResult shouldChat expected logs conf sc td =
         $+$ hang "Context" 4 (valToDoc . scriptContextToValue $ sc)
         $+$ hang "Configuration" 4 (ppDoc conf)
         $+$ hang "Inputs" 4 dumpInputs
-        $+$ hang "Logs" 4 dumpLogs
+        $+$ hang "Logs" 4 (dumpLogs logs)
     dumpInputs :: Doc
     dumpInputs = case td of
       SpendingTest d r v ->
@@ -276,11 +331,9 @@ deliverResult shouldChat expected logs conf sc td =
           $+$ ppDoc v
       MintingTest r ->
         "Redeemer" $+$ ppDoc r
-    dumpLogs :: Doc
-    dumpLogs = vcat . fmap go . zip [1 ..] $ logs
+
+dumpLogs :: [Text] -> Doc
+dumpLogs = vcat . fmap go . zip [1 ..]
+  where
     go :: (Int, Text) -> Doc
     go (ix, line) = (int ix <> colon) <+> (text . show $ line)
-
-formatScriptError :: ScriptError -> String
-formatScriptError =
-  renderStyle ourStyle . hang "Script execution error:" 4 . ppDoc
