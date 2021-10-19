@@ -25,6 +25,7 @@ import PlutusTx.Lift (makeLift)
 import PlutusTx.Natural.Internal (Natural (Natural))
 import PlutusTx.Prelude
 import PlutusTx.Ratio qualified as Ratio
+import Schema (ToArgument, ToSchema)
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Test.QuickCheck.Gen (suchThat)
 import Text.Show.Pretty (PrettyVal (prettyVal))
@@ -59,6 +60,10 @@ newtype NatRatio = NatRatio Rational
       ToData
     , -- | @since 1.0
       ToJSON
+    , -- | @since 1.0
+      ToSchema
+    , -- | @since 1.0
+      ToArgument
     )
     via Rational
 
