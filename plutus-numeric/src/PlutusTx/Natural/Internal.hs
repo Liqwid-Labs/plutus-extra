@@ -1,15 +1,6 @@
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-{- | An on-chain numeric type representing non-negative numbers only.
-
- = Warning
-
- This is an internal module; as such, it exposes the 'Natural' implementation,
- which can be used to violate constraints if used without care. This primarily
- exists to support @testlib@; for regular use, use 'PlutusTx.Natural' if at
- all possible
--}
 module PlutusTx.Natural.Internal (
   -- * Types,
   Natural (..),
@@ -32,6 +23,7 @@ import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude hiding (even)
 import Schema (ToArgument, ToSchema)
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
+import Text.Show.Pretty (PrettyVal (prettyVal), Value (Con))
 import Prelude qualified
 
 {- | A non-negative number.
@@ -70,6 +62,14 @@ newtype Natural = Natural Integer
     ( -- | @since 1.0
       Prelude.Show
     )
+
+{- | Displays like a positive integer.
+
+ @since 1.0
+-}
+instance PrettyVal Natural where
+  {-# INLINEABLE prettyVal #-}
+  prettyVal (Natural i) = prettyVal i
 
 -- | @since 1.0
 instance FromJSON Natural where
@@ -138,6 +138,13 @@ data Parity = Even | Odd
     , -- | @since 1.0
       Prelude.Show
     )
+
+-- | @since 1.0
+instance PrettyVal Parity where
+  {-# INLINEABLE prettyVal #-}
+  prettyVal = \case
+    Even -> Con "Even" []
+    Odd -> Con "Odd" []
 
 {- | Determine the parity of a number.
 

@@ -1,12 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-{- | An on-chain numeric type representing a ratio of non-negative numbers.
- = Warning
- This is an internal module; as such, it exposes the 'NatRatio'
- implementation, which can be used to violate constraints if used without
- care. This module primarily exists to support @testlib@, or for some internal
- APIs; if at all possible, use 'PlutusTx.NatRatio' instead.
--}
 module PlutusTx.NatRatio.Internal (
   NatRatio (..),
   natRatio,
@@ -34,6 +27,7 @@ import PlutusTx.Prelude
 import PlutusTx.Ratio qualified as Ratio
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Test.QuickCheck.Gen (suchThat)
+import Text.Show.Pretty (PrettyVal (prettyVal))
 import Prelude qualified
 
 {- | A ratio of 'Natural's. Similar to 'Rational', but with the numerator and
@@ -67,6 +61,14 @@ newtype NatRatio = NatRatio Rational
       ToJSON
     )
     via Rational
+
+{- | Represents this like a positive-only ratio.
+
+ @since 1.0
+-}
+instance PrettyVal NatRatio where
+  {-# INLINEABLE prettyVal #-}
+  prettyVal (NatRatio r) = prettyVal . Ratio.toGHC $ r
 
 -- | @since 1.0
 instance FromJSON NatRatio where

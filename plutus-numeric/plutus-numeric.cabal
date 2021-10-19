@@ -61,6 +61,7 @@ library
     , openapi3           ^>=3.1.0
     , playground-common
     , plutus-tx
+    , pretty-show        ^>=1.10
     , QuickCheck         ^>=2.14.2
     , template-haskell   ^>=2.16.0.0
 
