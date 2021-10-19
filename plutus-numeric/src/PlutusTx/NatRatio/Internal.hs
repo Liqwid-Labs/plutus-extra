@@ -21,8 +21,6 @@ module PlutusTx.NatRatio.Internal (
   toRational,
 ) where
 
-import Test.QuickCheck.Gen (suchThat)
-import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Control.Monad (guard)
 import Data.Aeson (FromJSON (parseJSON), ToJSON)
 import PlutusTx.IsData.Class (
@@ -34,6 +32,8 @@ import PlutusTx.Lift (makeLift)
 import PlutusTx.Natural.Internal (Natural (Natural))
 import PlutusTx.Prelude
 import PlutusTx.Ratio qualified as Ratio
+import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
+import Test.QuickCheck.Gen (suchThat)
 import Prelude qualified
 
 {- | A ratio of 'Natural's. Similar to 'Rational', but with the numerator and
@@ -101,7 +101,7 @@ instance Arbitrary NatRatio where
     Natural den <- suchThat arbitrary (> zero)
     Prelude.pure . NatRatio $ num Ratio.% den
   shrink nr = do
-    let Natural num = numerator nr 
+    let Natural num = numerator nr
     let Natural den = denominator nr
     num' <- Prelude.filter (> 0) . shrink $ num
     den' <- Prelude.filter (> 0) . shrink $ den

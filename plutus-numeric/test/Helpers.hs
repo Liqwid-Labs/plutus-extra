@@ -2,11 +2,12 @@
 
 module Helpers (
   NonZero (..),
-  NonNegative (..)) where
+  NonNegative (..),
+) where
 
-import PlutusTx.Ratio qualified as Ratio
 import Data.Kind (Type)
 import PlutusTx.Prelude qualified as PlutusPrelude
+import PlutusTx.Ratio qualified as Ratio
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Test.QuickCheck.Gen (suchThat)
 

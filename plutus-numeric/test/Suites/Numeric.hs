@@ -3,6 +3,10 @@
 module Suites.Numeric (tests) where
 
 import Data.Kind (Type)
+import Helpers (
+  NonNegative (NonNegative),
+  NonZero (NonZero),
+ )
 import PlutusTx.Numeric.Extra (
   IntegralDomain (
     abs,
@@ -26,10 +30,6 @@ import Test.QuickCheck (
   (.||.),
   (=/=),
   (===),
- )
-import Helpers (
-  NonNegative (NonNegative),
-  NonZero (NonZero),
  )
 import Test.QuickCheck.Modifiers (Negative (Negative), Positive (Positive))
 import Test.Tasty (TestTree, localOption, testGroup)

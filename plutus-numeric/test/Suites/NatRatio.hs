@@ -1,5 +1,6 @@
 module Suites.NatRatio (tests) where
 
+import Helpers (NonZero (NonZero))
 import PlutusTx.NatRatio (NatRatio)
 import PlutusTx.NatRatio qualified as NR
 import PlutusTx.Natural (Natural)
@@ -7,7 +8,6 @@ import PlutusTx.Numeric.Extra (reciprocal, (/), (^), (^+), (^-))
 import PlutusTx.Prelude qualified as Plutus
 import Test.QuickCheck (Property, forAllShrink, (===))
 import Test.QuickCheck.Arbitrary (arbitrary, shrink)
-import Helpers (NonZero (NonZero))
 import Test.QuickCheck.Modifiers (Negative (Negative), Positive (Positive))
 import Test.Tasty (TestTree, localOption, testGroup)
 import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)

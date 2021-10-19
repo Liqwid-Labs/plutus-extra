@@ -19,7 +19,6 @@ module PlutusTx.Natural.Internal (
   parity,
 ) where
 
-import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Control.Monad (guard)
 import Data.Aeson (FromJSON (parseJSON), ToJSON)
 import Data.OpenApi.Schema qualified as OpenApi
@@ -32,6 +31,7 @@ import PlutusTx.IsData (
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude hiding (even)
 import Schema (ToArgument, ToSchema)
+import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Prelude qualified
 
 {- | A non-negative number.
@@ -62,8 +62,8 @@ newtype Natural = Natural Integer
       ToArgument
     , -- | @since 1.0
       Prelude.Eq
-      -- | @since 1.0
-    , OpenApi.ToSchema
+    , -- | @since 1.0
+      OpenApi.ToSchema
     )
     via Integer
   deriving stock
