@@ -1,4 +1,15 @@
--- | An on-chain numeric type representing a ratio of non-negative numbers.
+{-# LANGUAGE Trustworthy #-}
+
+{- |
+ Module: PlutusTx.NatRatio
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ An on-chain numeric type representing a ratio of non-negative numbers.
+-}
 module PlutusTx.NatRatio (
   -- * Type
   Internal.NatRatio,

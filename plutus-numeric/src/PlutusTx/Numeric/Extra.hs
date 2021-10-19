@@ -1,8 +1,20 @@
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE Trustworthy #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-specialize #-}
 
+{- |
+ Module: PlutusTx.Numeric.Extra
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ A collection of type classes and operations which extend the Plutus numerical
+ hierarchy with additional capabilities and laws.
+-}
 module PlutusTx.Numeric.Extra (
   -- * Type classes
   AdditiveHemigroup (..),
