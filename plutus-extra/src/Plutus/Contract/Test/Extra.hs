@@ -9,6 +9,7 @@ module Plutus.Contract.Test.Extra (
   walletFundsExactChangeWithAccumState,
   valueAtComputedAddress,
   dataAtComputedAddress,
+  utxoAndStateAtComputedAddress,
 ) where
 
 --------------------------------------------------------------------------------
@@ -269,6 +270,51 @@ utxoAtComputedAddress ::
   (Ledger.Address -> UtxoMap -> Eff effs Bool) ->
   Folds.EmulatorEventFoldM effs Bool
 utxoAtComputedAddress contract inst addressGetter cont =
+  utxoAndStateAtComputedAddressImpl contract inst addressGetter (const cont)
+
+utxoAndStateAtComputedAddress :: 
+  forall
+    (w :: Type)
+    (s :: Row Type)
+    (e :: Type)
+    (a :: Type)
+    (contract :: Type -> Row Type -> Type -> Type -> Type).
+  ( Monoid w
+  , IsContract contract
+  ) =>
+  contract w s e a ->
+  ContractInstanceTag ->
+  (w -> Maybe Ledger.Address) ->
+  (w -> Ledger.Address -> UtxoMap -> Bool) ->
+  TracePredicate
+utxoAndStateAtComputedAddress contract tag getter predicate = 
+  utxoAndStateAtComputedAddressImpl contract tag getter 
+  $ \w addr utxo -> return $ predicate w addr utxo
+
+utxoAndStateAtComputedAddressImpl ::
+  forall
+    (effs :: [Type -> Type])
+    (w :: Type)
+    (s :: Row Type)
+    (e :: Type)
+    (a :: Type)
+    (contract :: Type -> Row Type -> Type -> Type -> Type).
+  ( Member (Error Folds.EmulatorFoldErr) effs
+  , Member (Writer (Doc Void)) effs
+  , Monoid w
+  , IsContract contract
+  ) =>
+  -- | The 'IsContract' code
+  contract w s e a ->
+  -- | The 'ContractInstanceTag', acquired inside the
+  -- 'Plutus.Trace.Emulator.EmulatorTrace'
+  ContractInstanceTag ->
+  -- | The function computing 'Ledger.Address'
+  (w -> Maybe Ledger.Address) ->
+  -- | The continuation function acting as a predicate
+  (w -> Ledger.Address -> UtxoMap -> Eff effs Bool) ->
+  Folds.EmulatorEventFoldM effs Bool
+utxoAndStateAtComputedAddressImpl contract inst addressGetter cont =
   flip
     postMapM
     ( (,)
@@ -287,8 +333,7 @@ utxoAtComputedAddress contract inst addressGetter cont =
                 _ -> id
               am = foldl' (flip step) (AM.addAddress addr mempty) chainEvents
               utxoMap = view (AM.fundsAt addr) am
-          cont addr utxoMap
-
+          cont w addr utxoMap
 -- Function copied from https://github.com/input-output-hk/plutus/blob/master/plutus-contract/src/Plutus/Contract/Test.hs
 
 -- | Get a datum of a given type 'd' out of a Transaction Output.
