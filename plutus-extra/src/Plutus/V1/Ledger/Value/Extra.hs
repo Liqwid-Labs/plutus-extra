@@ -54,4 +54,4 @@ valueIntersectEq (Ledger.Value x) (Ledger.Value y) =
 -- | Returns True when the left value is a subset of the right value
 valueSubsetOf :: Ledger.Value -> Ledger.Value -> Bool
 valueSubsetOf (Ledger.Value x) (Ledger.Value y) =
-  AssocMap.all (these (const True) (const False) (==)) $ x `AssocMap.union` y
+  AssocMap.all (these (const False) (const True) (==)) $ x `AssocMap.union` y
