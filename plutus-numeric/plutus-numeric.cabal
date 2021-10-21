@@ -43,6 +43,14 @@ common lang
     -Wmissing-export-lists -Werror -Wincomplete-record-updates
     -Wmissing-deriving-strategies
 
+common test-lang
+  import:        lang
+  build-depends:
+    , plutus-numeric
+    , tasty           ^>=1.4.1
+
+  ghc-options:   -threaded -O2 -rtsopts -with-rtsopts=-N
+
 library
   import:          lang
   exposed-modules:
@@ -68,7 +76,7 @@ library
   hs-source-dirs:  src
 
 test-suite property
-  import:         lang
+  import:         test-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
@@ -79,13 +87,21 @@ test-suite property
     Suites.Numeric
 
   build-depends:
-    , plutus-numeric
     , plutus-tx
     , plutus-tx-plugin
     , QuickCheck        ^>=2.14.2
-    , tasty             ^>=1.4.1
     , tasty-hunit       ^>=0.10.0.3
     , tasty-quickcheck  ^>=0.10.1.2
 
-  ghc-options:    -threaded -O2 -rtsopts -with-rtsopts=-N
   hs-source-dirs: test/property
+
+test-suite golden
+  import:         test-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-golden  ^>=1.0
+    , plutus-tx
+    , random         ^>=1.2.0
+
+  hs-source-dirs: test/golden
