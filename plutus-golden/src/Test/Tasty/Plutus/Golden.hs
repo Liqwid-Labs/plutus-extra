@@ -165,7 +165,8 @@ doGoldenJSON (Generator f) = do
 writeSamplesToFile :: FilePath -> Vector Value -> IO Result
 writeSamplesToFile p vals = do
   BS.writeFile p . Strict.toStrict . encodePretty $ vals
-  pure . testPassed $ "Generated new sample file."
+  pure . testPassed . renderStyle ourStyle $ 
+    "Generated sample file:" <+> text p
 
 loadAndCompareSamples :: FilePath -> Vector Value -> IO Result
 loadAndCompareSamples fp vals = do
