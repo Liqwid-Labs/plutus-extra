@@ -67,7 +67,7 @@ library
 
   hs-source-dirs:  src
 
-test-suite tests
+test-suite property
   import:         lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
@@ -88,4 +88,4 @@ test-suite tests
     , tasty-quickcheck  ^>=0.10.1.2
 
   ghc-options:    -threaded -O2 -rtsopts -with-rtsopts=-N
-  hs-source-dirs: test
+  hs-source-dirs: test/property
