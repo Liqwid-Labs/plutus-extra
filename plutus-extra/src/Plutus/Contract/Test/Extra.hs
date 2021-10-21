@@ -9,7 +9,8 @@ module Plutus.Contract.Test.Extra (
   walletFundsExactChangeWithAccumState,
   valueAtComputedAddress,
   dataAtComputedAddress,
-  utxoAndStateAtComputedAddress,
+  dataAtComputedAddressWithState,
+  utxoAtComputedAddressWithState,
 ) where
 
 --------------------------------------------------------------------------------
@@ -31,7 +32,7 @@ import Data.List (foldl')
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Row (Row)
-import Data.Text.Prettyprint.Doc (Doc, colon, indent, pretty, viaShow, vsep, (<+>))
+import Data.Text.Prettyprint.Doc (Doc, Pretty, colon, indent, line, pretty, viaShow, vsep, (<+>))
 import Data.Void (Void)
 import Prelude
 
@@ -204,8 +205,6 @@ valueAtComputedAddress contract inst addressGetter check =
 
 {- | Check that the datum at a computed address meet some condition.
  The address is computed using data acquired from contract's writer instance.
-
-  @since 1.1
 -}
 dataAtComputedAddress ::
   forall
@@ -240,6 +239,47 @@ dataAtComputedAddress contract inst addressGetter check =
         )
     return result
 
+{- | Check that the datum at a computed address
+ and data aquired from contract's writer instance meet some condition.
+ The address is computed using data acquired from contract's writer instance.
+-}
+dataAtComputedAddressWithState ::
+  forall
+    (datum :: Type)
+    (w :: Type)
+    (s :: Row Type)
+    (e :: Type)
+    (a :: Type)
+    (contract :: Type -> Row Type -> Type -> Type -> Type).
+  ( FromData datum
+  , Monoid w
+  , Pretty w
+  , IsContract contract
+  ) =>
+  -- | The 'IsContract' code
+  contract w s e a ->
+  -- | The 'ContractInstanceTag', acquired inside the
+  -- 'Plutus.Trace.Emulator.EmulatorTrace'
+  ContractInstanceTag ->
+  -- | The function computing 'Ledger.Address'
+  (w -> Maybe Ledger.Address) ->
+  -- | The @datum@ predicate
+  (w -> datum -> Bool) ->
+  TracePredicate
+dataAtComputedAddressWithState contract inst addressGetter check =
+  utxoAtComputedAddressWithStateImpl contract inst addressGetter $ \w addr utxoMap -> do
+    let datums = mapMaybe (uncurry $ getTxOutDatum @datum) $ Map.toList utxoMap
+        result = any (check w) datums :: Bool
+    unless result $
+      tell @(Doc Void)
+        ( "Data at address" <+> pretty addr <+> "was"
+            <+> foldMap (foldMap pretty . Ledger.txData . Ledger.txOutTxTx) utxoMap
+            <> line
+            <> "Contract writer data was"
+            <+> pretty w
+        )
+    return result
+
 {- | Extract UTxOs at a computed address and call continuation returning
  Boolean value based on both the address and UTxOs.
  The address is computed using data acquired from contract's writer instance.
@@ -270,9 +310,15 @@ utxoAtComputedAddress ::
   (Ledger.Address -> UtxoMap -> Eff effs Bool) ->
   Folds.EmulatorEventFoldM effs Bool
 utxoAtComputedAddress contract inst addressGetter cont =
-  utxoAndStateAtComputedAddressImpl contract inst addressGetter (const cont)
+  utxoAtComputedAddressWithStateImpl contract inst addressGetter (const cont)
 
-utxoAndStateAtComputedAddress :: 
+{- | Check that the UTxO at a computed address
+ and data aquired from contract's writer instance meet some condition.
+ The address is computed using data acquired from contract's writer instance.
+
+  @since 1.1
+-}
+utxoAtComputedAddressWithState ::
   forall
     (w :: Type)
     (s :: Row Type)
@@ -280,18 +326,35 @@ utxoAndStateAtComputedAddress ::
     (a :: Type)
     (contract :: Type -> Row Type -> Type -> Type -> Type).
   ( Monoid w
+  , Pretty w
   , IsContract contract
   ) =>
   contract w s e a ->
   ContractInstanceTag ->
   (w -> Maybe Ledger.Address) ->
-  (w -> Ledger.Address -> UtxoMap -> Bool) ->
+  (w -> UtxoMap -> Bool) ->
   TracePredicate
-utxoAndStateAtComputedAddress contract tag getter predicate = 
-  utxoAndStateAtComputedAddressImpl contract tag getter 
-  $ \w addr utxo -> return $ predicate w addr utxo
+utxoAtComputedAddressWithState contract inst getter check =
+  utxoAtComputedAddressWithStateImpl contract inst getter $ \w addr utxoMap ->
+    let result = check w utxoMap
+     in do
+          unless result $
+            tell @(Doc Void)
+              ( "UTxO at address" <+> pretty addr <+> "was"
+                  <+> foldMap viaShow utxoMap
+                  <> line
+                  <> "Contract writer data was"
+                  <+> pretty w
+              )
+          return result
 
-utxoAndStateAtComputedAddressImpl ::
+{-utxoAtComputedAddressWithStateImpl contract tag getter
+$ \w addr -> return . predicate w addr-}
+
+{- | Similar to 'utxoAtComputedAddress' but continuation have access
+ to a data aquired from contract's writer instance.
+-}
+utxoAtComputedAddressWithStateImpl ::
   forall
     (effs :: [Type -> Type])
     (w :: Type)
@@ -314,7 +377,7 @@ utxoAndStateAtComputedAddressImpl ::
   -- | The continuation function acting as a predicate
   (w -> Ledger.Address -> UtxoMap -> Eff effs Bool) ->
   Folds.EmulatorEventFoldM effs Bool
-utxoAndStateAtComputedAddressImpl contract inst addressGetter cont =
+utxoAtComputedAddressWithStateImpl contract inst addressGetter cont =
   flip
     postMapM
     ( (,)
@@ -334,7 +397,6 @@ utxoAndStateAtComputedAddressImpl contract inst addressGetter cont =
               am = foldl' (flip step) (AM.addAddress addr mempty) chainEvents
               utxoMap = view (AM.fundsAt addr) am
           cont w addr utxoMap
--- Function copied from https://github.com/input-output-hk/plutus/blob/master/plutus-contract/src/Plutus/Contract/Test.hs
 
 -- | Get a datum of a given type 'd' out of a Transaction Output.
 getTxOutDatum ::
