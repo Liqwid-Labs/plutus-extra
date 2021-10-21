@@ -13,21 +13,17 @@ module Test.Tasty.Plutus.Golden (
 import Control.Monad.Extra (ifM, unlessM)
 import Data.Aeson (FromJSON, ToJSON (toJSON), Value, eitherDecodeFileStrict')
 import Data.Aeson.Encode.Pretty (encodePretty)
-import Data.Aeson.Internal (
-  IResult (IError, ISuccess),
-  JSONPathElement (Index),
-  ifromJSON,
- )
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as Strict
 import Data.Kind (Type)
 import Data.Maybe (mapMaybe)
 import Data.Tagged (Tagged (Tagged))
-import Data.TreeDiff.Class (ediff)
-import Data.TreeDiff.Pretty (ppEditExpr, prettyPretty)
-import Data.Vector (Vector)
+import Data.Text (Text)
+import Data.Text qualified as T
+import Data.Text.Encoding as Encoding
 import Data.Vector qualified as Vector
 import PlutusTx.IsData.Class (FromData, ToData, UnsafeFromData)
+import Pretty.Diff qualified as Diff
 import Schema qualified as Plutus
 import System.Directory (
   createDirectoryIfMissing,
@@ -51,12 +47,9 @@ import Test.Tasty.Providers (
   testFailed,
   testPassed,
  )
-import Test.Tasty.Runners (resultSuccessful)
 import Text.PrettyPrint (
+  Doc,
   Style (lineLength),
-  hang,
-  int,
-  quotes,
   renderStyle,
   style,
   text,
@@ -159,49 +152,59 @@ doGoldenJSON (Generator f) = do
     (loadAndCompareSamples goldenFilePath sampleArray)
     (writeSamplesToFile goldenFilePath sampleArray)
   where
-    genSamples :: IOGenM StdGen -> IO (Vector Value)
-    genSamples rng = Vector.replicateM numSamples (toJSON <$> f rng)
+    genSamples :: IOGenM StdGen -> IO Value
+    genSamples rng = toJSON <$> Vector.replicateM numSamples (f rng)
 
-writeSamplesToFile :: FilePath -> Vector Value -> IO Result
+writeSamplesToFile :: FilePath -> Value -> IO Result
 writeSamplesToFile p vals = do
   BS.writeFile p . Strict.toStrict . encodePretty $ vals
-  pure . testPassed . renderStyle ourStyle $ 
+  pure . testPassed . renderStyle ourStyle $
     "Generated sample file:" <+> text p
 
-loadAndCompareSamples :: FilePath -> Vector Value -> IO Result
+loadAndCompareSamples :: FilePath -> Value -> IO Result
 loadAndCompareSamples fp vals = do
   result <- eitherDecodeFileStrict' fp
   pure $ case result of
     Left _ -> testFailed notSampleFile
-    Right val -> case ifromJSON val of
-      IError jpath err -> testFailed . valDidNotParse jpath $ err
-      ISuccess sampleVals ->
-        Vector.ifoldl' go (testPassed "") . Vector.zip sampleVals $ vals
+    Right sampleVals -> case compare sampleVals vals of
+      EQ -> testPassed ""
+      _ -> testFailed . sampleMismatch $ sampleVals
   where
-    go :: Result -> Int -> (Value, Value) -> Result
-    go acc ix (expected, actual)
-      | resultSuccessful acc = case compare expected actual of
-        EQ -> acc
-        _ -> testFailed . sampleMismatch ix expected $ actual
-      | otherwise = acc
     notSampleFile :: String
     notSampleFile =
       renderStyle ourStyle $
-        quotes (text fp) <+> "is not a valid sample file."
-          $+$ "Either it's not JSON, or is JSON, but not a JSON array."
-    valDidNotParse :: [JSONPathElement] -> String -> String
-    valDidNotParse jpath err = renderStyle ourStyle $ case jpath of
-      Index ix : _ ->
-        "Could not parse element" <+> (int ix <> ".")
-          $+$ hang "Error message" 4 (text err)
-      _ ->
-        "Could not parse."
-          $+$ hang "Error message" 4 (text err)
-    sampleMismatch :: Int -> Value -> Value -> String
-    sampleMismatch ix expected actual =
+        "Not a valid sample file."
+          $+$ "Either it is not JSON, or is JSON, but not a JSON array."
+          $+$ ""
+          $+$ dumpFileLocation
+    dumpFileLocation :: Doc
+    dumpFileLocation = "Sample file location" $+$ text fp
+    sampleMismatch :: Value -> String
+    sampleMismatch sampleVals =
       renderStyle ourStyle $
-        "Sample" <+> int ix <+> "did not match."
-          $+$ hang "Diff" 4 (ppEditExpr prettyPretty . ediff expected $ actual)
+        "Data did not match sample."
+          $+$ ""
+          $+$ "Diff"
+          $+$ ""
+          $+$ dumpJSONDiff sampleVals vals
+          $+$ ""
+          $+$ dumpFileLocation
+
+dumpJSONDiff :: Value -> Value -> Doc
+dumpJSONDiff expected actual =
+  let renderedExpected = go expected
+      renderedActual = go actual
+   in text . T.unpack . Diff.pretty config renderedExpected $ renderedActual
+  where
+    go :: Value -> Text
+    go = Encoding.decodeUtf8 . Strict.toStrict . encodePretty
+    config :: Diff.Config
+    config =
+      Diff.Config
+        { Diff.separatorText = Nothing
+        , Diff.wrapping = Diff.NoWrap
+        , Diff.multilineContext = Diff.Surrounding 2 "..."
+        }
 
 sampleFileName :: forall (a :: Type). (Typeable a) => FilePath
 sampleFileName = mapMaybe go $ moduleName <> "." <> typeName @a
