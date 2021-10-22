@@ -45,7 +45,11 @@ common lang
 
 library
   import:          lang
-  exposed-modules: Test.Tasty.Plutus.Golden
+  exposed-modules:
+    Test.Tasty.Plutus.Generator
+    Test.Tasty.Plutus.Golden
+
+  other-modules:   Test.Tasty.Plutus.Golden.JSON
   build-depends:
     , aeson              ^>=1.5.6.0
     , aeson-pretty       ^>=0.8.8
