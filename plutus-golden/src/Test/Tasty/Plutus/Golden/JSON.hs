@@ -16,8 +16,8 @@ import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as Encoding
+import Data.Vector (Vector)
 import Data.Vector qualified as Vector
-import Pretty.Diff qualified as Diff
 import System.Directory (
   createDirectoryIfMissing,
   doesDirectoryExist,
@@ -33,9 +33,11 @@ import System.Random.Stateful (
  )
 import Test.Tasty.Plutus.Generator (Generator (Generator))
 import Test.Tasty.Providers (Result, testFailed, testPassed)
+import Test.Tasty.Runners (resultSuccessful)
 import Text.PrettyPrint (
   Doc,
   Style (lineLength),
+  int,
   renderStyle,
   style,
   text,
@@ -45,7 +47,6 @@ import Text.PrettyPrint (
 import Type.Reflection (
   Typeable,
   tyConModule,
-  tyConName,
   typeRep,
   typeRepTyCon,
  )
@@ -53,13 +54,14 @@ import Type.Reflection (
 doGoldenJSON ::
   forall (a :: Type).
   (Typeable a, ToJSON a) =>
+  String ->
   Generator a ->
   IO Result
-doGoldenJSON (Generator f) = do
+doGoldenJSON tyName (Generator f) = do
   rng <- newIOGenM . mkStdGen $ 123456
   cwd <- getCurrentDirectory
   let goldenPath = cwd </> "golden" </> "json"
-  let goldenFilePath = goldenPath </> sampleFileName @a <.> "json"
+  let goldenFilePath = goldenPath </> sampleFileName @a tyName <.> "json"
   unlessM (doesDirectoryExist goldenPath) (createDirectoryIfMissing True goldenPath)
   sampleArray <- genSamples rng
   ifM
@@ -67,11 +69,11 @@ doGoldenJSON (Generator f) = do
     (loadAndCompareSamples goldenFilePath sampleArray)
     (writeSamplesToFile goldenFilePath sampleArray)
   where
-    genSamples :: IOGenM StdGen -> IO Value
-    genSamples rng = toJSON <$> Vector.replicateM numSamples (f rng)
+    genSamples :: IOGenM StdGen -> IO (Vector Value)
+    genSamples rng = Vector.replicateM numSamples (toJSON <$> f rng)
 
-sampleFileName :: forall (a :: Type). (Typeable a) => FilePath
-sampleFileName = mapMaybe go $ moduleName <> "." <> typeName @a
+sampleFileName :: forall (a :: Type). (Typeable a) => String -> FilePath
+sampleFileName tyName = mapMaybe go $ moduleName <> "." <> tyName
   where
     go :: Char -> Maybe Char
     go =
@@ -81,62 +83,65 @@ sampleFileName = mapMaybe go $ moduleName <> "." <> typeName @a
     moduleName :: String
     moduleName = tyConModule . typeRepTyCon $ typeRep @a
 
-loadAndCompareSamples :: FilePath -> Value -> IO Result
-loadAndCompareSamples fp vals = do
-  result <- eitherDecodeFileStrict' fp
-  pure $ case result of
-    Left _ -> testFailed notSampleFile
-    Right sampleVals -> case compare sampleVals vals of
-      EQ -> testPassed ""
-      _ -> testFailed . sampleMismatch $ sampleVals
-  where
-    notSampleFile :: String
-    notSampleFile =
-      renderStyle ourStyle $
-        "Not a valid sample file."
-          $+$ "Either it is not JSON, or is JSON, but not a JSON array."
-          $+$ ""
-          $+$ dumpFileLocation
-    dumpFileLocation :: Doc
-    dumpFileLocation = "Sample file location" $+$ text fp
-    sampleMismatch :: Value -> String
-    sampleMismatch sampleVals =
-      renderStyle ourStyle $
-        "Data did not match sample."
-          $+$ ""
-          $+$ "Diff"
-          $+$ ""
-          $+$ dumpJSONDiff sampleVals vals
-          $+$ ""
-          $+$ dumpFileLocation
-
-writeSamplesToFile :: FilePath -> Value -> IO Result
+writeSamplesToFile :: FilePath -> Vector Value -> IO Result
 writeSamplesToFile p vals = do
   BS.writeFile p . Lazy.toStrict . encodePretty $ vals
   pure . testPassed . renderStyle ourStyle $
     "Generated sample file:" <+> text p
+
+loadAndCompareSamples :: FilePath -> Vector Value -> IO Result
+loadAndCompareSamples fp vals = do
+  result <- eitherDecodeFileStrict' fp
+  pure $ case result of
+    Left err -> testFailed . parseError $ err
+    Right sampleVals ->
+      Vector.ifoldl' go (testPassed "") . Vector.zip sampleVals $ vals
+  where
+    go :: Result -> Int -> (Value, Value) -> Result
+    go acc ix (expected, actual)
+      | resultSuccessful acc = case compare expected actual of
+        EQ -> acc
+        _ -> testFailed . mismatch ix expected $ actual
+      | otherwise = acc
+    parseError :: String -> String
+    parseError err =
+      renderStyle ourStyle $
+        "Not a valid sample file."
+          $+$ "Either this file wasn't JSON, or it wasn't a JSON array."
+          $+$ ""
+          $+$ dumpFileLocation
+          $+$ ""
+          $+$ "Error"
+          $+$ ""
+          $+$ text err
+    mismatch :: Int -> Value -> Value -> String
+    mismatch ix expected actual =
+      renderStyle ourStyle $
+        "Sample" <+> int ix <+> "did not match."
+          $+$ ""
+          $+$ dumpFileLocation
+          $+$ ""
+          $+$ "Expected"
+          $+$ ""
+          $+$ jsonToDoc expected
+          $+$ ""
+          $+$ "Actual"
+          $+$ ""
+          $+$ jsonToDoc actual
+    dumpFileLocation :: Doc
+    dumpFileLocation =
+      "Sample file location"
+        $+$ ""
+        $+$ text fp
+
+jsonToDoc :: Value -> Doc
+jsonToDoc = text . T.unpack . renderJSON
+
+renderJSON :: Value -> Text
+renderJSON = Encoding.decodeUtf8 . Lazy.toStrict . encodePretty
 
 numSamples :: Int
 numSamples = 20
 
 ourStyle :: Style
 ourStyle = style {lineLength = 80}
-
-typeName :: forall (a :: Type). (Typeable a) => String
-typeName = tyConName . typeRepTyCon $ typeRep @a
-
-dumpJSONDiff :: Value -> Value -> Doc
-dumpJSONDiff expected actual =
-  let renderedExpected = go expected
-      renderedActual = go actual
-   in text . T.unpack . Diff.pretty config renderedExpected $ renderedActual
-  where
-    go :: Value -> Text
-    go = Encoding.decodeUtf8 . Lazy.toStrict . encodePretty
-    config :: Diff.Config
-    config =
-      Diff.Config
-        { Diff.separatorText = Nothing
-        , Diff.wrapping = Diff.NoWrap
-        , Diff.multilineContext = Diff.Surrounding 2 "..."
-        }
