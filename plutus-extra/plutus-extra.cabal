@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-extra
-version:            2.0
+version:            2.1
 extra-source-files: CHANGELOG.md
 
 common lang

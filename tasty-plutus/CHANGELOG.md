@@ -20,6 +20,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 * Minting-related `ContextBuilder` functionality is now polymorphic in its
   `Purpose`.
+* Fix a bug where _expected_ script failures reported as test failures in all
+  cases, instead of only when unexpected.
 
 ## 3.1 -- 2021-10-14
 
