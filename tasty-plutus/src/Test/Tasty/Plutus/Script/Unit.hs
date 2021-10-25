@@ -18,6 +18,8 @@
  >    shouldn'tValidate "Invalid context" validData invalidContext
  >    shouldn'tValidate "Invalid data" invalidData validContext
  >    shouldn'tValidate "Everything is bad" invalidData invalidContext
+ >    shouldValidateTracing "Gotta get good messages" tracePred validData validContext
+ >    shouldn'tValidateTracing "Oh damn" tracePred invalidData validContext
  >    ...
 
  = Note
@@ -28,6 +30,8 @@
 
  * 'shouldValidate'
  * 'shouldn'tValidate'
+ * 'shouldValidateTracing'
+ * 'shouldn'tValidateTracing'
 -}
 module Test.Tasty.Plutus.Script.Unit (
   -- * Validator context types
@@ -43,6 +47,8 @@ module Test.Tasty.Plutus.Script.Unit (
   withMintingPolicy,
   shouldValidate,
   shouldn'tValidate,
+  shouldValidateTracing,
+  shouldn'tValidateTracing,
 
   -- * Options
   Fee (..),
@@ -59,6 +65,8 @@ import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Data.Text qualified as Text
+import Data.Vector (Vector)
+import Data.Vector qualified as Vector
 import Ledger.Value (CurrencySymbol, Value)
 import Plutus.V1.Ledger.Contexts (ScriptContext)
 import Plutus.V1.Ledger.Interval (Interval)
@@ -152,10 +160,34 @@ shouldValidate ::
   WithScript p ()
 shouldValidate name td cb = case td of
   SpendingTest {} -> WithSpending $ do
-    tt <- asks (singleTest name . Spender Pass td cb)
+    tt <- asks (singleTest name . Spender Pass Nothing td cb)
     tell . Seq.singleton $ tt
   MintingTest {} -> WithMinting $ do
-    tt <- asks (singleTest name . Minter Pass td cb)
+    tt <- asks (singleTest name . Minter Pass Nothing td cb)
+    tell . Seq.singleton $ tt
+
+{- | Specify that, given this test data and context, as well as a predicate on
+ the entire trace:
+
+ * The validation should succeed; and
+ * The trace that results should satisfy the predicate.
+
+ @since 3.3
+-}
+shouldValidateTracing ::
+  forall (p :: Purpose).
+  (Typeable p) =>
+  String ->
+  (Vector Text -> Bool) ->
+  TestData p ->
+  ContextBuilder p ->
+  WithScript p ()
+shouldValidateTracing name f td cb = case td of
+  SpendingTest {} -> WithSpending $ do
+    tt <- asks (singleTest name . Spender Pass (Just f) td cb)
+    tell . Seq.singleton $ tt
+  MintingTest {} -> WithMinting $ do
+    tt <- asks (singleTest name . Minter Pass (Just f) td cb)
     tell . Seq.singleton $ tt
 
 {- | Specify that, given this test data and context, the validation should fail.
@@ -171,10 +203,34 @@ shouldn'tValidate ::
   WithScript p ()
 shouldn'tValidate name td cb = case td of
   SpendingTest {} -> WithSpending $ do
-    tt <- asks (singleTest name . Spender Fail td cb)
+    tt <- asks (singleTest name . Spender Fail Nothing td cb)
     tell . Seq.singleton $ tt
   MintingTest {} -> WithMinting $ do
-    tt <- asks (singleTest name . Minter Fail td cb)
+    tt <- asks (singleTest name . Minter Fail Nothing td cb)
+    tell . Seq.singleton $ tt
+
+{- | Specify that, given this test data and context, as well as a predicate on
+ the entire trace:
+
+ * The validation should fail; and
+ * The resulting trace should satisfy the predicate.
+
+ @since 3.3
+-}
+shouldn'tValidateTracing ::
+  forall (p :: Purpose).
+  (Typeable p) =>
+  String ->
+  (Vector Text -> Bool) ->
+  TestData p ->
+  ContextBuilder p ->
+  WithScript p ()
+shouldn'tValidateTracing name f td cb = case td of
+  SpendingTest {} -> WithSpending $ do
+    tt <- asks (singleTest name . Spender Fail (Just f) td cb)
+    tell . Seq.singleton $ tt
+  MintingTest {} -> WithMinting $ do
+    tt <- asks (singleTest name . Minter Fail (Just f) td cb)
     tell . Seq.singleton $ tt
 
 -- Helpers
@@ -184,12 +240,14 @@ data Outcome = Fail | Pass
 data ValidatorTest (p :: Purpose) where
   Spender ::
     Outcome ->
+    Maybe (Vector Text -> Bool) ->
     TestData 'ForSpending ->
     ContextBuilder 'ForSpending ->
     Validator ->
     ValidatorTest 'ForSpending
   Minter ::
     Outcome ->
+    Maybe (Vector Text -> Bool) ->
     TestData 'ForMinting ->
     ContextBuilder 'ForMinting ->
     MintingPolicy ->
@@ -197,21 +255,23 @@ data ValidatorTest (p :: Purpose) where
 
 instance (Typeable p) => IsTest (ValidatorTest p) where
   run opts vt _ = pure $ case vt of
-    Spender expected td@(SpendingTest d r v) cb val ->
+    Spender expected mPred td@(SpendingTest d r v) cb val ->
       let context = compileSpending conf cb d v
           context' = Context . toBuiltinData $ context
           d' = Datum . toBuiltinData $ d
           r' = Redeemer . toBuiltinData $ r
        in case runScript context' val d' r' of
             Left err -> handleError shouldChat expected conf context td err
-            Right (_, logs) -> deliverResult shouldChat expected logs conf context td
-    Minter expected td@(MintingTest r) cb mp ->
+            Right (_, logs) ->
+              deliverResult mPred shouldChat expected logs conf context td
+    Minter expected mPred td@(MintingTest r) cb mp ->
       let context = compileMinting conf cb
           context' = Context . toBuiltinData $ context
           r' = Redeemer . toBuiltinData $ r
        in case runMintingPolicyScript context' mp r' of
             Left err -> handleError shouldChat expected conf context td err
-            Right (_, logs) -> deliverResult shouldChat expected logs conf context td
+            Right (_, logs) ->
+              deliverResult mPred shouldChat expected logs conf context td
     where
       conf :: TransactionConfig
       conf =
@@ -297,6 +357,7 @@ handleError shouldChat expected conf sc td = \case
 
 deliverResult ::
   forall (p :: Purpose).
+  Maybe (Vector Text -> Bool) ->
   PlutusTracing ->
   Outcome ->
   [Text] ->
@@ -304,17 +365,25 @@ deliverResult ::
   ScriptContext ->
   TestData p ->
   Result
-deliverResult shouldChat expected logs conf sc td =
+deliverResult mPred shouldChat expected logs conf sc td =
   case (expected, lastMay logs >>= Text.stripPrefix "tasty-plutus: ") of
     (_, Nothing) -> testFailed noOutcome
     (Fail, Just "Pass") -> testFailed unexpectedSuccess
-    (Fail, Just "Fail") -> doPass
-    (Pass, Just "Pass") -> doPass
+    (Fail, Just "Fail") -> tryPass
+    (Pass, Just "Pass") -> tryPass
     (Pass, Just "Fail") -> testFailed unexpectedFailure
     (_, Just t) -> case Text.stripPrefix "Parse failed: " t of
       Nothing -> testFailed . internalError $ t
       Just t' -> testFailed . noParse $ t'
   where
+    tryPass :: Result
+    tryPass = case mPred of
+      Nothing -> doPass
+      Just f ->
+        let logs' = Vector.fromList logs
+         in if f logs'
+              then doPass
+              else testFailed didn'tLog
     doPass :: Result
     doPass = testPassed $ case shouldChat of
       Always ->
@@ -322,6 +391,11 @@ deliverResult shouldChat expected logs conf sc td =
           ""
             $+$ hang "Logs" 4 (dumpLogs logs)
       OnlyOnFail -> ""
+    didn'tLog :: String
+    didn'tLog =
+      renderStyle ourStyle $
+        "Trace did not contain expected contents"
+          $+$ dumpState
     noOutcome :: String
     noOutcome =
       renderStyle ourStyle $
