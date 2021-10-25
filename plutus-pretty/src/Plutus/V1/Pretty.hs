@@ -305,7 +305,7 @@ posixTimeToValue t =
 
  = Note
 
- Addresses are opaque; we display them as a one-argument constructor, 
+ Addresses are opaque; we display them as a one-argument constructor,
  containing their 'Show'-based representation.
 
  @since 1.0
