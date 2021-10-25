@@ -7,7 +7,8 @@ import PlutusTx.Numeric.Extra (restrictMay)
 import PlutusTx.Ratio qualified as R
 import System.Random.Stateful (StatefulGen, uniformRM)
 import Test.Tasty (defaultMain, testGroup)
-import Test.Tasty.Plutus.Golden (Generator (Generator), goldenJSON)
+import Test.Tasty.Plutus.Generator (Generator (Generator))
+import Test.Tasty.Plutus.Golden (goldenJSON)
 
 main :: IO ()
 main =

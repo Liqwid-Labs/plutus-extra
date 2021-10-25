@@ -49,7 +49,10 @@ library
     Test.Tasty.Plutus.Generator
     Test.Tasty.Plutus.Golden
 
-  other-modules:   Test.Tasty.Plutus.Golden.JSON
+  other-modules:
+    Test.Tasty.Plutus.Golden.Internal
+    Test.Tasty.Plutus.Golden.JSON
+
   build-depends:
     , aeson              ^>=1.5.6.0
     , aeson-pretty       ^>=0.8.8
@@ -66,6 +69,7 @@ library
     , tagged             ^>=0.8.6.1
     , tasty              ^>=1.4.1
     , text               ^>=1.2.4.1
+    , transformers       ^>=0.5.6.2
     , vector             ^>=0.12.3.0
 
   hs-source-dirs:  src
