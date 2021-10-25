@@ -14,6 +14,13 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 * Various re-exports from `Test.Tasty.Plutus.Script.Unit`.
 
+## 3.3 -- 2021-10-26
+
+### Added
+
+* `shouldn'tValidateTracing` and `shouldValidateTracing`, giving an explicit
+  handle and predicate on traces.
+
 ## 3.2 -- 2021-10-19
 
 ### Changed

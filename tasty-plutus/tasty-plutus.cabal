@@ -73,5 +73,6 @@ library
     , tasty              ^>=1.4.1
     , template-haskell   ^>=2.16.0.0
     , text               ^>=1.2.4.1
+    , vector             ^>=0.12.3.0
 
   hs-source-dirs:  src
