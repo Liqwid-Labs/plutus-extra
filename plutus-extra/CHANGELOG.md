@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 2.1 -- 2021-10-22
+
+### Added
+
+- `dataAtComputedAddressWithState` function at `Plutus.Contract.Test.Extra`
+- `utxoAtComputedAddressWithState` function at `Plutus.Contract.Test.Extra`
+
 ## 2.0 -- 2021-10-04
 
 ### Changed
