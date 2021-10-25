@@ -305,13 +305,13 @@ posixTimeToValue t =
 
  = Note
 
- Addresses are opaque; therefore, we display them as a parameter-less
- constructor application.
+ Addresses are opaque; we display them as a one-argument constructor, 
+ containing their 'Show'-based representation.
 
  @since 1.0
 -}
 addressToValue :: Address -> Pretty.Value
-addressToValue _ = Pretty.Con "Address" []
+addressToValue addr = Pretty.Con "Address" [Pretty.prettyVal . show $ addr]
 
 {- | Transforms a 'TokenName' into a 'Pretty.Value'.
 
