@@ -395,9 +395,9 @@ produceResult ex tc sc = \case
     NoOutcome -> counterexample (noOutcome logs) False
     ScriptPassed -> case ex of
       Good -> property True
-      Bad -> counterexample (unexpectedFailure logs) False
+      Bad -> counterexample (unexpectedSuccess logs) False
     ScriptFailed -> case ex of
-      Good -> counterexample (unexpectedSuccess logs) False
+      Good -> counterexample (unexpectedFailure logs) False
       Bad -> property True
   where
     scriptError :: ScriptError -> String
