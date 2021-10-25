@@ -44,6 +44,8 @@ import Prelude
  >    shouldn'tValidate "Invalid context" validData invalidContext
  >    shouldn'tValidate "Invalid data" invalidData validContext
  >    shouldn'tValidate "Everything is bad" invalidData invalidContext
+ >    shouldValidateTracing "Gotta get good messages" tracePred validData validContext
+ >    shouldn'tValidateTracing "Oh damn" tracePred invalidData validContext
  >    scriptProperty "Some property" myGenerator mkContext
  >    ...
 

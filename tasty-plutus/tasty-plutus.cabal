@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               tasty-plutus
-version:            3.2
+version:            3.3
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -73,5 +73,6 @@ library
     , tasty              ^>=1.4.1
     , template-haskell   ^>=2.16.0.0
     , text               ^>=1.2.4.1
+    , vector             ^>=0.12.3.0
 
   hs-source-dirs:  src
