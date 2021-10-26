@@ -5,7 +5,6 @@ module Test.Tasty.Plutus.Golden (
   -- * Testing API
   goldenJSON,
   goldenData,
-  goldenUnsafeData,
 
   -- * Options
   GoldenSeed (..),
@@ -14,11 +13,11 @@ module Test.Tasty.Plutus.Golden (
 ) where
 
 import Control.Monad.Trans.Reader (runReaderT)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (ToJSON)
 import Data.Kind (Type)
 import Data.Proxy (Proxy (Proxy))
 import Data.Tagged (Tagged (Tagged))
-import PlutusTx.IsData.Class (FromData, ToData, UnsafeFromData)
+import PlutusTx.IsData.Class (ToData)
 import System.Random.Stateful (mkStdGen, newIOGenM)
 import Test.Tasty (TestTree)
 import Test.Tasty.Options (
@@ -50,7 +49,7 @@ import Type.Reflection (
 
 goldenJSON ::
   forall (a :: Type).
-  (Typeable a, ToJSON a, FromJSON a) =>
+  (Typeable a, ToJSON a) =>
   Generator a ->
   TestTree
 goldenJSON = singleTest ("Golden JSON: " <> tyName) . GoldenJSON tyName
@@ -60,21 +59,10 @@ goldenJSON = singleTest ("Golden JSON: " <> tyName) . GoldenJSON tyName
 
 goldenData ::
   forall (a :: Type).
-  (Typeable a, FromData a, ToData a) =>
+  (Typeable a, ToData a) =>
   Generator a ->
   TestTree
 goldenData = singleTest ("Golden Data: " <> tyName) . GoldenData tyName
-  where
-    tyName :: String
-    tyName = typeName @a
-
-goldenUnsafeData ::
-  forall (a :: Type).
-  (Typeable a, UnsafeFromData a, ToData a) =>
-  Generator a ->
-  TestTree
-goldenUnsafeData =
-  singleTest ("Golden UnsafeData: " <> tyName) . GoldenUnsafeData tyName
   where
     tyName :: String
     tyName = typeName @a
@@ -166,9 +154,8 @@ typeName :: forall (a :: Type). (Typeable a) => String
 typeName = tyConName . typeRepTyCon $ typeRep @a
 
 data GoldenTest (a :: Type) where
-  GoldenJSON :: (ToJSON a, FromJSON a) => String -> Generator a -> GoldenTest a
-  GoldenData :: (FromData a, ToData a) => String -> Generator a -> GoldenTest a
-  GoldenUnsafeData :: (UnsafeFromData a, ToData a) => String -> Generator a -> GoldenTest a
+  GoldenJSON :: (ToJSON a) => String -> Generator a -> GoldenTest a
+  GoldenData :: (ToData a) => String -> Generator a -> GoldenTest a
 
 instance (Typeable a) => IsTest (GoldenTest a) where
   run opts gt _ = do
@@ -177,7 +164,9 @@ instance (Typeable a) => IsTest (GoldenTest a) where
       GoldenJSON tyName gen -> do
         let conf = Config tyName seed rng gen goldenPath sampleSize
         runReaderT doGoldenJSON conf
-      _ -> pure . testFailed $ "Unsupported for now"
+      GoldenData tyName gen -> do
+        let conf = Config tyName seed rng gen goldenPath sampleSize
+        runReaderT doGoldenData conf
     where
       seed :: Int
       GoldenSeed seed = lookupOption opts

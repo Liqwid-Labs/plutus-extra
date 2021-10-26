@@ -73,38 +73,13 @@ doGoldenJSON = do
   tyName <- asks configTypeName
   let filePath = folderPath </> sampleFileName @a tyName <.> "json"
   liftIO . createDirectoryIfMissing True $ folderPath
-  sample <- genJSONSample
+  sample <- genSample toJSON
   ifM
     (liftIO . doesFileExist $ filePath)
     (loadAndCompareSamples filePath sample)
     (writeSampleToFile filePath sample)
 
 -- Helpers
-
--- We can easily have multiple types with the same name in the same package. To
--- avoid these clashing, we use fully qualified names, but with . replaced with
--- -, to avoid triggering bad filename behaviour.
-sampleFileName :: forall (a :: Type). (Typeable a) => String -> FilePath
-sampleFileName tyName = mapMaybe go $ moduleName <> "." <> tyName
-  where
-    go :: Char -> Maybe Char
-    go =
-      pure . \case
-        '.' -> '-'
-        c -> c
-    moduleName :: String
-    moduleName = tyConModule . typeRepTyCon $ typeRep @a
-
-genJSONSample ::
-  forall (a :: Type).
-  (ToJSON a) =>
-  ReaderT (Config a) IO (Sample Value)
-genJSONSample = do
-  rng <- asks configRng
-  Generator f <- asks configGenerator
-  sampleSize <- asks configSampleSize
-  seed <- asks configSeed
-  Sample seed <$> Vector.replicateM sampleSize (toJSON <$> f rng)
 
 loadAndCompareSamples ::
   forall (a :: Type).
@@ -211,9 +186,6 @@ writeSampleToFile fp sample = do
   liftIO . serializeSample toJSON fp $ sample
   pure . testPassed . renderStyle ourStyle $
     "Generated:" <+> text fp
-
-ourStyle :: Style
-ourStyle = style {lineLength = 80}
 
 renderJSON :: Value -> Doc
 renderJSON =
