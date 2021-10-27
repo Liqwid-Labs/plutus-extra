@@ -227,7 +227,7 @@ instance (Typeable p) => IsTest (ScriptTest p) where
           d' = Datum . toBuiltinData $ d
           r' = Redeemer . toBuiltinData $ r
        in case runScript context' val d' r' of
-            Left err -> handleError shouldChat expected conf context td err
+            Left err -> handleError mPred shouldChat expected conf context td err
             Right (_, logs) ->
               deliverResult mPred shouldChat expected logs conf context td
     Minter expected mPred td@(MintingTest r) cb mp ->
@@ -235,7 +235,7 @@ instance (Typeable p) => IsTest (ScriptTest p) where
           context' = Context . toBuiltinData $ context
           r' = Redeemer . toBuiltinData $ r
        in case runMintingPolicyScript context' mp r' of
-            Left err -> handleError shouldChat expected conf context td err
+            Left err -> handleError mPred shouldChat expected conf context td err
             Right (_, logs) ->
               deliverResult mPred shouldChat expected logs conf context td
     where
@@ -272,6 +272,7 @@ instance (Typeable p) => IsTest (ScriptTest p) where
 
 handleError ::
   forall (p :: Purpose).
+  Maybe (Vector Text -> Bool) ->
   PlutusTracing ->
   Outcome ->
   TransactionConfig ->
@@ -279,15 +280,24 @@ handleError ::
   TestData p ->
   ScriptError ->
   Result
-handleError shouldChat expected conf sc td = \case
+handleError mPred shouldChat expected conf sc td = \case
   EvaluationError logs msg -> case expected of
     Pass -> testFailed . unexpectedFailure msg $ logs
-    Fail -> testPassed $ case shouldChat of
-      Always ->
-        renderStyle ourStyle $
-          ""
-            $+$ hang "Logs" 4 (dumpLogs logs)
-      OnlyOnFail -> ""
+    Fail -> case mPred of
+      Nothing -> doPass logs
+      Just f ->
+        let logs' = Vector.fromList logs
+         in if f logs'
+              then doPass logs
+              else testFailed . didn'tLog $ logs
+  {-
+  Fail -> testPassed $ case shouldChat of
+    Always ->
+      renderStyle ourStyle $
+        ""
+          $+$ hang "Logs" 4 (dumpLogs logs)
+    OnlyOnFail -> ""
+  -}
   EvaluationException name msg ->
     testFailed . renderStyle ourStyle $
       "Unexpected behaviour in script:" <+> text name
@@ -297,6 +307,18 @@ handleError shouldChat expected conf sc td = \case
       "Script was malformed"
         $+$ hang "Details" 4 (text msg)
   where
+    doPass :: [Text] -> Result
+    doPass logs = testPassed $ case shouldChat of
+      Always ->
+        renderStyle ourStyle $
+          ""
+            $+$ hang "Logs" 4 (dumpLogs logs)
+      OnlyOnFail -> ""
+    didn'tLog :: [Text] -> String
+    didn'tLog logs =
+      renderStyle ourStyle $
+        "Trace did not contain expected contents"
+          $+$ dumpState logs
     unexpectedFailure :: String -> [Text] -> String
     unexpectedFailure msg logs =
       renderStyle ourStyle $
