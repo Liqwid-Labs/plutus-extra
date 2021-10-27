@@ -1,0 +1,285 @@
+{
+    "seed": 123456,
+    "data": [
+        {
+            "data": [
+                {
+                    "data": 85391660,
+                    "tag": "I"
+                },
+                {
+                    "data": 54100113,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 108021873,
+                    "tag": "I"
+                },
+                {
+                    "data": 445180451,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 312001039,
+                    "tag": "I"
+                },
+                {
+                    "data": 436835771,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 33377213,
+                    "tag": "I"
+                },
+                {
+                    "data": 657823705,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 974737659,
+                    "tag": "I"
+                },
+                {
+                    "data": 553180906,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 842731649,
+                    "tag": "I"
+                },
+                {
+                    "data": 202485335,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 262420486,
+                    "tag": "I"
+                },
+                {
+                    "data": 273257873,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 26016193,
+                    "tag": "I"
+                },
+                {
+                    "data": 2610180,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 2014121,
+                    "tag": "I"
+                },
+                {
+                    "data": 213355705,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 120517523,
+                    "tag": "I"
+                },
+                {
+                    "data": 404144747,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 58185447,
+                    "tag": "I"
+                },
+                {
+                    "data": 104090771,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 344354296,
+                    "tag": "I"
+                },
+                {
+                    "data": 462542131,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 334525148,
+                    "tag": "I"
+                },
+                {
+                    "data": 448756917,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 59533163,
+                    "tag": "I"
+                },
+                {
+                    "data": 68960732,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 461385265,
+                    "tag": "I"
+                },
+                {
+                    "data": 783725364,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 482586348,
+                    "tag": "I"
+                },
+                {
+                    "data": 89919191,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 60791258,
+                    "tag": "I"
+                },
+                {
+                    "data": 14244677,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 123807968,
+                    "tag": "I"
+                },
+                {
+                    "data": 95672279,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 103284886,
+                    "tag": "I"
+                },
+                {
+                    "data": 191961999,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 15957442,
+                    "tag": "I"
+                },
+                {
+                    "data": 145508893,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        }
+    ]
+}

@@ -8,13 +8,15 @@ import PlutusTx.Ratio qualified as R
 import System.Random.Stateful (StatefulGen, uniformRM)
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.Plutus.Generator (Generator (Generator))
-import Test.Tasty.Plutus.Golden (goldenJSON)
+import Test.Tasty.Plutus.Golden (goldenJSON, goldenData)
 
 main :: IO ()
 main =
   defaultMain . testGroup "Golden tests" $
     [ goldenJSON genNatural
     , goldenJSON genNatRatio
+    , goldenData genNatural
+    , goldenData genNatRatio
     ]
 
 -- Helpers

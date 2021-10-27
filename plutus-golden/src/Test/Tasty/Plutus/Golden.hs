@@ -12,6 +12,7 @@ module Test.Tasty.Plutus.Golden (
   GoldenSampleSize,
 ) where
 
+import Test.Tasty.Plutus.Golden.Data (doGoldenData)
 import Control.Monad.Trans.Reader (runReaderT)
 import Data.Aeson (ToJSON)
 import Data.Kind (Type)
@@ -37,7 +38,6 @@ import Test.Tasty.Plutus.Golden.JSON (doGoldenJSON)
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
   singleTest,
-  testFailed,
  )
 import Text.Read (readMaybe)
 import Type.Reflection (

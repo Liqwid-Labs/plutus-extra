@@ -10,7 +10,6 @@ import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString.Lazy qualified as Lazy
 import Data.Function (on)
 import Data.Kind (Type)
-import Data.Maybe (mapMaybe)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as Encoding
 import Data.Vector qualified as Vector
@@ -20,18 +19,12 @@ import System.Directory (
   getCurrentDirectory,
  )
 import System.FilePath ((<.>), (</>))
-import Test.Tasty.Plutus.Generator (Generator (Generator))
 import Test.Tasty.Plutus.Golden.Internal (
   Config (
-    configGenerator,
     configGoldenPath,
-    configRng,
-    configSampleSize,
-    configSeed,
     configTypeName
   ),
   Sample (
-    Sample,
     sampleData,
     sampleSeed
   ),
@@ -41,25 +34,21 @@ import Test.Tasty.Plutus.Golden.Internal (
   ),
   deserializeSample,
   serializeSample,
+  sampleFileName,
+  genSample,
+  ourStyle
  )
 import Test.Tasty.Providers (Result, testFailed, testPassed)
 import Test.Tasty.Runners (resultSuccessful)
 import Text.PrettyPrint (
   Doc,
-  Style (lineLength),
   int,
   renderStyle,
-  style,
   text,
   ($+$),
   (<+>),
  )
-import Type.Reflection (
-  Typeable,
-  tyConModule,
-  typeRep,
-  typeRepTyCon,
- )
+import Type.Reflection (Typeable)
 import Prelude hiding (exp)
 
 doGoldenJSON ::
