@@ -5,6 +5,7 @@ module Test.Tasty.Plutus.Golden (
   -- * Testing API
   goldenJSON,
   goldenData,
+  goldenToSchema,
 
   -- * Options
   GoldenSeed (..),
@@ -12,10 +13,10 @@ module Test.Tasty.Plutus.Golden (
   GoldenSampleSize,
 ) where
 
-import Test.Tasty.Plutus.Golden.Data (doGoldenData)
 import Control.Monad.Trans.Reader (runReaderT)
 import Data.Aeson (ToJSON)
 import Data.Kind (Type)
+import Data.OpenApi.Schema (ToSchema)
 import Data.Proxy (Proxy (Proxy))
 import Data.Tagged (Tagged (Tagged))
 import PlutusTx.IsData.Class (ToData)
@@ -33,8 +34,13 @@ import Test.Tasty.Options (
   lookupOption,
  )
 import Test.Tasty.Plutus.Generator (Generator)
-import Test.Tasty.Plutus.Golden.Internal (Config (Config))
+import Test.Tasty.Plutus.Golden.Data (doGoldenData)
+import Test.Tasty.Plutus.Golden.Internal (
+  Config (Config),
+  StaticConfig (StaticConfig),
+ )
 import Test.Tasty.Plutus.Golden.JSON (doGoldenJSON)
+import Test.Tasty.Plutus.Golden.ToSchema (doGoldenToSchema)
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
   singleTest,
@@ -47,9 +53,10 @@ import Type.Reflection (
   typeRepTyCon,
  )
 
--- | Golden test the JSON serialization of @a@ via its 'ToJSON' instance.
---
--- @since 1.0
+{- | Golden test the JSON serialization of @a@ via its 'ToJSON' instance.
+
+ @since 1.0
+-}
 goldenJSON ::
   forall (a :: Type).
   (Typeable a, ToJSON a) =>
@@ -60,16 +67,33 @@ goldenJSON = singleTest ("Golden JSON: " <> tyName) . GoldenJSON tyName
     tyName :: String
     tyName = typeName @a
 
--- | Golden test the Plutus 'Data' serialization of @a@ via its 'ToData'
--- instance.
---
--- @since 1.0
+{- | Golden test the Plutus 'Data' serialization of @a@ via its 'ToData'
+ instance.
+
+ @since 1.0
+-}
 goldenData ::
   forall (a :: Type).
   (Typeable a, ToData a) =>
   Generator a ->
   TestTree
 goldenData = singleTest ("Golden Data: " <> tyName) . GoldenData tyName
+  where
+    tyName :: String
+    tyName = typeName @a
+
+{- | Golden test the OpenAPI schematization of @a@ via its 'ToSchema' instance.
+ This does not require a generator, as the serialization depends on the type,
+ not any of its values.
+
+ @since 1.0
+-}
+goldenToSchema ::
+  forall (a :: Type).
+  (ToSchema a) =>
+  TestTree
+goldenToSchema =
+  singleTest ("Golden ToSchema: " <> tyName) . GoldenToSchema @a $ tyName
   where
     tyName :: String
     tyName = typeName @a
@@ -163,6 +187,7 @@ typeName = tyConName . typeRepTyCon $ typeRep @a
 data GoldenTest (a :: Type) where
   GoldenJSON :: (ToJSON a) => String -> Generator a -> GoldenTest a
   GoldenData :: (ToData a) => String -> Generator a -> GoldenTest a
+  GoldenToSchema :: (ToSchema a) => String -> GoldenTest a
 
 instance (Typeable a) => IsTest (GoldenTest a) where
   run opts gt _ = do
@@ -174,8 +199,8 @@ instance (Typeable a) => IsTest (GoldenTest a) where
       GoldenData tyName gen -> do
         let conf = Config tyName seed rng gen goldenPath sampleSize
         runReaderT doGoldenData conf
-      GoldenToSchema tyName gen -> do
-        let conf = Config tyName seed rng gen goldenPath sampleSize
+      GoldenToSchema tyName -> do
+        let conf :: StaticConfig a = StaticConfig tyName goldenPath
         runReaderT doGoldenToSchema conf
     where
       seed :: Int

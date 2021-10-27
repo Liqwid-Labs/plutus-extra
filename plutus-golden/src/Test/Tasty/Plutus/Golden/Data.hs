@@ -1,19 +1,16 @@
 module Test.Tasty.Plutus.Golden.Data (doGoldenData) where
 
-import Prelude hiding (exp)
-import Data.Bitraversable (bitraverse)
-import Text.Read (readMaybe)
-import Data.Bifunctor (bimap)
-import Text.Show.Pretty (ppDoc)
-import Data.Function (on)
-import Data.Aeson.Types (Parser)
-import Data.Aeson (Value, object, toJSON, withObject, (.:))
 import Control.Monad.Extra (ifM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Reader (ReaderT, asks)
+import Data.Aeson (Value, object, toJSON, withObject, (.:))
+import Data.Aeson.Types (Parser)
+import Data.Bifunctor (bimap)
+import Data.Bitraversable (bitraverse)
+import Data.Function (on)
 import Data.Kind (Type)
 import Data.Vector qualified as Vector
-import PlutusTx (Data (Constr, Map, List, I, B))
+import PlutusTx (Data (B, Constr, I, List, Map))
 import PlutusTx.IsData.Class (ToData, toData)
 import System.Directory (
   createDirectoryIfMissing,
@@ -40,7 +37,7 @@ import Test.Tasty.Plutus.Golden.Internal (
   sampleFileName,
   serializeSample,
  )
-import Test.Tasty.Providers (testPassed, testFailed)
+import Test.Tasty.Providers (testFailed, testPassed)
 import Test.Tasty.Runners (Result, resultSuccessful)
 import Text.PrettyPrint (
   Doc,
@@ -50,7 +47,10 @@ import Text.PrettyPrint (
   ($+$),
   (<+>),
  )
+import Text.Read (readMaybe)
+import Text.Show.Pretty (ppDoc)
 import Type.Reflection (Typeable)
+import Prelude hiding (exp)
 
 doGoldenData ::
   forall (a :: Type).
@@ -78,7 +78,7 @@ loadAndCompareSamples ::
   ReaderT (Config a) IO Result
 loadAndCompareSamples fp sample = do
   result <- liftIO . deserializeSample dataParseJSON $ fp
-  pure $ case result of 
+  pure $ case result of
     Left err -> testFailed . sampleError $ err
     Right expected -> compareSamples fp expected sample
   where
@@ -101,28 +101,28 @@ loadAndCompareSamples fp sample = do
           $+$ ""
           $+$ text err'
 
-compareSamples :: 
-  FilePath -> 
-  Sample Data -> 
-  Sample Data -> 
+compareSamples ::
+  FilePath ->
+  Sample Data ->
+  Sample Data ->
   Result
 compareSamples fp expected actual =
-  case (compare `on` sampleSeed) expected actual of 
-    EQ -> case (compare `on` (Vector.length . sampleData)) expected actual of 
-      EQ -> 
+  case (compare `on` sampleSeed) expected actual of
+    EQ -> case (compare `on` (Vector.length . sampleData)) expected actual of
+      EQ ->
         let expVec = sampleData expected
             actVec = sampleData actual
-          in Vector.ifoldl' go (testPassed "") . Vector.zip expVec $ actVec
+         in Vector.ifoldl' go (testPassed "") . Vector.zip expVec $ actVec
       _ -> testFailed mismatchedSampleCounts
     _ -> testFailed mismatchedSeeds
   where
-    go :: 
-      Result -> 
-      Int -> 
-      (Data, Data) -> 
+    go ::
+      Result ->
+      Int ->
+      (Data, Data) ->
       Result
     go acc ix (ex, act)
-      | resultSuccessful acc = case compare ex act of 
+      | resultSuccessful acc = case compare ex act of
         EQ -> acc
         _ -> testFailed . mismatchedSample ix ex $ act
       | otherwise = acc
@@ -176,23 +176,34 @@ writeSampleToFile fp sample = do
     "Generated:" <+> text fp
 
 dataToJSON :: Data -> Value
-dataToJSON = object . \case
-  Constr ix ds -> [("tag", "Constr"), 
-                   ("index", toJSON ix), 
-                   ("data", toJSON . fmap dataToJSON $ ds)]
-  Map keyVals -> [("tag", "Map"), 
-                  ("data", toJSON . fmap (bimap dataToJSON dataToJSON) $ keyVals)]
-  List ds -> [("tag", "List"), 
-              ("data", toJSON . fmap dataToJSON $ ds)]
-  I i -> [("tag", "I"), 
-          ("data", toJSON i)]
-  B bs -> [("tag", "B"), 
-           ("data", toJSON . show $ bs)]
+dataToJSON =
+  object . \case
+    Constr ix ds ->
+      [ ("tag", "Constr")
+      , ("index", toJSON ix)
+      , ("data", toJSON . fmap dataToJSON $ ds)
+      ]
+    Map keyVals ->
+      [ ("tag", "Map")
+      , ("data", toJSON . fmap (bimap dataToJSON dataToJSON) $ keyVals)
+      ]
+    List ds ->
+      [ ("tag", "List")
+      , ("data", toJSON . fmap dataToJSON $ ds)
+      ]
+    I i ->
+      [ ("tag", "I")
+      , ("data", toJSON i)
+      ]
+    B bs ->
+      [ ("tag", "B")
+      , ("data", toJSON . show $ bs)
+      ]
 
 dataParseJSON :: Value -> Parser Data
 dataParseJSON = withObject "Data" $ \obj -> do
   t <- obj .: "tag"
-  case t of 
+  case t of
     "Constr" -> do
       ix <- obj .: "index"
       asValues <- obj .: "data"
@@ -209,12 +220,10 @@ dataParseJSON = withObject "Data" $ \obj -> do
     "I" -> I <$> obj .: "data"
     "B" -> do
       asString <- obj .: "data"
-      case readMaybe asString of 
+      case readMaybe asString of
         Nothing -> error $ "Could not parse ByteString: " <> asString
         Just bs -> pure . B $ bs
     _ -> error $ "Not a valid tag: " <> t
 
 dumpFileLocation :: FilePath -> Doc
 dumpFileLocation fp = "Sample file location:" <+> text fp
-
-

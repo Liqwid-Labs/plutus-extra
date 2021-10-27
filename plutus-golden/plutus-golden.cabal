@@ -53,6 +53,7 @@ library
     Test.Tasty.Plutus.Golden.Data
     Test.Tasty.Plutus.Golden.Internal
     Test.Tasty.Plutus.Golden.JSON
+    Test.Tasty.Plutus.Golden.ToSchema
 
   build-depends:
     , aeson              ^>=1.5.6.0
@@ -61,6 +62,7 @@ library
     , directory          ^>=1.3.6.0
     , extra              ^>=1.7.9
     , filepath           ^>=1.4.2.1
+    , openapi3           ^>=3.1.0
     , playground-common
     , plutus-ledger-api
     , plutus-tx

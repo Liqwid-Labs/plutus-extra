@@ -2,6 +2,7 @@
 
 module Test.Tasty.Plutus.Golden.Internal (
   Config (..),
+  StaticConfig (..),
   Sample (..),
   SampleError (..),
   serializeSample,
@@ -45,6 +46,13 @@ data Config (a :: Type) = Config
 data Sample (a :: Type) = Sample
   { sampleSeed :: {-# UNPACK #-} !Int
   , sampleData :: {-# UNPACK #-} !(Vector a)
+  }
+
+-- For types where the serialization is not value-dependent. Mostly aimed at
+-- OpenAPI's ToSchema.
+data StaticConfig (a :: Type) = StaticConfig
+  { staticConfigTypeName :: String
+  , staticConfigGoldenPath :: FilePath
   }
 
 data SampleError

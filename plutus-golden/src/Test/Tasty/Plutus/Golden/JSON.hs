@@ -33,10 +33,10 @@ import Test.Tasty.Plutus.Golden.Internal (
     NotSample
   ),
   deserializeSample,
-  serializeSample,
-  sampleFileName,
   genSample,
-  ourStyle
+  ourStyle,
+  sampleFileName,
+  serializeSample,
  )
 import Test.Tasty.Providers (Result, testFailed, testPassed)
 import Test.Tasty.Runners (resultSuccessful)
