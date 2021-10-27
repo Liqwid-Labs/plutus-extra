@@ -47,6 +47,9 @@ import Type.Reflection (
   typeRepTyCon,
  )
 
+-- | Golden test the JSON serialization of @a@ via its 'ToJSON' instance.
+--
+-- @since 1.0
 goldenJSON ::
   forall (a :: Type).
   (Typeable a, ToJSON a) =>
@@ -57,6 +60,10 @@ goldenJSON = singleTest ("Golden JSON: " <> tyName) . GoldenJSON tyName
     tyName :: String
     tyName = typeName @a
 
+-- | Golden test the Plutus 'Data' serialization of @a@ via its 'ToData'
+-- instance.
+--
+-- @since 1.0
 goldenData ::
   forall (a :: Type).
   (Typeable a, ToData a) =>
@@ -167,6 +174,9 @@ instance (Typeable a) => IsTest (GoldenTest a) where
       GoldenData tyName gen -> do
         let conf = Config tyName seed rng gen goldenPath sampleSize
         runReaderT doGoldenData conf
+      GoldenToSchema tyName gen -> do
+        let conf = Config tyName seed rng gen goldenPath sampleSize
+        runReaderT doGoldenToSchema conf
     where
       seed :: Int
       GoldenSeed seed = lookupOption opts
