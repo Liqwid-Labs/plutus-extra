@@ -7,6 +7,7 @@ module Test.Tasty.Plutus.Golden.Internal (
   serializeSample,
   deserializeSample,
   ourStyle,
+  genToGenerator,
 ) where
 
 import Data.Aeson (
@@ -23,12 +24,16 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as Lazy
 import Data.Kind (Type)
 import Data.Vector (Vector)
+import System.Random.SplitMix (SMGen, splitSMGen)
+import Test.QuickCheck.Gen (Gen (MkGen))
+import Test.QuickCheck.Random (QCGen (QCGen))
 import Text.PrettyPrint (Style (lineLength), style)
 
-data Config = Config
+data Config (a :: Type) = Config
   { configSeed :: {-# UNPACK #-} !Int
   , configGoldenPath :: FilePath
   , configSampleSize :: {-# UNPACK #-} !Int
+  , configGenerator :: SMGen -> (a, SMGen)
   }
 
 data Sample (a :: Type) = Sample
@@ -76,3 +81,12 @@ deserializeSample f fp = do
 
 ourStyle :: Style
 ourStyle = style {lineLength = 80}
+
+genToGenerator ::
+  forall (a :: Type).
+  Gen a ->
+  SMGen ->
+  (a, SMGen)
+genToGenerator (MkGen f) rng =
+  let (used, passed) = splitSMGen rng
+   in (f (QCGen used) 100, passed) -- QuickCheck default size

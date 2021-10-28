@@ -104,6 +104,5 @@ test-suite golden
   build-depends:
     , plutus-golden  ^>=1.0
     , plutus-tx
-    , random         ^>=1.2.0
 
   hs-source-dirs: test/golden

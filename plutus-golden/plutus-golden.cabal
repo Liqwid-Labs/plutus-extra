@@ -62,6 +62,7 @@ library
     , pretty-show        ^>=1.10
     , QuickCheck         ^>=2.14.2
     , random             ^>=1.2.0
+    , splitmix           ^>=0.1.0.3
     , tagged             ^>=0.8.6.1
     , tasty              ^>=1.4.1
     , text               ^>=1.2.4.1

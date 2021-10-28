@@ -57,14 +57,15 @@ import System.Directory (
   getCurrentDirectory,
  )
 import System.FilePath ((<.>), (</>))
+import System.Random.SplitMix (SMGen)
 import System.Random.Stateful (
   IOGenM,
   applyRandomGenM,
   newIOGenM,
  )
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary))
-import Test.QuickCheck.Gen (Gen (MkGen))
-import Test.QuickCheck.Random (QCGen, mkQCGen)
+import Test.QuickCheck.Gen (Gen)
+import Test.QuickCheck.Random (QCGen (QCGen), mkQCGen)
 import Test.Tasty (TestTree)
 import Test.Tasty.Options (
   IsOption (
@@ -80,6 +81,7 @@ import Test.Tasty.Options (
 import Test.Tasty.Plutus.Golden.Internal (
   Config (
     Config,
+    configGenerator,
     configGoldenPath,
     configSampleSize,
     configSeed
@@ -87,6 +89,7 @@ import Test.Tasty.Plutus.Golden.Internal (
   Sample (Sample, sampleData, sampleSeed),
   SampleError (NotJSON, NotSample),
   deserializeSample,
+  genToGenerator,
   ourStyle,
   serializeSample,
  )
@@ -287,12 +290,14 @@ instance (Typeable a) => IsTest (GoldenTest a) where
         let folderPath' = folderPath </> "json"
         createDirectoryIfMissing True folderPath'
         let filePath = folderPath' </> tyName <.> "json"
-        runReaderT (goJSON g) . Config seed filePath $ sampleSize
+        let gen = genToGenerator g
+        runReaderT goJSON . Config seed filePath sampleSize $ gen
       GoldenData tyName g -> do
         let folderPath' = folderPath </> "data"
         createDirectoryIfMissing True folderPath'
         let filePath = folderPath' </> tyName <.> "json"
-        runReaderT (goData g) . Config seed filePath $ sampleSize
+        let gen = genToGenerator g
+        runReaderT goData . Config seed filePath sampleSize $ gen
       GoldenToSchema tyName -> do
         let folderPath' = folderPath </> "to-schema"
         createDirectoryIfMissing True folderPath'
@@ -315,26 +320,24 @@ instance (Typeable a) => IsTest (GoldenTest a) where
 goJSON ::
   forall (a :: Type).
   (ToJSON a) =>
-  Gen a ->
-  ReaderT Config IO Result
-goJSON g = do
+  ReaderT (Config a) IO Result
+goJSON = do
   fp <- asks configGoldenPath
   ifM
     (liftIO . doesFileExist $ fp)
-    (loadAndCheckJSON g)
-    (genAndWriteSample toJSON g)
+    loadAndCheckJSON
+    (genAndWriteSample toJSON)
 
 goData ::
   forall (a :: Type).
   (ToData a) =>
-  Gen a ->
-  ReaderT Config IO Result
-goData g = do
+  ReaderT (Config a) IO Result
+goData = do
   fp <- asks configGoldenPath
   ifM
     (liftIO . doesFileExist $ fp)
-    (loadAndCheckData g)
-    (genAndWriteSample (dataToValue . toData) g)
+    loadAndCheckData
+    (genAndWriteSample (dataToValue . toData))
 
 goToSchema ::
   forall (a :: Type).
@@ -350,46 +353,41 @@ goToSchema = do
 loadAndCheckJSON ::
   forall (a :: Type).
   (ToJSON a) =>
-  Gen a ->
-  ReaderT Config IO Result
-loadAndCheckJSON g = do
+  ReaderT (Config a) IO Result
+loadAndCheckJSON = do
   fp <- asks configGoldenPath
   result <- liftIO . deserializeSample pure $ fp
   case result of
     Left err -> testFailed <$> sampleError err
-    Right sample -> checkJSON g sample
+    Right sample -> checkJSON sample
 
 loadAndCheckData ::
   forall (a :: Type).
   (ToData a) =>
-  Gen a ->
-  ReaderT Config IO Result
-loadAndCheckData g = do
+  ReaderT (Config a) IO Result
+loadAndCheckData = do
   fp <- asks configGoldenPath
   result <- liftIO . deserializeSample parseData $ fp
   case result of
     Left err -> testFailed <$> sampleError err
-    Right sample -> checkData g sample
+    Right sample -> checkData sample
 
 genAndWriteSample ::
   forall (a :: Type).
   (a -> Value) ->
-  Gen a ->
-  ReaderT Config IO Result
-genAndWriteSample f (MkGen gen) = do
+  ReaderT (Config a) IO Result
+genAndWriteSample f = do
   seed <- asks configSeed
   sampleSize <- asks configSampleSize
-  rng <- newIOGenM . mkQCGen $ seed
+  rng <- newIOGenM . (\(QCGen g) -> g) . mkQCGen $ seed
   sample <- Sample seed <$> Vector.replicateM sampleSize (go rng)
   fp <- asks configGoldenPath
   liftIO . serializeSample f fp $ sample
   pure . testPassed . renderStyle ourStyle $
     "Generated:" <+> text fp
   where
-    go :: IOGenM QCGen -> ReaderT Config IO a
-    go = applyRandomGenM gen'
-    gen' :: QCGen -> (a, QCGen)
-    gen' rng = (gen rng 30, rng) -- default for 'generate' from QuickCheck
+    go :: IOGenM SMGen -> ReaderT (Config a) IO a
+    go rng = asks configGenerator >>= flip applyRandomGenM rng
 
 parseData :: Value -> Parser Data
 parseData = withObject "Data" $ \obj -> do
@@ -475,7 +473,10 @@ writeSchema = do
   pure . testPassed . renderStyle ourStyle $
     "Generated:" <+> text fp
 
-sampleError :: SampleError -> ReaderT Config IO String
+sampleError ::
+  forall (a :: Type).
+  SampleError ->
+  ReaderT (Config a) IO String
 sampleError err = do
   fp <- asks configGoldenPath
   pure . renderStyle ourStyle $ case err of
@@ -499,56 +500,52 @@ sampleError err = do
 checkJSON ::
   forall (a :: Type).
   (ToJSON a) =>
-  Gen a ->
   Sample Value ->
-  ReaderT Config IO Result
-checkJSON (MkGen gen) sample = do
+  ReaderT (Config a) IO Result
+checkJSON sample = do
   let seed = sampleSeed sample
-  rng <- newIOGenM . mkQCGen $ seed
+  rng <- newIOGenM . (\(QCGen g) -> g) . mkQCGen $ seed
   Vector.ifoldM (go rng) (testPassed "") . sampleData $ sample
   where
     go ::
-      IOGenM QCGen ->
+      IOGenM SMGen ->
       Result ->
       Int ->
       Value ->
-      ReaderT Config IO Result
+      ReaderT (Config a) IO Result
     go rng acc ix expected
       | resultSuccessful acc = do
-        actual <- toJSON <$> applyRandomGenM gen' rng
+        gen <- asks configGenerator
+        actual <- toJSON <$> applyRandomGenM gen rng
         case compare expected actual of
           EQ -> pure acc
           _ -> testFailed <$> jsonMismatch ix expected actual
       | otherwise = pure acc
-    gen' :: QCGen -> (a, QCGen)
-    gen' rng = (gen rng 30, rng) -- default for 'generate' from QuickCheck
 
 checkData ::
   forall (a :: Type).
   (ToData a) =>
-  Gen a ->
   Sample Data ->
-  ReaderT Config IO Result
-checkData (MkGen gen) sample = do
+  ReaderT (Config a) IO Result
+checkData sample = do
   let seed = sampleSeed sample
-  rng <- newIOGenM . mkQCGen $ seed
+  rng <- newIOGenM . (\(QCGen g) -> g) . mkQCGen $ seed
   Vector.ifoldM (go rng) (testPassed "") . sampleData $ sample
   where
     go ::
-      IOGenM QCGen ->
+      IOGenM SMGen ->
       Result ->
       Int ->
       Data ->
-      ReaderT Config IO Result
+      ReaderT (Config a) IO Result
     go rng acc ix expected
       | resultSuccessful acc = do
-        actual <- toData <$> applyRandomGenM gen' rng
+        gen <- asks configGenerator
+        actual <- toData <$> applyRandomGenM gen rng
         case compare expected actual of
           EQ -> pure acc
           _ -> testFailed <$> dataMismatch ix expected actual
       | otherwise = pure acc
-    gen' :: QCGen -> (a, QCGen)
-    gen' rng = (gen rng 30, rng) -- default for 'generate' from QuickCheck
 
 dumpSamplePath :: FilePath -> Doc
 dumpSamplePath fp = "Sample file location:" <+> text fp
@@ -568,7 +565,12 @@ schemaMismatch expected actual = do
       $+$ "Actual"
       $+$ ppDoc actual
 
-jsonMismatch :: Int -> Value -> Value -> ReaderT Config IO String
+jsonMismatch ::
+  forall (a :: Type).
+  Int ->
+  Value ->
+  Value ->
+  ReaderT (Config a) IO String
 jsonMismatch ix expected actual = do
   fp <- asks configGoldenPath
   pure . renderStyle ourStyle $
@@ -586,7 +588,12 @@ jsonMismatch ix expected actual = do
     go :: Value -> Doc
     go = text . unpack . decodeUtf8 . Lazy.toStrict . encodePretty
 
-dataMismatch :: Int -> Data -> Data -> ReaderT Config IO String
+dataMismatch ::
+  forall (a :: Type).
+  Int ->
+  Data ->
+  Data ->
+  ReaderT (Config a) IO String
 dataMismatch ix expected actual = do
   fp <- asks configGoldenPath
   pure . renderStyle ourStyle $
