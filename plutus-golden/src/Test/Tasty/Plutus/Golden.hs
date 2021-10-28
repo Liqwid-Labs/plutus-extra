@@ -18,13 +18,38 @@ module Test.Tasty.Plutus.Golden (
 import Control.Monad.Extra (ifM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Reader (ReaderT, ask, asks, runReaderT)
-import Data.Aeson (ToJSON (toJSON), Value)
+import Data.Aeson (
+  ToJSON (toJSON),
+  Value,
+  eitherDecodeFileStrict',
+  object,
+  withObject,
+  (.:),
+ )
+import Data.Aeson.Encode.Pretty (encodePretty)
+import Data.Aeson.Types (Parser)
+import Data.Bifunctor (bimap)
+import Data.Bitraversable (bitraverse)
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as Lazy
 import Data.Kind (Type)
 import Data.Maybe (mapMaybe)
-import Data.OpenApi.Schema (ToSchema)
+import Data.OpenApi (Schema)
+import Data.OpenApi.Schema (ToSchema, toSchema)
 import Data.Proxy (Proxy (Proxy))
 import Data.Tagged (Tagged (Tagged))
-import PlutusTx (Data)
+import Data.Text (unpack)
+import Data.Text.Encoding (decodeUtf8)
+import Data.Vector qualified as Vector
+import PlutusTx (
+  Data (
+    B,
+    Constr,
+    I,
+    List,
+    Map
+  ),
+ )
 import PlutusTx.IsData.Class (ToData, toData)
 import System.Directory (
   createDirectoryIfMissing,
@@ -32,9 +57,14 @@ import System.Directory (
   getCurrentDirectory,
  )
 import System.FilePath ((<.>), (</>))
-import System.Random.Stateful (mkStdGen, newIOGenM)
+import System.Random.Stateful (
+  IOGenM,
+  applyRandomGenM,
+  newIOGenM,
+ )
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary))
-import Test.QuickCheck.Gen (Gen)
+import Test.QuickCheck.Gen (Gen (MkGen))
+import Test.QuickCheck.Random (QCGen, mkQCGen)
 import Test.Tasty (TestTree)
 import Test.Tasty.Options (
   IsOption (
@@ -48,14 +78,36 @@ import Test.Tasty.Options (
   lookupOption,
  )
 import Test.Tasty.Plutus.Golden.Internal (
-  Config (Config, configGoldenPath),
+  Config (
+    Config,
+    configGoldenPath,
+    configSampleSize,
+    configSeed
+  ),
+  Sample (Sample, sampleData, sampleSeed),
+  SampleError (NotJSON, NotSample),
+  deserializeSample,
+  ourStyle,
+  serializeSample,
  )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
   Result,
   singleTest,
+  testFailed,
+  testPassed,
+ )
+import Test.Tasty.Runners (resultSuccessful)
+import Text.PrettyPrint (
+  Doc,
+  int,
+  renderStyle,
+  text,
+  ($+$),
+  (<+>),
  )
 import Text.Read (readMaybe)
+import Text.Show.Pretty (ppDoc)
 import Type.Reflection (
   Typeable,
   tyConModule,
@@ -84,7 +136,7 @@ goldenJSONWith ::
   Gen a ->
   TestTree
 goldenJSONWith =
-  singleTest ("Golden JSON: " <> typeName @a)
+  singleTest ("Golden JSON (" <> typeName @a <> ")")
     . GoldenJSON (fullyQualifiedName @a)
 
 {- | Golden test the Plutus 'Data' serialization of @a@ via its 'ToData'
@@ -108,7 +160,7 @@ goldenDataWith ::
   Gen a ->
   TestTree
 goldenDataWith =
-  singleTest ("Golden Data: " <> typeName @a)
+  singleTest ("Golden Data (" <> typeName @a <> ")")
     . GoldenData (fullyQualifiedName @a)
 
 {- | Golden test the OpenAPI schematization of @a@ via its 'ToSchema' instance.
@@ -120,7 +172,7 @@ goldenToSchema ::
   (ToSchema a) =>
   TestTree
 goldenToSchema =
-  singleTest ("Golden ToSchema: " <> typeName @a)
+  singleTest ("Golden ToSchema (" <> typeName @a <> ")")
     . GoldenToSchema @a
     $ fullyQualifiedName @a
 
@@ -300,36 +352,251 @@ loadAndCheckJSON ::
   (ToJSON a) =>
   Gen a ->
   ReaderT Config IO Result
-loadAndCheckJSON g = _
+loadAndCheckJSON g = do
+  fp <- asks configGoldenPath
+  result <- liftIO . deserializeSample pure $ fp
+  case result of
+    Left err -> testFailed <$> sampleError err
+    Right sample -> checkJSON g sample
 
 loadAndCheckData ::
   forall (a :: Type).
   (ToData a) =>
   Gen a ->
   ReaderT Config IO Result
-loadAndCheckData g = _
+loadAndCheckData g = do
+  fp <- asks configGoldenPath
+  result <- liftIO . deserializeSample parseData $ fp
+  case result of
+    Left err -> testFailed <$> sampleError err
+    Right sample -> checkData g sample
 
 genAndWriteSample ::
   forall (a :: Type).
   (a -> Value) ->
   Gen a ->
   ReaderT Config IO Result
-genAndWriteSample f gen = _
+genAndWriteSample f (MkGen gen) = do
+  seed <- asks configSeed
+  sampleSize <- asks configSampleSize
+  rng <- newIOGenM . mkQCGen $ seed
+  sample <- Sample seed <$> Vector.replicateM sampleSize (go rng)
+  fp <- asks configGoldenPath
+  liftIO . serializeSample f fp $ sample
+  pure . testPassed . renderStyle ourStyle $
+    "Generated:" <+> text fp
+  where
+    go :: IOGenM QCGen -> ReaderT Config IO a
+    go = applyRandomGenM gen'
+    gen' :: QCGen -> (a, QCGen)
+    gen' rng = (gen rng 30, rng) -- default for 'generate' from QuickCheck
 
-parseData :: _
-parseData = _
+parseData :: Value -> Parser Data
+parseData = withObject "Data" $ \obj -> do
+  tag <- obj .: "tag"
+  case tag of
+    "Constr" -> do
+      ix <- obj .: "index"
+      asVals <- obj .: "data"
+      ds <- traverse parseData asVals
+      pure . Constr ix $ ds
+    "Map" -> do
+      asVals <- obj .: "data"
+      keyVals <- traverse (bitraverse parseData parseData) asVals
+      pure . Map $ keyVals
+    "List" -> do
+      asVals <- obj .: "data"
+      ds <- traverse parseData asVals
+      pure . List $ ds
+    "I" -> I <$> obj .: "data"
+    "B" -> do
+      asString <- obj .: "data"
+      case readMaybe asString of
+        Nothing -> fail $ "Not a valid ByteString: " <> asString
+        Just bs -> pure . B $ bs
+    _ -> fail $ "Not a valid tag: " <> tag
 
 dataToValue :: Data -> Value
-dataToValue = _
+dataToValue =
+  object . \case
+    Constr ix ds ->
+      [ ("tag", "Constr")
+      , ("index", toJSON ix)
+      , ("data", toJSON . fmap dataToValue $ ds)
+      ]
+    Map keyVals ->
+      [ ("tag", "Map")
+      , ("data", toJSON . fmap (bimap dataToValue dataToValue) $ keyVals)
+      ]
+    List ds ->
+      [ ("tag", "List")
+      , ("data", toJSON . fmap dataToValue $ ds)
+      ]
+    I i ->
+      [ ("tag", "I")
+      , ("data", toJSON i)
+      ]
+    B bs ->
+      [ ("tag", "B")
+      , ("data", toJSON . show $ bs)
+      ]
 
 loadAndCheckSchema ::
   forall (a :: Type).
   (ToSchema a) =>
   ReaderT FilePath IO Result
-loadAndCheckSchema = _
+loadAndCheckSchema = do
+  fp <- ask
+  result <- liftIO . eitherDecodeFileStrict' $ fp
+  case result of
+    Left err ->
+      pure . testFailed . renderStyle ourStyle $
+        "Could not parse sample."
+          $+$ ""
+          $+$ dumpSamplePath fp
+          $+$ ""
+          $+$ "Error message"
+          $+$ ""
+          $+$ text err
+    Right scm -> do
+      let scm' = toSchema (Proxy @a)
+      if scm == scm'
+        then pure . testPassed $ ""
+        else testFailed <$> schemaMismatch scm scm'
 
 writeSchema ::
   forall (a :: Type).
   (ToSchema a) =>
   ReaderT FilePath IO Result
-writeSchema = _
+writeSchema = do
+  let scm = toSchema (Proxy @a)
+  fp <- ask
+  liftIO . BS.writeFile fp . Lazy.toStrict . encodePretty . toJSON $ scm
+  pure . testPassed . renderStyle ourStyle $
+    "Generated:" <+> text fp
+
+sampleError :: SampleError -> ReaderT Config IO String
+sampleError err = do
+  fp <- asks configGoldenPath
+  pure . renderStyle ourStyle $ case err of
+    NotJSON err' ->
+      "Could not parse sample file as JSON."
+        $+$ ""
+        $+$ dumpSamplePath fp
+        $+$ ""
+        $+$ "Parse error"
+        $+$ ""
+        $+$ text err'
+    NotSample err' ->
+      "Given file is not a valid sample file."
+        $+$ ""
+        $+$ dumpSamplePath fp
+        $+$ ""
+        $+$ "Parse error"
+        $+$ ""
+        $+$ text err'
+
+checkJSON ::
+  forall (a :: Type).
+  (ToJSON a) =>
+  Gen a ->
+  Sample Value ->
+  ReaderT Config IO Result
+checkJSON (MkGen gen) sample = do
+  let seed = sampleSeed sample
+  rng <- newIOGenM . mkQCGen $ seed
+  Vector.ifoldM (go rng) (testPassed "") . sampleData $ sample
+  where
+    go ::
+      IOGenM QCGen ->
+      Result ->
+      Int ->
+      Value ->
+      ReaderT Config IO Result
+    go rng acc ix expected
+      | resultSuccessful acc = do
+        actual <- toJSON <$> applyRandomGenM gen' rng
+        case compare expected actual of
+          EQ -> pure acc
+          _ -> testFailed <$> jsonMismatch ix expected actual
+      | otherwise = pure acc
+    gen' :: QCGen -> (a, QCGen)
+    gen' rng = (gen rng 30, rng) -- default for 'generate' from QuickCheck
+
+checkData ::
+  forall (a :: Type).
+  (ToData a) =>
+  Gen a ->
+  Sample Data ->
+  ReaderT Config IO Result
+checkData (MkGen gen) sample = do
+  let seed = sampleSeed sample
+  rng <- newIOGenM . mkQCGen $ seed
+  Vector.ifoldM (go rng) (testPassed "") . sampleData $ sample
+  where
+    go ::
+      IOGenM QCGen ->
+      Result ->
+      Int ->
+      Data ->
+      ReaderT Config IO Result
+    go rng acc ix expected
+      | resultSuccessful acc = do
+        actual <- toData <$> applyRandomGenM gen' rng
+        case compare expected actual of
+          EQ -> pure acc
+          _ -> testFailed <$> dataMismatch ix expected actual
+      | otherwise = pure acc
+    gen' :: QCGen -> (a, QCGen)
+    gen' rng = (gen rng 30, rng) -- default for 'generate' from QuickCheck
+
+dumpSamplePath :: FilePath -> Doc
+dumpSamplePath fp = "Sample file location:" <+> text fp
+
+schemaMismatch :: Schema -> Schema -> ReaderT FilePath IO String
+schemaMismatch expected actual = do
+  fp <- ask
+  pure . renderStyle ourStyle $
+    "Schema does not match."
+      $+$ ""
+      $+$ dumpSamplePath fp
+      $+$ ""
+      $+$ "Expected"
+      $+$ ""
+      $+$ ppDoc expected
+      $+$ ""
+      $+$ "Actual"
+      $+$ ppDoc actual
+
+jsonMismatch :: Int -> Value -> Value -> ReaderT Config IO String
+jsonMismatch ix expected actual = do
+  fp <- asks configGoldenPath
+  pure . renderStyle ourStyle $
+    "Sample" <+> int ix <+> "does not match."
+      $+$ ""
+      $+$ dumpSamplePath fp
+      $+$ ""
+      $+$ "Expected"
+      $+$ ""
+      $+$ go expected
+      $+$ ""
+      $+$ "Actual"
+      $+$ go actual
+  where
+    go :: Value -> Doc
+    go = text . unpack . decodeUtf8 . Lazy.toStrict . encodePretty
+
+dataMismatch :: Int -> Data -> Data -> ReaderT Config IO String
+dataMismatch ix expected actual = do
+  fp <- asks configGoldenPath
+  pure . renderStyle ourStyle $
+    "Sample" <+> int ix <+> "does not match."
+      $+$ ""
+      $+$ dumpSamplePath fp
+      $+$ ""
+      $+$ "Expected"
+      $+$ ""
+      $+$ ppDoc expected
+      $+$ ""
+      $+$ "Actual"
+      $+$ ppDoc actual
