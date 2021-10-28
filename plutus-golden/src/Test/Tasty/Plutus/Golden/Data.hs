@@ -32,7 +32,6 @@ import Test.Tasty.Plutus.Golden.Internal (
     NotSample
   ),
   deserializeSample,
-  genSample,
   ourStyle,
   sampleFileName,
   serializeSample,

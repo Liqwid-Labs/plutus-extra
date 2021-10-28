@@ -2,17 +2,15 @@
 
 module Test.Tasty.Plutus.Golden.Internal (
   Config (..),
-  StaticConfig (..),
   Sample (..),
   SampleError (..),
   serializeSample,
   deserializeSample,
   sampleFileName,
-  genSample,
+  -- genSample,
   ourStyle,
 ) where
 
-import Control.Monad.Trans.Reader (ReaderT, asks)
 import Data.Aeson (
   Value,
   eitherDecodeFileStrict',
@@ -28,17 +26,11 @@ import Data.ByteString.Lazy qualified as Lazy
 import Data.Kind (Type)
 import Data.Maybe (mapMaybe)
 import Data.Vector (Vector)
-import Data.Vector qualified as Vector
-import System.Random.Stateful (IOGenM, StdGen)
-import Test.Tasty.Plutus.Generator (Generator (Generator))
 import Text.PrettyPrint (Style (lineLength), style)
 import Type.Reflection (Typeable, tyConModule, typeRep, typeRepTyCon)
 
-data Config (a :: Type) = Config
-  { configTypeName :: String
-  , configSeed :: {-# UNPACK #-} !Int
-  , configRng :: IOGenM StdGen
-  , configGenerator :: Generator a
+data Config = Config
+  { configSeed :: {-# UNPACK #-} !Int
   , configGoldenPath :: FilePath
   , configSampleSize :: {-# UNPACK #-} !Int
   }
@@ -46,13 +38,6 @@ data Config (a :: Type) = Config
 data Sample (a :: Type) = Sample
   { sampleSeed :: {-# UNPACK #-} !Int
   , sampleData :: {-# UNPACK #-} !(Vector a)
-  }
-
--- For types where the serialization is not value-dependent. Mostly aimed at
--- OpenAPI's ToSchema.
-data StaticConfig (a :: Type) = StaticConfig
-  { staticConfigTypeName :: String
-  , staticConfigGoldenPath :: FilePath
   }
 
 data SampleError
@@ -107,6 +92,7 @@ sampleFileName tyName = mapMaybe go $ moduleName <> "." <> tyName
     moduleName :: String
     moduleName = tyConModule . typeRepTyCon $ typeRep @a
 
+{-
 genSample ::
   forall (a :: Type) (b :: Type).
   (a -> b) ->
@@ -117,6 +103,7 @@ genSample f = do
   sampleSize <- asks configSampleSize
   seed <- asks configSeed
   Sample seed <$> Vector.replicateM sampleSize (f <$> g rng)
+-}
 
 ourStyle :: Style
 ourStyle = style {lineLength = 80}

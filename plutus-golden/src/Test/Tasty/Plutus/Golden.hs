@@ -4,7 +4,9 @@
 module Test.Tasty.Plutus.Golden (
   -- * Testing API
   goldenJSON,
+  goldenJSONWith,
   goldenData,
+  goldenDataWith,
   goldenToSchema,
 
   -- * Options
@@ -13,14 +15,26 @@ module Test.Tasty.Plutus.Golden (
   GoldenSampleSize,
 ) where
 
-import Control.Monad.Trans.Reader (runReaderT)
-import Data.Aeson (ToJSON)
+import Control.Monad.Extra (ifM)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Trans.Reader (ReaderT, ask, asks, runReaderT)
+import Data.Aeson (ToJSON (toJSON), Value)
 import Data.Kind (Type)
+import Data.Maybe (mapMaybe)
 import Data.OpenApi.Schema (ToSchema)
 import Data.Proxy (Proxy (Proxy))
 import Data.Tagged (Tagged (Tagged))
-import PlutusTx.IsData.Class (ToData)
+import PlutusTx (Data)
+import PlutusTx.IsData.Class (ToData, toData)
+import System.Directory (
+  createDirectoryIfMissing,
+  doesFileExist,
+  getCurrentDirectory,
+ )
+import System.FilePath ((<.>), (</>))
 import System.Random.Stateful (mkStdGen, newIOGenM)
+import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary))
+import Test.QuickCheck.Gen (Gen)
 import Test.Tasty (TestTree)
 import Test.Tasty.Options (
   IsOption (
@@ -33,21 +47,18 @@ import Test.Tasty.Options (
   OptionDescription (Option),
   lookupOption,
  )
-import Test.Tasty.Plutus.Generator (Generator)
-import Test.Tasty.Plutus.Golden.Data (doGoldenData)
 import Test.Tasty.Plutus.Golden.Internal (
-  Config (Config),
-  StaticConfig (StaticConfig),
+  Config (Config, configGoldenPath),
  )
-import Test.Tasty.Plutus.Golden.JSON (doGoldenJSON)
-import Test.Tasty.Plutus.Golden.ToSchema (doGoldenToSchema)
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
+  Result,
   singleTest,
  )
 import Text.Read (readMaybe)
 import Type.Reflection (
   Typeable,
+  tyConModule,
   tyConName,
   typeRep,
   typeRepTyCon,
@@ -59,13 +70,22 @@ import Type.Reflection (
 -}
 goldenJSON ::
   forall (a :: Type).
-  (Typeable a, ToJSON a) =>
-  Generator a ->
+  (Typeable a, Arbitrary a, ToJSON a) =>
   TestTree
-goldenJSON = singleTest ("Golden JSON: " <> tyName) . GoldenJSON tyName
-  where
-    tyName :: String
-    tyName = typeName @a
+goldenJSON = goldenJSONWith @a arbitrary
+
+{- | As 'goldenJSON', but with explicit generator.
+
+ @since 1.0
+-}
+goldenJSONWith ::
+  forall (a :: Type).
+  (Typeable a, ToJSON a) =>
+  Gen a ->
+  TestTree
+goldenJSONWith =
+  singleTest ("Golden JSON: " <> typeName @a)
+    . GoldenJSON (fullyQualifiedName @a)
 
 {- | Golden test the Plutus 'Data' serialization of @a@ via its 'ToData'
  instance.
@@ -74,17 +94,24 @@ goldenJSON = singleTest ("Golden JSON: " <> tyName) . GoldenJSON tyName
 -}
 goldenData ::
   forall (a :: Type).
-  (Typeable a, ToData a) =>
-  Generator a ->
+  (Typeable a, Arbitrary a, ToData a) =>
   TestTree
-goldenData = singleTest ("Golden Data: " <> tyName) . GoldenData tyName
-  where
-    tyName :: String
-    tyName = typeName @a
+goldenData = goldenDataWith @a arbitrary
+
+{- | As 'goldenData', but with explicit generator.
+
+ @since 1.0
+-}
+goldenDataWith ::
+  forall (a :: Type).
+  (Typeable a, ToData a) =>
+  Gen a ->
+  TestTree
+goldenDataWith =
+  singleTest ("Golden Data: " <> typeName @a)
+    . GoldenData (fullyQualifiedName @a)
 
 {- | Golden test the OpenAPI schematization of @a@ via its 'ToSchema' instance.
- This does not require a generator, as the serialization depends on the type,
- not any of its values.
 
  @since 1.0
 -}
@@ -93,10 +120,9 @@ goldenToSchema ::
   (ToSchema a) =>
   TestTree
 goldenToSchema =
-  singleTest ("Golden ToSchema: " <> tyName) . GoldenToSchema @a $ tyName
-  where
-    tyName :: String
-    tyName = typeName @a
+  singleTest ("Golden ToSchema: " <> typeName @a)
+    . GoldenToSchema @a
+    $ fullyQualifiedName @a
 
 {- | The seed used for generating samples.
 
@@ -184,24 +210,42 @@ instance IsOption GoldenSampleSize where
 typeName :: forall (a :: Type). (Typeable a) => String
 typeName = tyConName . typeRepTyCon $ typeRep @a
 
+fullyQualifiedName :: forall (a :: Type). (Typeable a) => String
+fullyQualifiedName = mapMaybe go $ moduleName <> "." <> typeName @a
+  where
+    go :: Char -> Maybe Char
+    go =
+      pure . \case
+        '.' -> '-'
+        c -> c
+    moduleName :: String
+    moduleName = tyConModule . typeRepTyCon $ typeRep @a
+
 data GoldenTest (a :: Type) where
-  GoldenJSON :: (ToJSON a) => String -> Generator a -> GoldenTest a
-  GoldenData :: (ToData a) => String -> Generator a -> GoldenTest a
+  GoldenJSON :: (ToJSON a) => String -> Gen a -> GoldenTest a
+  GoldenData :: (ToData a) => String -> Gen a -> GoldenTest a
   GoldenToSchema :: (ToSchema a) => String -> GoldenTest a
 
 instance (Typeable a) => IsTest (GoldenTest a) where
   run opts gt _ = do
-    rng <- newIOGenM . mkStdGen $ seed
+    cwd <- getCurrentDirectory
+    let folderPath = cwd </> goldenPath
     case gt of
-      GoldenJSON tyName gen -> do
-        let conf = Config tyName seed rng gen goldenPath sampleSize
-        runReaderT doGoldenJSON conf
-      GoldenData tyName gen -> do
-        let conf = Config tyName seed rng gen goldenPath sampleSize
-        runReaderT doGoldenData conf
+      GoldenJSON tyName g -> do
+        let folderPath' = folderPath </> "json"
+        createDirectoryIfMissing True folderPath'
+        let filePath = folderPath' </> tyName <.> "json"
+        runReaderT (goJSON g) . Config seed filePath $ sampleSize
+      GoldenData tyName g -> do
+        let folderPath' = folderPath </> "data"
+        createDirectoryIfMissing True folderPath'
+        let filePath = folderPath' </> tyName <.> "json"
+        runReaderT (goData g) . Config seed filePath $ sampleSize
       GoldenToSchema tyName -> do
-        let conf :: StaticConfig a = StaticConfig tyName goldenPath
-        runReaderT doGoldenToSchema conf
+        let folderPath' = folderPath </> "to-schema"
+        createDirectoryIfMissing True folderPath'
+        let filePath = folderPath' </> tyName <.> "json"
+        runReaderT (goToSchema @a) filePath
     where
       seed :: Int
       GoldenSeed seed = lookupOption opts
@@ -215,3 +259,77 @@ instance (Typeable a) => IsTest (GoldenTest a) where
       , Option (Proxy @GoldenPath)
       , Option (Proxy @GoldenSampleSize)
       ]
+
+goJSON ::
+  forall (a :: Type).
+  (ToJSON a) =>
+  Gen a ->
+  ReaderT Config IO Result
+goJSON g = do
+  fp <- asks configGoldenPath
+  ifM
+    (liftIO . doesFileExist $ fp)
+    (loadAndCheckJSON g)
+    (genAndWriteSample toJSON g)
+
+goData ::
+  forall (a :: Type).
+  (ToData a) =>
+  Gen a ->
+  ReaderT Config IO Result
+goData g = do
+  fp <- asks configGoldenPath
+  ifM
+    (liftIO . doesFileExist $ fp)
+    (loadAndCheckData g)
+    (genAndWriteSample (dataToValue . toData) g)
+
+goToSchema ::
+  forall (a :: Type).
+  (ToSchema a) =>
+  ReaderT FilePath IO Result
+goToSchema = do
+  fp <- ask
+  ifM
+    (liftIO . doesFileExist $ fp)
+    (loadAndCheckSchema @a)
+    (writeSchema @a)
+
+loadAndCheckJSON ::
+  forall (a :: Type).
+  (ToJSON a) =>
+  Gen a ->
+  ReaderT Config IO Result
+loadAndCheckJSON g = _
+
+loadAndCheckData ::
+  forall (a :: Type).
+  (ToData a) =>
+  Gen a ->
+  ReaderT Config IO Result
+loadAndCheckData g = _
+
+genAndWriteSample ::
+  forall (a :: Type).
+  (a -> Value) ->
+  Gen a ->
+  ReaderT Config IO Result
+genAndWriteSample f gen = _
+
+parseData :: _
+parseData = _
+
+dataToValue :: Data -> Value
+dataToValue = _
+
+loadAndCheckSchema ::
+  forall (a :: Type).
+  (ToSchema a) =>
+  ReaderT FilePath IO Result
+loadAndCheckSchema = _
+
+writeSchema ::
+  forall (a :: Type).
+  (ToSchema a) =>
+  ReaderT FilePath IO Result
+writeSchema = _
