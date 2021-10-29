@@ -196,7 +196,7 @@ valueAtComputedAddress ::
   (Ledger.Value -> Bool) ->
   TracePredicate
 valueAtComputedAddress contract inst addressGetter check =
-  utxoAtComputedAddress contract inst addressGetter $ \addr utxoMap -> do
+  utxoAtComputedAddress contract inst addressGetter $ \_ addr utxoMap -> do
     let value = foldMap (Ledger.txOutValue . Ledger.txOutTxOut) utxoMap
         result = check value
     unless result $
@@ -229,7 +229,7 @@ dataAtComputedAddress ::
   (datum -> Bool) ->
   TracePredicate
 dataAtComputedAddress contract inst addressGetter check =
-  utxoAtComputedAddress contract inst addressGetter $ \addr utxoMap -> do
+  utxoAtComputedAddress contract inst addressGetter $ \_ addr utxoMap ->
     let datums = mapMaybe (uncurry $ getTxOutDatum @datum) $ Map.toList utxoMap
         result = any check datums
     unless result $
@@ -267,50 +267,9 @@ dataAtComputedAddressWithState ::
   (w -> datum -> Bool) ->
   TracePredicate
 dataAtComputedAddressWithState contract inst addressGetter check =
-  utxoAtComputedAddressWithStateImpl contract inst addressGetter $ \w addr utxoMap -> do
+  utxoAtComputedAddress contract inst addressGetter $ \w addr utxoMap ->
     let datums = mapMaybe (uncurry $ getTxOutDatum @datum) $ Map.toList utxoMap
-        result = any (check w) datums :: Bool
-    unless result $
-      tell @(Doc Void)
-        ( "Data at address" <+> pretty addr <+> "was"
-            <+> foldMap (foldMap pretty . Ledger.txData . Ledger.txOutTxTx) utxoMap
-            <> line
-            <> "Contract writer data was"
-            <+> pretty w
-        )
-    return result
-
-{- | Extract UTxOs at a computed address and call continuation returning
- Boolean value based on both the address and UTxOs.
- The address is computed using data acquired from contract's writer instance.
-
-  @since 1.1
--}
-utxoAtComputedAddress ::
-  forall
-    (effs :: [Type -> Type])
-    (w :: Type)
-    (s :: Row Type)
-    (e :: Type)
-    (a :: Type)
-    (contract :: Type -> Row Type -> Type -> Type -> Type).
-  ( Member (Error Folds.EmulatorFoldErr) effs
-  , Member (Writer (Doc Void)) effs
-  , Monoid w
-  , IsContract contract
-  ) =>
-  -- | The 'IsContract' code
-  contract w s e a ->
-  -- | The 'ContractInstanceTag', acquired inside the
-  -- 'Plutus.Trace.Emulator.EmulatorTrace'
-  ContractInstanceTag ->
-  -- | The function computing 'Ledger.Address'
-  (w -> Maybe Ledger.Address) ->
-  -- | The continuation function acting as a predicate
-  (Ledger.Address -> UtxoMap -> Eff effs Bool) ->
-  Folds.EmulatorEventFoldM effs Bool
-utxoAtComputedAddress contract inst addressGetter cont =
-  utxoAtComputedAddressWithStateImpl contract inst addressGetter (const cont)
+          (any (check w) datums)
 
 {- | Check that the UTxO at a computed address
  and data aquired from contract's writer instance meet some condition.
@@ -335,26 +294,12 @@ utxoAtComputedAddressWithState ::
   (w -> UtxoMap -> Bool) ->
   TracePredicate
 utxoAtComputedAddressWithState contract inst getter check =
-  utxoAtComputedAddressWithStateImpl contract inst getter $ \w addr utxoMap ->
-    let result = check w utxoMap
-     in do
-          unless result $
-            tell @(Doc Void)
-              ( "UTxO at address" <+> pretty addr <+> "was"
-                  <+> foldMap viaShow utxoMap
-                  <> line
-                  <> "Contract writer data was"
-                  <+> pretty w
-              )
-          return result
-
-{-utxoAtComputedAddressWithStateImpl contract tag getter
-$ \w addr -> return . predicate w addr-}
+  utxoAtComputedAddress contract inst getter $ \w addr utxoMap ->
 
 {- | Similar to 'utxoAtComputedAddress' but continuation have access
  to a data aquired from contract's writer instance.
 -}
-utxoAtComputedAddressWithStateImpl ::
+utxoAtComputedAddress ::
   forall
     (effs :: [Type -> Type])
     (w :: Type)
@@ -377,7 +322,7 @@ utxoAtComputedAddressWithStateImpl ::
   -- | The continuation function acting as a predicate
   (w -> Ledger.Address -> UtxoMap -> Eff effs Bool) ->
   Folds.EmulatorEventFoldM effs Bool
-utxoAtComputedAddressWithStateImpl contract inst addressGetter cont =
+utxoAtComputedAddress contract inst addressGetter cont =
   flip
     postMapM
     ( (,)
