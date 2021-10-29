@@ -10,6 +10,7 @@ module Plutus.Contract.Test.Extra (
   valueAtComputedAddress,
   dataAtComputedAddress,
   dataAtComputedAddressWithState,
+  valueAtComputedAddressWithState,
   utxoAtComputedAddressWithState,
 ) where
 
@@ -201,6 +202,43 @@ valueAtComputedAddress contract inst addressGetter check =
         result = check value
     unless result $
       tell @(Doc Void) ("Funds at address" <+> pretty addr <+> "were" <> pretty value)
+    return result
+
+{- | Check that the funds at a computed address
+ and data aquired from contract's writer instance meet some condition.
+ The address is computed using data acquired from contract's writer instance.
+-}
+valueAtComputedAddressWithState ::
+  forall
+    (w :: Type)
+    (s :: Row Type)
+    (e :: Type)
+    (a :: Type)
+    (contract :: Type -> Row Type -> Type -> Type -> Type).
+  ( Monoid w
+  , Pretty w
+  , IsContract contract
+  ) =>
+  -- | The 'IsContract' code
+  contract w s e a ->
+  -- | The 'ContractInstanceTag', acquired inside the
+  -- 'Plutus.Trace.Emulator.EmulatorTrace'
+  ContractInstanceTag ->
+  -- | The function computing 'Ledger.Address'
+  (w -> Maybe Ledger.Address) ->
+  -- | The @datum@ predicate
+  (w -> Ledger.Value -> Bool) ->
+  TracePredicate
+valueAtComputedAddressWithState contract inst addressGetter check =
+  utxoAtComputedAddressWithStateImpl contract inst addressGetter $ \w addr utxoMap -> do
+    let value = foldMap (Ledger.txOutValue . Ledger.txOutTxOut) utxoMap
+        result = check w value
+    unless result $
+      tell @(Doc Void)
+        ( "Funds at address" <+> pretty addr <+> "were" <> pretty value
+            <+> "Contract writer data was"
+            <+> pretty w
+        )
     return result
 
 {- | Check that the datum at a computed address meet some condition.
