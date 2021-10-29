@@ -33,7 +33,7 @@ import Data.List (foldl')
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Row (Row)
-import Data.Text.Prettyprint.Doc (Doc, Pretty, colon, indent, line, pretty, viaShow, vsep, (<+>))
+import Data.Text.Prettyprint.Doc (Doc, Pretty, align, colon, indent, pretty, viaShow, vsep, (<+>))
 import Data.Void (Void)
 import Prelude
 
@@ -171,6 +171,36 @@ walletFundsChangeWithAccumStateImpl exact contract inst wallet toDlt =
                  ]
       pure result
 
+data CheckedState = CheckedState
+  { checkedAddress :: Ledger.Address
+  , checkedData :: [CheckedData]
+  }
+
+data CheckedData where
+  CheckedDatas :: UtxoMap -> CheckedData
+  CheckedValue :: Ledger.Value -> CheckedData
+  CheckedUtxos :: UtxoMap -> CheckedData
+  CheckedWriter :: forall w. Pretty w => w -> CheckedData
+
+instance Pretty CheckedState where
+  pretty (CheckedState address datas) =
+    "At the address" <+> pretty address <+> ":"
+      <+> align (vsep $ map pretty datas)
+
+instance Pretty CheckedData where
+  pretty (CheckedDatas utxos) =
+    "Data was"
+      <+> foldMap (foldMap pretty . Ledger.txData . Ledger.txOutTxTx) utxos
+  pretty (CheckedValue value) =
+    "Funds was"
+      <+> pretty value
+  pretty (CheckedUtxos utxos) =
+    "UTxO was"
+      <+> foldMap viaShow utxos
+  pretty (CheckedWriter w) =
+    "Contract writer data was"
+      <+> pretty w
+
 {- | Check that the funds at a computed address meet some condition.
  The address is computed using data acquired from contract's writer instance.
 
@@ -197,12 +227,12 @@ valueAtComputedAddress ::
   (Ledger.Value -> Bool) ->
   TracePredicate
 valueAtComputedAddress contract inst addressGetter check =
-  utxoAtComputedAddress contract inst addressGetter $ \_ addr utxoMap -> do
+  utxoAtComputedAddress contract inst addressGetter $ \_ addr utxoMap ->
     let value = foldMap (Ledger.txOutValue . Ledger.txOutTxOut) utxoMap
-        result = check value
-    unless result $
-      tell @(Doc Void) ("Funds at address" <+> pretty addr <+> "were" <> pretty value)
-    pure result
+     in showStateIfFailAndReturn
+          [CheckedValue value]
+          addr
+          (check value)
 
 {- | Check that the funds at a computed address
  and data aquired from contract's writer instance meet some condition.
@@ -273,13 +303,10 @@ dataAtComputedAddress ::
 dataAtComputedAddress contract inst addressGetter check =
   utxoAtComputedAddress contract inst addressGetter $ \_ addr utxoMap ->
     let datums = mapMaybe (uncurry $ getTxOutDatum @datum) $ Map.toList utxoMap
-        result = any check datums
-    unless result $
-      tell @(Doc Void)
-        ( "Data at address" <+> pretty addr <+> "was"
-            <+> foldMap (foldMap pretty . Ledger.txData . Ledger.txOutTxTx) utxoMap
-        )
-    pure result
+     in showStateIfFailAndReturn
+          [CheckedDatas utxoMap]
+          addr
+          (any check datums)
 
 {- | Check that the datum at a computed address
  and data aquired from contract's writer instance meet some condition.
@@ -313,6 +340,9 @@ dataAtComputedAddressWithState ::
 dataAtComputedAddressWithState contract inst addressGetter check =
   utxoAtComputedAddress contract inst addressGetter $ \w addr utxoMap ->
     let datums = mapMaybe (uncurry $ getTxOutDatum @datum) $ Map.toList utxoMap
+     in showStateIfFailAndReturn
+          [CheckedDatas utxoMap, CheckedWriter w]
+          addr
           (any (check w) datums)
 
 {- | Check that the UTxO at a computed address
@@ -321,6 +351,17 @@ dataAtComputedAddressWithState contract inst addressGetter check =
 
   @since 2.1
 -}
+showStateIfFailAndReturn ::
+  forall effs.
+  Member (Writer (Doc Void)) effs =>
+  [CheckedData] ->
+  Ledger.Address ->
+  Bool ->
+  Eff effs Bool
+showStateIfFailAndReturn datas addr result = do
+  unless result $ tell @(Doc Void) $ pretty $ CheckedState addr datas
+  return result
+
 utxoAtComputedAddressWithState ::
   forall
     (w :: Type)
@@ -339,6 +380,10 @@ utxoAtComputedAddressWithState ::
   TracePredicate
 utxoAtComputedAddressWithState contract inst getter check =
   utxoAtComputedAddress contract inst getter $ \w addr utxoMap ->
+    showStateIfFailAndReturn
+      [CheckedUtxos utxoMap, CheckedWriter w]
+      addr
+      (check w utxoMap)
 
 {- | Similar to 'utxoAtComputedAddress' but continuation have access
  to a data aquired from contract's writer instance.
