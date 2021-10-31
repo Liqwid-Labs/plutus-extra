@@ -5,6 +5,7 @@ packages:
   ./tasty-plutus/tasty-plutus.cabal
   ./plutus-pretty/plutus-pretty.cabal
   ./plutus-numeric/plutus-numeric.cabal
+  ./plutus-golden/plutus-golden.cabal
 
 -- Additional stuff we need
 
