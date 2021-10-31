@@ -1,6 +1,35 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE RankNTypes #-}
 
+{- |
+ Module: Test.Tasty.Plutus.Golden
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ An interface for simple writing of golden tests. Supports testing 'ToJSON',
+ 'ToData' and 'ToSchema'.
+
+ = Example usage
+
+ > myGoldenTests :: TestTree
+ > myGoldenTests = testGroup "Golden tests" [
+ >    goldenJSON @MyType,
+ >    goldenJSONWith myGenerator,
+ >    goldenToSchema @MyType
+ >    ...
+
+ = Note
+
+ 'goldenJSON', 'goldenData' and 'goldenToSchema' require a type argument to
+ tell them which type you want to golden test. This should be provided using
+ @TypeApplications@, or you will get errors about ambiguous types or missing
+ instances. This does not apply to 'goldenJSONWith' and 'goldenDataWith', as
+ the explicit 'Gen' being passed to them ensures that we know what type is to
+ be tested.
+-}
 module Test.Tasty.Plutus.Golden (
   -- * Testing API
   goldenJSON,
