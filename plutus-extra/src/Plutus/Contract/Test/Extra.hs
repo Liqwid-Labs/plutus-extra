@@ -354,7 +354,7 @@ showStateIfFailAndReturn ::
   Eff effs Bool
 showStateIfFailAndReturn datas addr result = do
   unless result $ tell @(Doc Void) $ pretty $ CheckedState addr datas
-  return result
+  pure result
 
 {- | Check that the UTxO at a computed address
  and data aquired from contract's writer instance meet some condition.
