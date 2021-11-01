@@ -314,7 +314,7 @@ showStateIfFailAndReturn ::
   Eff effs Bool
 showStateIfFailAndReturn datas addr result = do
   unless result $ tell @(Doc Void) $ pretty $ CheckedState addr datas
-  return result
+  pure result
 
 {- | Check that the UTxO at a computed address
  and data aquired from contract's writer instance meet some condition.
@@ -384,7 +384,7 @@ utxoAtComputedAddress contract inst addressGetter cont =
       case addressGetter w of
         Nothing -> do
           tell @(Doc Void) $ "Could not compute address using the given getter"
-          return False
+          pure False
         Just addr -> do
           let step = \case
                 TxnValidate _ txn _ -> AM.updateAddresses (Ledger.Valid txn)
