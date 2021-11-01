@@ -360,7 +360,7 @@ showStateIfFailAndReturn datas addr result = do
  and data aquired from contract's writer instance meet some condition.
  The address is computed using data acquired from contract's writer instance.
 
-  @since 1.1
+  @since 2.1
 -}
 utxoAtComputedAddressWithState ::
   forall
