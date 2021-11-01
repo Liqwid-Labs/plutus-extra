@@ -207,6 +207,8 @@ valueAtComputedAddress contract inst addressGetter check =
 {- | Check that the funds at a computed address
  and data aquired from contract's writer instance meet some condition.
  The address is computed using data acquired from contract's writer instance.
+
+  @since 2.2
 -}
 valueAtComputedAddressWithState ::
   forall
@@ -243,6 +245,8 @@ valueAtComputedAddressWithState contract inst addressGetter check =
 
 {- | Check that the datum at a computed address meet some condition.
  The address is computed using data acquired from contract's writer instance.
+
+  @since 1.1
 -}
 dataAtComputedAddress ::
   forall
@@ -280,6 +284,8 @@ dataAtComputedAddress contract inst addressGetter check =
 {- | Check that the datum at a computed address
  and data aquired from contract's writer instance meet some condition.
  The address is computed using data acquired from contract's writer instance.
+
+  @since 2.1
 -}
 dataAtComputedAddressWithState ::
   forall
@@ -354,7 +360,7 @@ utxoAtComputedAddress contract inst addressGetter cont =
  and data aquired from contract's writer instance meet some condition.
  The address is computed using data acquired from contract's writer instance.
 
-  @since 1.1
+  @since 2.1
 -}
 utxoAtComputedAddressWithState ::
   forall
@@ -386,11 +392,10 @@ utxoAtComputedAddressWithState contract inst getter check =
               )
           return result
 
-{-utxoAtComputedAddressWithStateImpl contract tag getter
-$ \w addr -> return . predicate w addr-}
-
 {- | Similar to 'utxoAtComputedAddress' but continuation have access
  to a data aquired from contract's writer instance.
+
+   @since 2.1
 -}
 utxoAtComputedAddressWithStateImpl ::
   forall
