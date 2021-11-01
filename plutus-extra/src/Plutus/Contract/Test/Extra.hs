@@ -301,12 +301,6 @@ dataAtComputedAddressWithState contract inst addressGetter check =
           addr
           (any (check w) datums)
 
-{- | Check that the UTxO at a computed address
- and data aquired from contract's writer instance meet some condition.
- The address is computed using data acquired from contract's writer instance.
-
-  @since 1.1
--}
 showStateIfFailAndReturn ::
   forall effs.
   Member (Writer (Doc Void)) effs =>
@@ -318,6 +312,12 @@ showStateIfFailAndReturn datas addr result = do
   unless result $ tell @(Doc Void) $ pretty $ CheckedState addr datas
   return result
 
+{- | Check that the UTxO at a computed address
+ and data aquired from contract's writer instance meet some condition.
+ The address is computed using data acquired from contract's writer instance.
+
+  @since 1.1
+-}
 utxoAtComputedAddressWithState ::
   forall
     (w :: Type)
