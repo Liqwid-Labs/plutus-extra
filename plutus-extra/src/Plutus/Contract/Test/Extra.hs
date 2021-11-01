@@ -235,6 +235,8 @@ valueAtComputedAddress contract inst addressGetter check =
 
 {- | Check that the datum at a computed address meet some condition.
  The address is computed using data acquired from contract's writer instance.
+
+ @since 1.1
 -}
 dataAtComputedAddress ::
   forall
@@ -269,6 +271,8 @@ dataAtComputedAddress contract inst addressGetter check =
 {- | Check that the datum at a computed address
  and data aquired from contract's writer instance meet some condition.
  The address is computed using data acquired from contract's writer instance.
+
+ @since 2.1
 -}
 dataAtComputedAddressWithState ::
   forall
@@ -316,7 +320,7 @@ showStateIfFailAndReturn datas addr result = do
  and data aquired from contract's writer instance meet some condition.
  The address is computed using data acquired from contract's writer instance.
 
-  @since 1.1
+  @since 2.1
 -}
 utxoAtComputedAddressWithState ::
   forall
@@ -343,6 +347,8 @@ utxoAtComputedAddressWithState contract inst getter check =
 
 {- | Similar to 'utxoAtComputedAddress' but continuation have access
  to a data aquired from contract's writer instance.
+
+ @since 1.1
 -}
 utxoAtComputedAddress ::
   forall
