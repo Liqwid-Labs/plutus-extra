@@ -10,6 +10,7 @@ module Plutus.Contract.Test.Extra (
   valueAtComputedAddress,
   dataAtComputedAddress,
   dataAtComputedAddressWithState,
+  valueAtComputedAddressWithState,
   utxoAtComputedAddressWithState,
 ) where
 
@@ -201,10 +202,51 @@ valueAtComputedAddress contract inst addressGetter check =
         result = check value
     unless result $
       tell @(Doc Void) ("Funds at address" <+> pretty addr <+> "were" <> pretty value)
-    return result
+    pure result
+
+{- | Check that the funds at a computed address
+ and data aquired from contract's writer instance meet some condition.
+ The address is computed using data acquired from contract's writer instance.
+
+  @since 2.2
+-}
+valueAtComputedAddressWithState ::
+  forall
+    (w :: Type)
+    (s :: Row Type)
+    (e :: Type)
+    (a :: Type)
+    (contract :: Type -> Row Type -> Type -> Type -> Type).
+  ( Monoid w
+  , Pretty w
+  , IsContract contract
+  ) =>
+  -- | The 'IsContract' code
+  contract w s e a ->
+  -- | The 'ContractInstanceTag', acquired inside the
+  -- 'Plutus.Trace.Emulator.EmulatorTrace'
+  ContractInstanceTag ->
+  -- | The function computing 'Ledger.Address'
+  (w -> Maybe Ledger.Address) ->
+  -- | The @datum@ predicate
+  (w -> Ledger.Value -> Bool) ->
+  TracePredicate
+valueAtComputedAddressWithState contract inst addressGetter check =
+  utxoAtComputedAddressWithStateImpl contract inst addressGetter $ \w addr utxoMap -> do
+    let value = foldMap (Ledger.txOutValue . Ledger.txOutTxOut) utxoMap
+        result = check w value
+    unless result $
+      tell @(Doc Void)
+        ( "Funds at address" <+> pretty addr <+> "were" <> pretty value
+            <+> "Contract writer data was"
+            <+> pretty w
+        )
+    pure result
 
 {- | Check that the datum at a computed address meet some condition.
  The address is computed using data acquired from contract's writer instance.
+
+  @since 1.1
 -}
 dataAtComputedAddress ::
   forall
@@ -237,11 +279,13 @@ dataAtComputedAddress contract inst addressGetter check =
         ( "Data at address" <+> pretty addr <+> "was"
             <+> foldMap (foldMap pretty . Ledger.txData . Ledger.txOutTxTx) utxoMap
         )
-    return result
+    pure result
 
 {- | Check that the datum at a computed address
  and data aquired from contract's writer instance meet some condition.
  The address is computed using data acquired from contract's writer instance.
+
+  @since 2.1
 -}
 dataAtComputedAddressWithState ::
   forall
@@ -278,7 +322,7 @@ dataAtComputedAddressWithState contract inst addressGetter check =
             <> "Contract writer data was"
             <+> pretty w
         )
-    return result
+    pure result
 
 {- | Extract UTxOs at a computed address and call continuation returning
  Boolean value based on both the address and UTxOs.
@@ -316,7 +360,7 @@ utxoAtComputedAddress contract inst addressGetter cont =
  and data aquired from contract's writer instance meet some condition.
  The address is computed using data acquired from contract's writer instance.
 
-  @since 1.1
+  @since 2.1
 -}
 utxoAtComputedAddressWithState ::
   forall
@@ -346,13 +390,12 @@ utxoAtComputedAddressWithState contract inst getter check =
                   <> "Contract writer data was"
                   <+> pretty w
               )
-          return result
-
-{-utxoAtComputedAddressWithStateImpl contract tag getter
-$ \w addr -> return . predicate w addr-}
+          pure result
 
 {- | Similar to 'utxoAtComputedAddress' but continuation have access
  to a data aquired from contract's writer instance.
+
+   @since 2.1
 -}
 utxoAtComputedAddressWithStateImpl ::
   forall
@@ -388,7 +431,7 @@ utxoAtComputedAddressWithStateImpl contract inst addressGetter cont =
       case addressGetter w of
         Nothing -> do
           tell @(Doc Void) $ "Could not compute address using the given getter"
-          return False
+          pure False
         Just addr -> do
           let step = \case
                 TxnValidate _ txn _ -> AM.updateAddresses (Ledger.Valid txn)
