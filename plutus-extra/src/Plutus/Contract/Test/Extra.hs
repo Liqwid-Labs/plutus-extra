@@ -262,16 +262,12 @@ valueAtComputedAddressWithState ::
   (w -> Ledger.Value -> Bool) ->
   TracePredicate
 valueAtComputedAddressWithState contract inst addressGetter check =
-  utxoAtComputedAddressWithStateImpl contract inst addressGetter $ \w addr utxoMap -> do
+  utxoAtComputedAddress contract inst addressGetter $ \w addr utxoMap ->
     let value = foldMap (Ledger.txOutValue . Ledger.txOutTxOut) utxoMap
-        result = check w value
-    unless result $
-      tell @(Doc Void)
-        ( "Funds at address" <+> pretty addr <+> "were" <> pretty value
-            <+> "Contract writer data was"
-            <+> pretty w
-        )
-    pure result
+     in showStateIfFailAndReturn
+          [CheckedValue value, CheckedWriter w]
+          addr
+          (check w value)
 
 {- | Check that the datum at a computed address meet some condition.
  The address is computed using data acquired from contract's writer instance.
