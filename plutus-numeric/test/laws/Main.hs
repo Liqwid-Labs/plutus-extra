@@ -1,16 +1,19 @@
 module Main (main) where
 
-import PlutusTx.Natural (Natural)
 import PlutusTx.NatRatio (NatRatio)
-import Test.Tasty (defaultMain, testGroup, adjustOption)
-import Test.Tasty.Plutus.Laws (jsonLaws)
+import PlutusTx.Natural (Natural)
+import Test.Tasty (adjustOption, defaultMain, testGroup)
+import Test.Tasty.Plutus.Laws (dataLaws, jsonLaws)
 import Test.Tasty.QuickCheck (QuickCheckTests)
 
 main :: IO ()
-main = defaultMain . adjustOption (max testMinimum) . testGroup "Laws" $ [
-  jsonLaws @Natural,
-  jsonLaws @NatRatio
-  ]
+main =
+  defaultMain . adjustOption (max testMinimum) . testGroup "Laws" $
+    [ jsonLaws @Natural
+    , jsonLaws @NatRatio
+    , dataLaws @Natural
+    , dataLaws @NatRatio
+    ]
   where
     testMinimum :: QuickCheckTests
     testMinimum = 10000
