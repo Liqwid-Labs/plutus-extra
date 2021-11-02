@@ -2,11 +2,15 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 2.2 -- 2021-10-29
+## 2.2 -- 2021-11-01
 
 ### Added
 
 - `valueAtComputedAddressWithState` function at `Plutus.Contract.Test.Extra`
+
+### Changed
+
+* Unified output of predicate builders that use computed address
 
 ## 2.1 -- 2021-10-22
 
