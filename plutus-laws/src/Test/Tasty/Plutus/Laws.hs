@@ -5,8 +5,6 @@ module Test.Tasty.Plutus.Laws (
   jsonLawsWith,
   dataLaws,
   dataLawsWith,
-  --  unsafeDataLaws,
-  --  unsafeDataLawsWith,
   --  plutusEqLaws,
   --  plutusEqLawsWith,
   --  plutusOrdLaws,
@@ -22,6 +20,7 @@ import Data.Text.Encoding (decodeUtf8)
 import PlutusTx.IsData.Class (
   FromData (fromBuiltinData),
   ToData (toBuiltinData),
+  UnsafeFromData (unsafeFromBuiltinData),
   fromData,
   toData,
  )
@@ -70,14 +69,14 @@ jsonLawsWith gen shr =
 -- | @since 1.0
 dataLaws ::
   forall (a :: Type).
-  (Typeable a, ToData a, FromData a, Arbitrary a, Eq a, Show a) =>
+  (Typeable a, ToData a, UnsafeFromData a, FromData a, Arbitrary a, Eq a, Show a) =>
   TestTree
 dataLaws = dataLawsWith @a arbitrary shrink
 
 -- | @since 1.0
 dataLawsWith ::
   forall (a :: Type).
-  (Typeable a, ToData a, FromData a, Eq a, Show a) =>
+  (Typeable a, ToData a, FromData a, UnsafeFromData a, Eq a, Show a) =>
   Gen a ->
   (a -> [a]) ->
   TestTree
@@ -92,6 +91,10 @@ dataLawsWith gen shr =
       ( "fromData . toData = Just"
       , forAllShrinkShow gen shr ppShow (go fromData toData)
       )
+    ,
+      ( "unsafeFromBuiltinData . toBuiltinData = id"
+      , forAllShrinkShow gen shr ppShow go2
+      )
     ]
   where
     go ::
@@ -101,6 +104,8 @@ dataLawsWith gen shr =
       a ->
       Property
     go from to x = (from . to $ x) === Just x
+    go2 :: a -> Property
+    go2 x = (unsafeFromBuiltinData . toBuiltinData $ x) === x
 
 -- Helpers
 
