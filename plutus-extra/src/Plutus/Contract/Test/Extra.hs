@@ -381,8 +381,9 @@ utxoAtComputedAddressWithState contract inst getter check =
       addr
       (check w utxoMap)
 
-{- | Similar to 'utxoAtComputedAddress' but continuation have access
- to a data aquired from contract's writer instance.
+{- | Extract UTxOs at a computed address and call continuation returning
+ Boolean value based the address, UTxOs, and data aquired from contract's writer instance.
+ The address is computed using data acquired from contract's writer instance.
 
    @since 2.1
 -}
