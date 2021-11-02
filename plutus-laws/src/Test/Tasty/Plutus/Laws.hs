@@ -12,8 +12,8 @@ module Test.Tasty.Plutus.Laws (
   plutusEqLawsWith,
   plutusEqLawsDirect,
   plutusEqLawsDirectWith,
-  --  plutusOrdLaws,
-  --  plutusOrdLawsWith
+  plutusOrdLaws,
+  plutusOrdLawsWith,
 
   -- * Helper types
   Pair (..),
@@ -41,6 +41,7 @@ import Test.QuickCheck (
   checkCoverage,
   cover,
   forAllShrinkShow,
+  property,
   (.||.),
   (===),
  )
@@ -168,10 +169,10 @@ plutusEqLaws = plutusEqLawsWith @a arbitrary shrink
  = Note
 
  As this function (like 'plutusEqLaws') uses a technique to avoid coverage
- issues, if your generator is restricted (especially to a small, finite subset
- of the whole type), you may get test failures due to poor coverage. If this
- happens, either use 'plutusEqLawsDirectWith', or change the generator to be
- less constrained.
+ issues, if your generator and shrinker are restricted (especially to a
+ small, finite subset of the whole type), you may get test failures due to
+ poor coverage. If this happens, either use 'plutusEqLawsDirectWith', or
+ change the generator and shrinker to be less constrained.
 
  @since 1.0
 -}
@@ -292,6 +293,85 @@ plutusEqLawsDirectWith gen shr =
         ((x PlutusTx.== y) && (y PlutusTx.== z))
         "precondition satisfied"
         $ ((x PlutusTx.== y) && (y PlutusTx.== z)) === (x PlutusTx.== z)
+
+{- | Checks that the 'PlutusTx.Ord' instance for @a@ is a total order.
+
+ = Note
+
+ This uses a technique to avoid coverage issues arising from a low likelihood
+ of independently generating identical values (specifically in the tests for
+ antisymmetry). This mostly affects those types which have a large, or
+ infinite, number of inhabitants: if your type is finite and small, this will
+ actually have the _opposite_ effect, as it would skew the comparisons the
+ /other/ way.
+
+ To assist with this, coverage checking is built in: if you are seeing errors
+ due to coverage, try using 'plutusOrdLawsDirect' instead.
+
+ @since 1.0
+-}
+plutusOrdLaws ::
+  forall (a :: Type).
+  (Typeable a, PlutusTx.Ord a, Arbitrary a, Show a) =>
+  TestTree
+plutusOrdLaws = plutusOrdLawsWith @a arbitrary shrink
+
+{- | As 'plutusOrdLaws', but with an explicit generator and shrinker.
+
+ = Note
+
+ As this function (like 'plutusOrdLaws') uses a technique to avoid coverage
+ issues, if your generator and shrinker are restricted (especially to a small,
+ finite subset of the whole type), you may get test failures due to poor
+ coverage. If this happens, either use 'plutusOrdLawsDirectWith', or change
+ the generator and shrinker to be less constrained.
+
+ @since 1.0
+-}
+plutusOrdLawsWith ::
+  forall (a :: Type).
+  (Typeable a, PlutusTx.Ord a, Show a) =>
+  Gen a ->
+  (a -> [a]) ->
+  TestTree
+plutusOrdLawsWith gen shr =
+  testProperties
+    ("Plutus Ord laws for " <> typeName @a)
+    [
+      ( "x <= y or y <= x"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propTotal
+      )
+    ,
+      ( "if x <= y and y <= x, then x == y"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propAntiSymm
+      )
+    ,
+      ( "if x <= y and y <= z, then x <= z"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propTrans
+      )
+    ]
+  where
+    propTotal :: Pair a -> Property
+    propTotal (Pair x y) =
+      ((x PlutusTx.<= y) PlutusTx.== True)
+        .||. ((y PlutusTx.<= x) PlutusTx.== True)
+    propAntiSymm :: Entangled a -> Property
+    propAntiSymm ent = checkCoverage
+      . cover 50.0 (knownEntangled ent) "precondition known satisfied"
+      $ case ent of
+        Entangled x y ->
+          ((x PlutusTx.<= y) && (y PlutusTx.<= x)) === (x PlutusTx.== y)
+        Disentangled x y ->
+          ((x PlutusTx.<= y) && (y PlutusTx.<= x)) === (x PlutusTx.== y)
+    propTrans :: Triple a -> Property
+    propTrans (Triple x y z) = checkCoverage
+      . cover 33.3 (go x y z) "x-to-y and y-to-z implies x-to-z"
+      $ case (x PlutusTx.<= y, y PlutusTx.<= z) of
+        (True, True) -> (x PlutusTx.<= z) === True
+        (False, False) -> (x PlutusTx.<= z) === False
+        _ -> property True -- any outcome is acceptable
+    go :: a -> a -> a -> Bool
+    go x y z = (x PlutusTx.<= y) == (y PlutusTx.<= z)
 
 -- | @since 1.0
 data Pair (a :: Type) = Pair a a

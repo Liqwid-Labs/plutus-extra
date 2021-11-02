@@ -3,7 +3,12 @@ module Main (main) where
 import PlutusTx.NatRatio (NatRatio)
 import PlutusTx.Natural (Natural)
 import Test.Tasty (adjustOption, defaultMain, testGroup)
-import Test.Tasty.Plutus.Laws (dataLaws, jsonLaws, plutusEqLaws)
+import Test.Tasty.Plutus.Laws (
+  dataLaws,
+  jsonLaws,
+  plutusEqLaws,
+  plutusOrdLaws,
+ )
 import Test.Tasty.QuickCheck (QuickCheckTests)
 
 main :: IO ()
@@ -15,6 +20,8 @@ main =
     , dataLaws @NatRatio
     , plutusEqLaws @Natural
     , plutusEqLaws @NatRatio
+    , plutusOrdLaws @Natural
+    , plutusOrdLaws @NatRatio
     ]
   where
     testMinimum :: QuickCheckTests
