@@ -15,6 +15,7 @@ module Test.Tasty.Plutus.Internal (
   ScriptResult (..),
   testValidatorScript,
   testMintingPolicyScript,
+  ScriptInputPosition (..),
 ) where
 
 import Control.Monad.RWS.Strict (RWS)
@@ -75,11 +76,13 @@ import Test.Tasty (TestTree)
 import Test.Tasty.Options (
   IsOption (
     defaultValue,
+    optionCLParser,
     optionHelp,
     optionName,
     parseValue,
     showDefaultValue
   ),
+  mkFlagCLParser,
  )
 import Text.PrettyPrint (Style (lineLength), style)
 import Text.Read (readMaybe)
@@ -233,6 +236,7 @@ data TransactionConfig = TransactionConfig
   , testTxId :: TxId
   , testCurrencySymbol :: CurrencySymbol
   , testValidatorHash :: ValidatorHash
+  , scriptInputPosition :: ScriptInputPosition
   }
   deriving stock (Show)
 
@@ -267,6 +271,11 @@ instance Semigroup (ContextBuilder p) where
   ContextBuilder is os pkhs ts ms <> ContextBuilder is' os' pkhs' ts' ms' =
     ContextBuilder (is <> is') (os <> os') (pkhs <> pkhs') (ts <> ts') (ms <> ms')
 
+-- | @since 3.4
+instance Monoid (ContextBuilder p) where
+  {-# INLINEABLE mempty #-}
+  mempty = ContextBuilder mempty mempty mempty mempty mempty
+
 compileSpending ::
   forall (datum :: Type).
   (ToData datum) =>
@@ -288,7 +297,9 @@ compileSpending conf cb d val =
           inInfo = createTxInInfo conf (0, Input (OwnType dt) val)
           inData = datumWithHash dt
        in baseInfo
-            { txInfoInputs = inInfo : txInfoInputs baseInfo
+            { txInfoInputs = case scriptInputPosition conf of
+                Head -> inInfo : txInfoInputs baseInfo
+                Tail -> txInfoInputs baseInfo <> [inInfo]
             , txInfoData = inData : txInfoData baseInfo
             }
 
@@ -470,3 +481,29 @@ parseLogs logs = case lastMay logs >>= Text.stripPrefix "tasty-plutus: " of
   Just t -> case Text.stripPrefix "Parse failed: " t of
     Nothing -> InternalError t
     Just t' -> ParseFailed t'
+
+{- | Where to place the script input in 'txInfoInputs' when generating a
+ 'ScriptContext'.
+
+ The default value is 'Head' (meaning \'the first item in the list\'). The
+ option is controlled purely by a flag; if you want to change to 'Tail'
+ (meaning \'the last item in the list\'), pass @--input-last@.
+
+ @since 3.4
+-}
+data ScriptInputPosition = Head | Tail
+  deriving stock
+    ( -- | @since 3.4
+      Eq
+    , -- | @since 3.4
+      Show
+    )
+
+-- | @since 3.4
+instance IsOption ScriptInputPosition where
+  defaultValue = Head
+  parseValue = const (Just Tail)
+  optionName = Tagged "input-last"
+  optionHelp = Tagged "Place the script input last in txInfoInputs."
+  showDefaultValue = const . Just $ "Place the script input first."
+  optionCLParser = mkFlagCLParser mempty Tail
