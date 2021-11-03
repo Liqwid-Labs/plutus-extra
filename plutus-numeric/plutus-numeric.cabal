@@ -106,3 +106,13 @@ test-suite golden
     , plutus-tx
 
   hs-source-dirs: test/golden
+
+test-suite laws
+  import:         test-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-laws       ^>=1.0
+    , tasty-quickcheck  ^>=0.10.1.2
+
+  hs-source-dirs: test/laws

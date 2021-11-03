@@ -6,6 +6,7 @@ packages:
   ./plutus-pretty/plutus-pretty.cabal
   ./plutus-numeric/plutus-numeric.cabal
   ./plutus-golden/plutus-golden.cabal
+  ./plutus-laws/plutus-laws.cabal
 
 -- Additional stuff we need
 
