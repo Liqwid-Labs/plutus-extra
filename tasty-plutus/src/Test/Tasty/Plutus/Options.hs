@@ -19,6 +19,7 @@ module Test.Tasty.Plutus.Options (
   TestCurrencySymbol (..),
   TestValidatorHash (..),
   PlutusTracing (..),
+  ScriptInputPosition (..),
 
   -- * Property test options
   PropertyTestCount,
@@ -46,7 +47,11 @@ import Test.Tasty.Options (
   ),
   mkFlagCLParser,
  )
-import Test.Tasty.Plutus.Internal (PropertyMaxSize, PropertyTestCount)
+import Test.Tasty.Plutus.Internal (
+  PropertyMaxSize,
+  PropertyTestCount,
+  ScriptInputPosition (Head, Tail),
+ )
 import Test.Tasty.Plutus.Options.QQ (maxSize, testCount)
 import Prelude
 

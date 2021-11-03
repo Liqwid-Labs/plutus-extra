@@ -77,6 +77,7 @@ import Test.Tasty.Plutus.Internal (
   PropertyMaxSize (PropertyMaxSize),
   PropertyTestCount (PropertyTestCount),
   Purpose (ForMinting, ForSpending),
+  ScriptInputPosition,
   ScriptResult (
     InternalError,
     NoOutcome,
@@ -86,6 +87,7 @@ import Test.Tasty.Plutus.Internal (
   ),
   TransactionConfig (
     TransactionConfig,
+    scriptInputPosition,
     testCurrencySymbol,
     testFee,
     testTimeRange,
@@ -207,6 +209,7 @@ instance (Typeable p) => IsTest (PropertyTest p) where
             , testTxId = testTxId'
             , testCurrencySymbol = testCurrencySymbol'
             , testValidatorHash = testValidatorHash'
+            , scriptInputPosition = lookupOption opts
             }
     let PropertyTestCount testCount' = lookupOption opts
     let PropertyMaxSize maxSize' = lookupOption opts
@@ -243,6 +246,7 @@ instance (Typeable p) => IsTest (PropertyTest p) where
       , Option @TestValidatorHash Proxy
       , Option @PropertyTestCount Proxy
       , Option @PropertyMaxSize Proxy
+      , Option @ScriptInputPosition Proxy
       ]
 
 spenderProperty ::
