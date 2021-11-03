@@ -1,71 +1,85 @@
-# `plutus-golden`
+# `plutus-laws`
 
 ## What is this?
 
-A framework for testing serialized representation stability using [golden
-testing](https://ro-che.info/articles/2017-12-04-golden-tests). This focuses on
-type classes used for serialization for Plutus projects.
+A helper library for checking type class laws, similar in spirit to
+[`quickcheck-classes`](https://hackage.haskell.org/package/quickcheck-classes).
+Essentially, you specify what type class laws you want checked, and
+`plutus-laws` does the rest, while avoiding many pitfalls in doing the same work
+manually. We also aim to support several Plutus variants of common type classes
+as part of the framework.
 
 ## What can this do?
 
-Currently, we can perform golden testing of the following serializing type
-classes:
+Currently, we can check type class laws for the following:
 
-* `ToJSON` from `aeson`
-* `ToData` from Plutus
-* `ToSchema` from `openapi3`
+* `ToJSON` and `FromJSON` (in combination)
+* Plutus `ToData`, `FromData` and `UnsafeFromData` (in combination)
+* Plutus `Eq`
+* Plutus `Ord`
+* Plutus `Semigroup`
+* Plutus `Monoid`
 
-For the first two, we support either using an `Arbitrary` instance for
-generating samples, or, if you prefer, you can supply an explicin `Gen` instead.
+We also ensure that some of these (specifically `Eq` and `Ord`) are checked in a
+way that either ensures coverage issues don't arise, or at least warns when they
+do. This requires no manual effort on the part of the user - only a choice
+between functions. We also provide both automatic (via `Arbitrary`) and manual
+specification of generators and shrinkers to use while testing the laws.
+
+As this wraps `tasty-quickcheck`, we also support any options that
+`tasty-quickcheck` supports, such as for controlling how many tests get run.
+Lasty, we supply some helpers for writing your own laws and tests.
 
 ## What are the goals of this project?
 
 ### Convenience
 
-Golden tests can be a bit awkward to set up, as most frameworks for it are
-general and unopinionated to the point of uselessness. This forces you to do a
-lot of manual plumbing and setup, even if most of this generality is not needed.
-`plutus-golden`, due to its narrower focus, aims to avoid _all_ of this - just
-specify what types you want tested, and what type classes to test, and you're
-all set.
+Property testing and assuring that type class laws are followed are both
+non-trivial tasks, and often require skills and experience that not everyone
+has. Furthermore, acquiring such experience is often not easy. The _combination_
+of these two tasks is particularly difficult, as it requires being aware of
+multiple concerns, many of which are not well-documented.
 
-This is partly what drives the decision to piggy-back off of `Arbitrary`; due to
-Plutus' support for QuickCheck, it's likely you'll already have such instances
-lying around, especially if you also want to do property testing.
+`plutus-laws` is designed to not require you to think about any of these, and
+ideally be as automatic as possible. Specify the type class laws you want
+checked, provide a generator and shrinker, and we do the rest.
 
-### Good failure reporting
+### Good coverage
 
-Knowing that a test failed is often far less useful than knowing _why_ it
-failed. This is true of golden testing especially, as you need to figure out
-what exactly changed in the representation. To this end, we aim to give focused
-and useful information about what we expected to see, versus what we actually
-saw, and present it as readably as the type class being checked allows.
+Many type class laws are stated as 'if-then's. This is easy to follow, but
+difficult to test, as you must ensure that the precondition both being satisfied
+and /not/ being satisfied receives equal treatment: this issue is termed
+_coverage_. The 'direct' approach to formalizing such 'if-then' statements as
+laws is unlikely to have good coverage, especially for types which are infinite
+or have large cardinality: if using QuickCheck yourself, it's up to you to make
+sure that you check and control for this.
 
-This also extends to the format used for sample files: we use JSON throughout,
-as this aids human-readability and manual inspection.
+We want to make this a non-consideration as far as reasonable. While we can't
+completely automate this (without having some kind of type-level cardinality
+measuring scheme, which is far outside of our scope), we can at least remove the
+fiddly low-level details of doing this. Where possible, `plutus-laws` makes this
+automatic, and will warn you if you're potentially running into trouble. This at
+least means that even _if_ you get the few choices we offer wrong, you won't
+need to spend a long time fixing such issues.
 
 ### Integration with `tasty`
 
-The `tasty` test framework supports a range of test types, is extensible,
-scriptable, and provides a lot of solutions to 'boilerplate' around testing.
-`plutus-golden` aims to be a 'good citizen' of the `tasty` universe as much as
-possible, allowing integration between itself and other uses of `tasty` without
-issue.
+`tasty` is a meta-framework, allowing combining multiple types of testing inside
+of the same suite. We aim to be a 'good citizen' of the `tasty` ecosystem, and
+integrate well with the rest.
 
 ## How can I use this?
 
 ```haskell
-> {-# LANGUAGE TypeApplications #-}
->
-> import Test.Tasty (testGroup)
-> import Test.Tasty.Plutus.Golden (goldenJSON, goldenDataWith, goldenToSchema)
-> 
-> myGoldenTests :: TestTree
-> myGoldenTests = testGroup "Golden tests" [
->   goldenJSON @MyType,
->   goldenDataWith myGenerator @MyOtherType,
->   goldenToSchema @MyType,
->   ...
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.Plutus.Laws (jsonLaws, dataLawsWith)
+
+myLawsTests :: TestTree
+myLawsTests = testGroup "Laws" [
+  jsonLaws @MyType,
+  dataLawsWith myGen myShrinker,
+  ...
+```
 
 ## What can I do with this?
 

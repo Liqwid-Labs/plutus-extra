@@ -1,5 +1,30 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
+{- |
+ Module: Test.Tasty.Plutus.Laws
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ Allows for automatically testing various type class laws using QuickCheck.
+
+ Can be used like so:
+
+ > import Test.Tasty.Plutus.Laws (jsonLaws, dataLawsWith)
+ >
+ > myLawsTests :: TestTree
+ > myLawsTests = testGroup "Laws" [
+ >    jsonLaws @MyType,
+ >    dataLawsWith myGen myShrinker
+ >    ...
+
+ = Note
+
+ This module's API is a wrapper around @tasty-quickcheck@; thus, all options
+ used by @tasty-quickcheck@ can also be used here.
+-}
 module Test.Tasty.Plutus.Laws (
   -- * Test API
 
@@ -28,12 +53,6 @@ module Test.Tasty.Plutus.Laws (
   plutusSemigroupLawsWith,
   plutusMonoidLaws,
   plutusMonoidLawsWith,
-
-  -- * Helper types
-  Pair (..),
-  Triple (..),
-  Entangled (Entangled, Disentangled),
-  Entangled3 (Entangled3, Disentangled3),
 ) where
 
 import Data.Aeson (FromJSON, ToJSON (toJSON), decode, encode)
