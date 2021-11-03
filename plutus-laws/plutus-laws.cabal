@@ -45,7 +45,10 @@ common lang
 
 library
   import:          lang
-  exposed-modules: Test.Tasty.Plutus.Laws
+  exposed-modules:
+    Test.Tasty.Plutus.Arbitrary
+    Test.Tasty.Plutus.Laws
+
   build-depends:
     , aeson             ^>=1.5.6.0
     , aeson-pretty      ^>=0.8.8
