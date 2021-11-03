@@ -4,16 +4,32 @@
 
 module Test.Tasty.Plutus.Laws (
   -- * Test API
+
+  -- ** Serialization
   jsonLaws,
   jsonLawsWith,
   dataLaws,
   dataLawsWith,
+
+  -- ** Plutus type classes
+
+  -- *** Eq
   plutusEqLaws,
   plutusEqLawsWith,
   plutusEqLawsDirect,
   plutusEqLawsDirectWith,
+
+  -- *** Ord
   plutusOrdLaws,
   plutusOrdLawsWith,
+  plutusOrdLawsDirect,
+  plutusOrdLawsDirectWith,
+
+  -- *** Others
+  plutusSemigroupLaws,
+  plutusSemigroupLawsWith,
+  plutusMonoidLaws,
+  plutusMonoidLawsWith,
 
   -- * Helper types
   Pair (..),
@@ -372,6 +388,155 @@ plutusOrdLawsWith gen shr =
         _ -> property True -- any outcome is acceptable
     go :: a -> a -> a -> Bool
     go x y z = (x PlutusTx.<= y) == (y PlutusTx.<= z)
+
+{- | Checks that the 'PlutusTx.Ord' instance for @a@ is a total order.
+
+ = Note
+
+ This function tests the total order properties (specifically anti-symmetry
+ and transitivity) directly, without relying on the coverage-improving
+ technique used in 'plutusOrdLaws'. This works if @a@ as a type is both finite
+ and has small cardinality, as in that situation, the distribution of
+ successful and unsuccessful preconditions will be reasonable. However, if @a@
+ is infinite or large, this will cause a skewed case distribution, which will
+ produce misleading results.
+
+ To assist with this, coverage checking is built in to the properties this
+ checks; if you find that your coverage is too low, use 'plutusOrdLaws'
+ instead.
+
+ @since 1.0
+-}
+plutusOrdLawsDirect ::
+  forall (a :: Type).
+  (Typeable a, PlutusTx.Ord a, Show a, Arbitrary a) =>
+  TestTree
+plutusOrdLawsDirect = plutusOrdLawsDirectWith @a arbitrary shrink
+
+{- | As 'plutusOrdLawsDirect', but with explicit generator and shrinker.
+
+ = Note
+
+ As this function (like 'plutusOrdLawsDirect') tests total order properties
+ directly, either @a@ must be both finite and small, or the generator and
+ shrinker passed to this function must produce only a small and finite subset
+ of the type. See the caveats on the use of 'plutusOrdLawsDirect' as to why.
+
+ To assist with this, coverage checking is built in to the properties this
+ checks; if you find that your coverage is too low, use 'plutusOrdLaws'
+ instead.
+
+ @since 1.0
+-}
+plutusOrdLawsDirectWith ::
+  forall (a :: Type).
+  (Typeable a, PlutusTx.Ord a, Show a) =>
+  Gen a ->
+  (a -> [a]) ->
+  TestTree
+plutusOrdLawsDirectWith gen shr =
+  testProperties
+    ("Plutus Ord laws for " <> typeName @a)
+    [
+      ( "x <= y or y <= x"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propTotal
+      )
+    ,
+      ( "if x <= y and y <= x, then x == y"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propAntiSymm
+      )
+    ,
+      ( "if x <= y and y <= z, then x <= z"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propTrans
+      )
+    ]
+  where
+    propTotal :: Pair a -> Property
+    propTotal (Pair x y) =
+      ((x PlutusTx.<= y) PlutusTx.== True)
+        .||. ((y PlutusTx.<= x) PlutusTx.== True)
+    propAntiSymm :: Pair a -> Property
+    propAntiSymm (Pair x y) =
+      cover 50.0 (go x y) "precondition known satisfied" $
+        ((x PlutusTx.<= y) && (y PlutusTx.<= x)) === (x PlutusTx.== y)
+    propTrans :: Triple a -> Property
+    propTrans (Triple x y z) = cover 33.3 (go2 x y z) "precondition known satisfied" $
+      case (x PlutusTx.<= y, y PlutusTx.<= z) of
+        (True, True) -> (x PlutusTx.<= z) === True
+        (False, False) -> (x PlutusTx.<= z) === False
+        _ -> property True -- any outcome is acceptable
+    go :: a -> a -> Bool
+    go x y = (x PlutusTx.<= y) && (y PlutusTx.<= x)
+    go2 :: a -> a -> a -> Bool
+    go2 x y z = (x PlutusTx.<= y) == (y PlutusTx.<= z)
+
+{- | Checks that the 'PlutusTx.Semigroup' instance for @a@ has an associative
+ 'PlutusTx.<>'.
+
+ @since 1.0
+-}
+plutusSemigroupLaws ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.Semigroup a, Arbitrary a, Show a) =>
+  TestTree
+plutusSemigroupLaws = plutusSemigroupLawsWith @a arbitrary shrink
+
+{- | As 'plutusSemigroupLaws', but with explicit generator and shrinker.
+
+ @since 1.0
+-}
+plutusSemigroupLawsWith ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.Semigroup a, Show a) =>
+  Gen a ->
+  (a -> [a]) ->
+  TestTree
+plutusSemigroupLawsWith gen shr =
+  testProperties
+    ("PlutusTx Semigroup laws for " <> typeName @a)
+    [
+      ( "(x <> y) <> z = x <> (y <> z)"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow go
+      )
+    ]
+  where
+    go :: Triple a -> Property
+    go (Triple x y z) =
+      ((x PlutusTx.<> y) PlutusTx.<> z)
+        === (x PlutusTx.<> (y PlutusTx.<> z))
+
+{- | Checks that the 'PlutusTx.Monoid' instance for @a@ has 'PlutusTx.mempty' as
+ both a left and right identity for 'PlutusTx.<>'.
+
+ @since 1.0
+-}
+plutusMonoidLaws ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.Monoid a, Arbitrary a, Show a) =>
+  TestTree
+plutusMonoidLaws = plutusMonoidLawsWith @a arbitrary shrink
+
+{- | As 'plutusMonoidLaws', but with explicit generator and shrinker.
+
+ @since 1.0
+-}
+plutusMonoidLawsWith ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.Monoid a, Show a) =>
+  Gen a ->
+  (a -> [a]) ->
+  TestTree
+plutusMonoidLawsWith gen shr =
+  testProperties
+    ("PlutusTx Monoid laws for " <> typeName @a)
+    [ ("x <> mempty = x", forAllShrinkShow gen shr ppShow rightId)
+    , ("mempty <> x = x", forAllShrinkShow gen shr ppShow leftId)
+    ]
+  where
+    leftId :: a -> Property
+    leftId x = x PlutusTx.<> PlutusTx.mempty === x
+    rightId :: a -> Property
+    rightId x = PlutusTx.mempty PlutusTx.<> x === x
 
 -- | @since 1.0
 data Pair (a :: Type) = Pair a a
