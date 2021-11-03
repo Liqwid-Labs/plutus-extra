@@ -69,8 +69,10 @@ import Test.Tasty.Options (
 import Test.Tasty.Plutus.Internal (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
+  ScriptInputPosition,
   TransactionConfig (
     TransactionConfig,
+    scriptInputPosition,
     testCurrencySymbol,
     testFee,
     testTimeRange,
@@ -247,6 +249,7 @@ instance (Typeable p) => IsTest (ScriptTest p) where
           , testTxId = testTxId'
           , testCurrencySymbol = testCurrencySymbol'
           , testValidatorHash = testValidatorHash'
+          , scriptInputPosition = lookupOption opts
           }
       testFee' :: Value
       Fee testFee' = lookupOption opts
@@ -268,6 +271,7 @@ instance (Typeable p) => IsTest (ScriptTest p) where
       , Option @TestCurrencySymbol Proxy
       , Option @TestValidatorHash Proxy
       , Option @PlutusTracing Proxy
+      , Option @ScriptInputPosition Proxy
       ]
 
 handleError ::
