@@ -9,6 +9,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * Add `ScriptInputPosition` option to control where in `txInfoInputs` the script
   input goes.
 * Make `ContextBuilder` a `Monoid`.
+* Add `Test.Tasty.Plutus.Script.Size`, containing a script size testing
+  interface.
 
 ## 3.3 -- 2021-10-26
 
