@@ -7,21 +7,22 @@ A framework for testing Plutus scripts, integrating with
 
 ## So what can this do?
 
-We currently have the ability to test either a `Validator` or a `MintingPolicy`,
-by use of `evaluateScript` from Plutus with custom testing hooks. Since
-`evaluateScript` uses Plutus' own CEK evaluator, it is more precise, and will
-also catch issues of Plutus compilation (as the tests will refuse to compile if
-there are any such issues).
+We currently provide three kinds of tests:
 
-Specifically, we provide two kinds of tests:
-
-* A 'unit-test-like' interface, based on [the techniques described here](https://github.com/input-output-hk/plutus/issues/3360#issuecomment-891643931).
+* A 'unit-test-like' interface, based on the [techniques described here](https://github.com/input-output-hk/plutus/issues/3360#issuecomment-891643931).
 * A property testing interface, using
   [QuickCheck](https://hackage.haskell.org/package/QuickCheck) as a basis.
+* A script size checker.
 
-These are not mutually exclusive - you can use one, the other, or both, in the
-same set of tests. We also provide a range of options (using `tasty`'s option
-interface) to control various aspects of the tests.
+The first two interfaces can test a `Validator` or a `MintingPolicy`, using
+`evaluateScript` from Plutus with custom testing hooks. Since `evaluateScript`
+uses Plutus' own CEK evaluator, it is precise, and will also catch Plutus
+compilation isses, as the tests will refuse to compile in that case. The third
+interface can test any `Script`. You can use any, or all, of these interfaces in
+the same set of tests, and on the same scripts.
+
+We also provide a range of options to control various aspects of the tests.
+These use `tasty`'s option interface, and many support CLI setting.
 
 ## What are the goals of this project?
 
