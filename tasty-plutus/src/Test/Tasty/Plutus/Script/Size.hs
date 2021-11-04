@@ -1,5 +1,25 @@
 {-# LANGUAGE QuasiQuotes #-}
 
+{- |
+ Module: Test.Tasty.Plutus.Script.Size
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ Provides a means of checking that a script fits into a given size, either
+ based on a user-specified limit, or the inherent limit of the on-chain size
+ (as currently known).
+
+ = Example usage
+
+ > mySizeTests :: TestTree
+ > mySizeTests = testGroup "Size" [
+ >    fitsOnChain myScript,
+ >    fitsInto (kbytes [nat| 3 |]) myOtherScript,
+ >    ...
+-}
 module Test.Tasty.Plutus.Script.Size (
   -- * Test API
   fitsOnChain,
@@ -31,7 +51,16 @@ import Text.PrettyPrint (renderStyle, (<+>))
 import Text.Show.Pretty (dumpDoc)
 import Prelude hiding (divMod)
 
--- | @since 3.4
+{- | Checks whether the given script fits on-chain given current limits (16KiB).
+
+ = Note
+
+ This does not include any arguments to the script; thus, passing this test
+ isn't necessarily a guarantee that the script /and/ its arguments will fit.
+ To assist with judging this, a successful test will also output the size.
+
+ @since 3.4
+-}
 fitsOnChain ::
   String ->
   Script ->
@@ -39,7 +68,16 @@ fitsOnChain ::
 fitsOnChain scriptName =
   singleTest (scriptName <> " fits on-chain") . FitsOnChain
 
--- | @since 3.4
+{- | Checks whether the given script is no bigger than the given size limit.
+
+ = Note
+
+ This does not include any arguments to the script; thus, even if the script
+ fits into that limit, its arguments will add to that size. To assist with
+ judging this, a successful test will also output the size.
+
+ @since 3.4
+-}
 fitsInto ::
   String ->
   ByteSize ->
@@ -49,7 +87,13 @@ fitsInto scriptName maxSize =
   singleTest (scriptName <> " fits into " <> prettyByteSize maxSize)
     . FitsInto maxSize
 
--- | @since 3.4
+{- | An opaque type to represent sizes in bytes.
+
+ If you want to construct a 'ByteSize', use either 'bytes' (for a number of
+ bytes) or 'kbytes' (for a number of kibibytes, or 1024-byte blocks).
+
+ @since 3.4
+-}
 newtype ByteSize = ByteSize Natural
   deriving
     ( -- | @since 3.4
@@ -59,11 +103,18 @@ newtype ByteSize = ByteSize Natural
     )
     via Natural
 
--- | @since 3.4
+{- | Yield a 'ByteSize' representing the given number of bytes.
+
+ @since 3.4
+-}
 bytes :: Natural -> ByteSize
 bytes = ByteSize
 
--- | @since 3.4
+{- | Yield a 'ByteSize' representing the given number of kibibytes (that is,
+ units of 1024 bytes).
+
+ @since 3.4
+-}
 kbytes :: Natural -> ByteSize
 kbytes = ByteSize . (PTx.* [nat| 1024 |])
 
