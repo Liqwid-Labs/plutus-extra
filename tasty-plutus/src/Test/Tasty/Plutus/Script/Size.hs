@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 {- |
@@ -144,7 +145,15 @@ instance IsTest FitTest where
             _ -> testPassed . produceSize $ serializedSize
     where
       produceSize :: Int64 -> String
-      produceSize i = renderStyle ourStyle $ case i `quotRem` 1024 of
-        (d, 0) -> "Size:" <+> dumpDoc d <+> "KiB"
-        _ -> "Size:" <+> dumpDoc i <+> "B"
+      produceSize i =
+        renderStyle ourStyle $
+          "Size:" <+> case i `quotRem` 1024 of
+            (d, 0) -> dumpDoc d <> "KiB"
+            (d, r) ->
+              dumpDoc i <> "B (~"
+                <> ( if
+                        | r <= 256 -> dumpDoc d <> "KiB)"
+                        | r > 256 && r < 768 -> dumpDoc d <> ".5KiB)"
+                        | otherwise -> dumpDoc (d + 1) <> "KiB"
+                   )
   testOptions = Tagged []
