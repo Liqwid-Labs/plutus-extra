@@ -54,6 +54,8 @@ library
 
   other-modules:
     Test.Tasty.Plutus.Internal
+    Test.Tasty.Plutus.Internal.Env
+    Test.Tasty.Plutus.Internal.Feedback
     Test.Tasty.Plutus.Options.QQ
 
   build-depends:
