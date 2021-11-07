@@ -388,6 +388,10 @@ plutusOrdLawsWith gen shr =
       ( "if x <= y and y <= z, then x <= z"
       , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propTrans
       )
+    ,
+      ( "compare x y == EQ if and only if x == y"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propEqEq
+      )
     ]
   where
     propTotal :: Pair a -> Property
@@ -409,6 +413,14 @@ plutusOrdLawsWith gen shr =
         (True, True) -> (x PlutusTx.<= z) === True
         (False, False) -> (x PlutusTx.<= z) === False
         _ -> property True -- any outcome is acceptable
+    propEqEq :: Entangled a -> Property
+    propEqEq ent = checkCoverage
+      . cover 50.0 (knownEntangled ent) "precondition known satisfied"
+      $ case ent of
+        Entangled x y ->
+          (PlutusTx.compare x y == EQ) === (x PlutusTx.== y)
+        Disentangled x y ->
+          (PlutusTx.compare x y == EQ) === (x PlutusTx.== y)
     go :: a -> a -> a -> Bool
     go x y z = (x PlutusTx.<= y) == (y PlutusTx.<= z)
 
@@ -472,6 +484,10 @@ plutusOrdLawsDirectWith gen shr =
       ( "if x <= y and y <= z, then x <= z"
       , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propTrans
       )
+    ,
+      ( "compare x y == EQ if and only if x == y"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propEqEq
+      )
     ]
   where
     propTotal :: Pair a -> Property
@@ -488,6 +504,10 @@ plutusOrdLawsDirectWith gen shr =
         (True, True) -> (x PlutusTx.<= z) === True
         (False, False) -> (x PlutusTx.<= z) === False
         _ -> property True -- any outcome is acceptable
+    propEqEq :: Pair a -> Property
+    propEqEq (Pair x y) =
+      cover 50.0 (go x y) "precondition known satisfied" $
+        (PlutusTx.compare x y == EQ) === (x PlutusTx.== y)
     go :: a -> a -> Bool
     go x y = (x PlutusTx.<= y) && (y PlutusTx.<= x)
     go2 :: a -> a -> a -> Bool
