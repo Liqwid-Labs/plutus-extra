@@ -47,10 +47,9 @@ import Test.Tasty.Options (
   ),
   mkFlagCLParser,
  )
-import Test.Tasty.Plutus.Internal (
+import Test.Tasty.Plutus.Internal.Options (
   PropertyMaxSize,
   PropertyTestCount,
-  ScriptInputPosition (Head, Tail),
  )
 import Test.Tasty.Plutus.Options.QQ (maxSize, testCount)
 import Prelude
@@ -195,3 +194,29 @@ instance IsOption PlutusTracing where
   optionHelp = Tagged "Always provide Plutus traces for unit tests."
   showDefaultValue = const . Just $ "Only on failure"
   optionCLParser = mkFlagCLParser mempty Always
+
+{- | Where to place the script input in 'txInfoInputs' when generating a
+ 'ScriptContext'.
+
+ The default value is 'Head' (meaning \'the first item in the list\'). The
+ option is controlled purely by a flag; if you want to change to 'Tail'
+ (meaning \'the last item in the list\'), pass @--input-last@.
+
+ @since 3.4
+-}
+data ScriptInputPosition = Head | Tail
+  deriving stock
+    ( -- | @since 3.4
+      Eq
+    , -- | @since 3.4
+      Show
+    )
+
+-- | @since 3.4
+instance IsOption ScriptInputPosition where
+  defaultValue = Head
+  parseValue = const (Just Tail)
+  optionName = Tagged "input-last"
+  optionHelp = Tagged "Place the script input last in txInfoInputs."
+  showDefaultValue = const . Just $ "Place the script input first."
+  optionCLParser = mkFlagCLParser mempty Tail

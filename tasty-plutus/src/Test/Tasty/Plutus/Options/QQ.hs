@@ -14,7 +14,7 @@ import Language.Haskell.TH.Syntax (
   Q,
   Type,
  )
-import Test.Tasty.Plutus.Internal (
+import Test.Tasty.Plutus.Internal.Options (
   PropertyMaxSize (PropertyMaxSize),
   PropertyTestCount (PropertyTestCount),
  )

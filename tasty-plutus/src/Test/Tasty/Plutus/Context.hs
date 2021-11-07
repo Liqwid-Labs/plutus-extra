@@ -21,14 +21,14 @@ module Test.Tasty.Plutus.Context (
   -- * Types
 
   -- ** Classification and labelling
-  Internal.Purpose (..),
+  Purpose (..),
 
   -- ** Building contexts
-  Internal.ExternalType (..),
-  Internal.Input (..),
-  Internal.Output (..),
-  Internal.Minting (..),
-  Internal.ContextBuilder,
+  ExternalType (..),
+  Input (..),
+  Output (..),
+  Minting (..),
+  ContextBuilder,
 
   -- * Functions
 
@@ -69,7 +69,14 @@ import Plutus.V1.Ledger.Scripts (ValidatorHash)
 import Plutus.V1.Ledger.Value (TokenName, Value)
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
-import Test.Tasty.Plutus.Internal qualified as Internal
+import Test.Tasty.Plutus.Internal.Context (
+  ContextBuilder (ContextBuilder),
+  ExternalType (OwnType, PubKeyType, ScriptType),
+  Input (Input),
+  Minting (OtherMint, OwnMint),
+  Output (Output),
+  Purpose (ForMinting, ForSpending),
+ )
 import Wallet.Emulator.Types (Wallet, walletPubKey)
 
 {- | Single-input context.
@@ -77,54 +84,54 @@ import Wallet.Emulator.Types (Wallet, walletPubKey)
  @since 1.0
 -}
 input ::
-  forall (p :: Internal.Purpose).
-  Internal.Input ->
-  Internal.ContextBuilder p
+  forall (p :: Purpose).
+  Input ->
+  ContextBuilder p
 input x =
-  Internal.ContextBuilder (Seq.singleton x) mempty mempty mempty mempty
+  ContextBuilder (Seq.singleton x) mempty mempty mempty mempty
 
 {- | Single-output context.
 
  @since 1.0
 -}
 output ::
-  forall (p :: Internal.Purpose).
-  Internal.Output ->
-  Internal.ContextBuilder p
+  forall (p :: Purpose).
+  Output ->
+  ContextBuilder p
 output x =
-  Internal.ContextBuilder mempty (Seq.singleton x) mempty mempty mempty
+  ContextBuilder mempty (Seq.singleton x) mempty mempty mempty
 
 {- | Context with one signature.
 
  @since 1.0
 -}
 signedWith ::
-  forall (p :: Internal.Purpose).
+  forall (p :: Purpose).
   PubKeyHash ->
-  Internal.ContextBuilder p
+  ContextBuilder p
 signedWith pkh =
-  Internal.ContextBuilder mempty mempty (Seq.singleton pkh) mempty mempty
+  ContextBuilder mempty mempty (Seq.singleton pkh) mempty mempty
 
 {- | Context with one additional datum.
 
  @since 1.0
 -}
 datum ::
-  forall (p :: Internal.Purpose).
+  forall (p :: Purpose).
   BuiltinData ->
-  Internal.ContextBuilder p
+  ContextBuilder p
 datum d =
-  Internal.ContextBuilder mempty mempty mempty (Seq.singleton d) mempty
+  ContextBuilder mempty mempty mempty (Seq.singleton d) mempty
 
 {- | Short for @'datum' '.' 'toBuiltinData'@.
 
  @since 3.0
 -}
 addDatum ::
-  forall (p :: Internal.Purpose) (a :: Type).
+  forall (p :: Purpose) (a :: Type).
   (ToData a) =>
   a ->
-  Internal.ContextBuilder p
+  ContextBuilder p
 addDatum = datum . toBuiltinData
 
 {- | Context with one minting.
@@ -132,11 +139,11 @@ addDatum = datum . toBuiltinData
  @since 3.2
 -}
 minting ::
-  forall (p :: Internal.Purpose).
-  Internal.Minting ->
-  Internal.ContextBuilder p
+  forall (p :: Purpose).
+  Minting ->
+  ContextBuilder p
 minting =
-  Internal.ContextBuilder mempty mempty mempty mempty . Seq.singleton
+  ContextBuilder mempty mempty mempty mempty . Seq.singleton
 
 {- | Indicate that a payment must happen to the given public key, worth the
  given amount.
@@ -144,12 +151,12 @@ minting =
  @since 1.0
 -}
 paysToPubKey ::
-  forall (p :: Internal.Purpose).
+  forall (p :: Purpose).
   PubKeyHash ->
   Value ->
-  Internal.ContextBuilder p
+  ContextBuilder p
 paysToPubKey pkh =
-  output . Internal.Output (Internal.PubKeyType pkh)
+  output . Output (PubKeyType pkh)
 
 {- | Indicate that a payment must happen to the given 'Wallet', worth the
  given amount.
@@ -157,10 +164,10 @@ paysToPubKey pkh =
  @since 1.0
 -}
 paysToWallet ::
-  forall (p :: Internal.Purpose).
+  forall (p :: Purpose).
   Wallet ->
   Value ->
-  Internal.ContextBuilder p
+  ContextBuilder p
 paysToWallet wallet = paysToPubKey (walletPubKeyHash wallet)
 
 {- | Indicate that the script being tested must pay itself the given amount.
@@ -168,13 +175,13 @@ paysToWallet wallet = paysToPubKey (walletPubKeyHash wallet)
  @since 1.0
 -}
 paysSelf ::
-  forall (p :: Internal.Purpose) (a :: Type).
+  forall (p :: Purpose) (a :: Type).
   (ToData a) =>
   Value ->
   a ->
-  Internal.ContextBuilder p
+  ContextBuilder p
 paysSelf v dt =
-  output . Internal.Output (Internal.OwnType . toBuiltinData $ dt) $ v
+  output . Output (OwnType . toBuiltinData $ dt) $ v
 
 {- | Indicate that the script being tested must pay another script the given
  amount.
@@ -182,24 +189,24 @@ paysSelf v dt =
  @since 1.0
 -}
 paysOther ::
-  forall (p :: Internal.Purpose) (a :: Type).
+  forall (p :: Purpose) (a :: Type).
   (ToData a) =>
   ValidatorHash ->
   Value ->
   a ->
-  Internal.ContextBuilder p
+  ContextBuilder p
 paysOther hash v dt =
-  output . Internal.Output (Internal.ScriptType hash . toBuiltinData $ dt) $ v
+  output . Output (ScriptType hash . toBuiltinData $ dt) $ v
 
 {- | As 'paysToPubKey', but using Lovelace.
 
  @since 3.0
 -}
 paysLovelaceToPubKey ::
-  forall (p :: Internal.Purpose).
+  forall (p :: Purpose).
   PubKeyHash ->
   Integer ->
-  Internal.ContextBuilder p
+  ContextBuilder p
 paysLovelaceToPubKey pkh = paysToPubKey pkh . lovelaceValueOf
 
 {- | As 'paysToWallet', but using Lovelace.
@@ -207,10 +214,10 @@ paysLovelaceToPubKey pkh = paysToPubKey pkh . lovelaceValueOf
  @since 3.0
 -}
 paysLovelaceToWallet ::
-  forall (p :: Internal.Purpose).
+  forall (p :: Purpose).
   Wallet ->
   Integer ->
-  Internal.ContextBuilder p
+  ContextBuilder p
 paysLovelaceToWallet wallet = paysToWallet wallet . lovelaceValueOf
 
 {- | Indicate that the given amount must be spent from the given public key.
@@ -218,22 +225,22 @@ paysLovelaceToWallet wallet = paysToWallet wallet . lovelaceValueOf
  @since 1.0
 -}
 spendsFromPubKey ::
-  forall (p :: Internal.Purpose).
+  forall (p :: Purpose).
   PubKeyHash ->
   Value ->
-  Internal.ContextBuilder p
+  ContextBuilder p
 spendsFromPubKey pkh =
-  input . Internal.Input (Internal.PubKeyType pkh)
+  input . Input (PubKeyType pkh)
 
 {- | As 'spendsFromPubKey', with an added signature.
 
  @since 1.0
 -}
 spendsFromPubKeySigned ::
-  forall (p :: Internal.Purpose).
+  forall (p :: Purpose).
   PubKeyHash ->
   Value ->
-  Internal.ContextBuilder p
+  ContextBuilder p
 spendsFromPubKeySigned pkh v = spendsFromPubKey pkh v <> signedWith pkh
 
 {- | Indicate that the given amount must be spent from the given 'Wallet'.
@@ -241,10 +248,10 @@ spendsFromPubKeySigned pkh v = spendsFromPubKey pkh v <> signedWith pkh
  @since 1.0
 -}
 spendsFromWallet ::
-  forall (p :: Internal.Purpose).
+  forall (p :: Purpose).
   Wallet ->
   Value ->
-  Internal.ContextBuilder p
+  ContextBuilder p
 spendsFromWallet wallet = spendsFromPubKey (walletPubKeyHash wallet)
 
 {- | As 'spendsFromWallet', with an added signature.
@@ -252,10 +259,10 @@ spendsFromWallet wallet = spendsFromPubKey (walletPubKeyHash wallet)
  @since 1.0
 -}
 spendsFromWalletSigned ::
-  forall (p :: Internal.Purpose).
+  forall (p :: Purpose).
   Wallet ->
   Value ->
-  Internal.ContextBuilder p
+  ContextBuilder p
 spendsFromWalletSigned wallet = spendsFromPubKeySigned (walletPubKeyHash wallet)
 
 {- | Indicate that the given amount must be spent from another script.
@@ -263,35 +270,35 @@ spendsFromWalletSigned wallet = spendsFromPubKeySigned (walletPubKeyHash wallet)
  @since 1.0
 -}
 spendsFromOther ::
-  forall (p :: Internal.Purpose) (datum :: Type).
+  forall (p :: Purpose) (datum :: Type).
   (ToData datum) =>
   ValidatorHash ->
   Value ->
   datum ->
-  Internal.ContextBuilder p
+  ContextBuilder p
 spendsFromOther hash v d =
-  input . Internal.Input (Internal.ScriptType hash . toBuiltinData $ d) $ v
+  input . Input (ScriptType hash . toBuiltinData $ d) $ v
 
 {- | Indicate that an amount of a given token must be minted.
 
  @since 3.2
 -}
 mintsWithSelf ::
-  forall (p :: Internal.Purpose).
+  forall (p :: Purpose).
   TokenName ->
   Integer ->
-  Internal.ContextBuilder p
-mintsWithSelf tn = minting . Internal.OwnMint tn
+  ContextBuilder p
+mintsWithSelf tn = minting . OwnMint tn
 
 {- | Indicate that someone must mint the given 'Value'.
 
  @since 3.2
 -}
 mintsValue ::
-  forall (p :: Internal.Purpose).
+  forall (p :: Purpose).
   Value ->
-  Internal.ContextBuilder p
-mintsValue = minting . Internal.OtherMint
+  ContextBuilder p
+mintsValue = minting . OtherMint
 
 -- Helpers
 
