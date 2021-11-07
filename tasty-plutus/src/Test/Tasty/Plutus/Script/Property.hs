@@ -72,19 +72,10 @@ import Test.QuickCheck (
   stdArgs,
  )
 import Test.Tasty.Options (OptionDescription (Option), lookupOption)
-import Test.Tasty.Plutus.Internal (
+import Test.Tasty.Plutus.Internal (ourStyle)
+import Test.Tasty.Plutus.Internal.Context (
   ContextBuilder,
-  PropertyMaxSize (PropertyMaxSize),
-  PropertyTestCount (PropertyTestCount),
   Purpose (ForMinting, ForSpending),
-  ScriptInputPosition,
-  ScriptResult (
-    InternalError,
-    NoOutcome,
-    ParseFailed,
-    ScriptFailed,
-    ScriptPassed
-  ),
   TransactionConfig (
     TransactionConfig,
     scriptInputPosition,
@@ -94,15 +85,30 @@ import Test.Tasty.Plutus.Internal (
     testTxId,
     testValidatorHash
   ),
-  WithScript (WithMinting, WithSpending),
   compileMinting,
   compileSpending,
-  ourStyle,
+ )
+import Test.Tasty.Plutus.Internal.Options (
+  PropertyMaxSize (PropertyMaxSize),
+  PropertyTestCount (PropertyTestCount),
+ )
+import Test.Tasty.Plutus.Internal.Run (
+  ScriptResult (
+    InternalError,
+    NoOutcome,
+    ParseFailed,
+    ScriptFailed,
+    ScriptPassed
+  ),
   testMintingPolicyScript,
   testValidatorScript,
  )
+import Test.Tasty.Plutus.Internal.WithScript (
+  WithScript (WithMinting, WithSpending),
+ )
 import Test.Tasty.Plutus.Options (
   Fee (Fee),
+  ScriptInputPosition,
   TestCurrencySymbol (TestCurrencySymbol),
   TestTxId (TestTxId),
   TestValidatorHash (TestValidatorHash),

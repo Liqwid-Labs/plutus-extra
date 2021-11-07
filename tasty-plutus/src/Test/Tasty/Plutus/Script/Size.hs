@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 {- |
@@ -29,13 +30,18 @@ module Test.Tasty.Plutus.Script.Size (
   ByteSize,
   bytes,
   kbytes,
+
+  -- * Test helpers
+  validatorToScript,
 ) where
 
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy qualified as BS
 import Data.Int (Int64)
+import Data.Kind (Type)
 import Data.Tagged (Tagged (Tagged))
-import Plutus.V1.Ledger.Scripts (Script)
+import Ledger.Typed.Scripts (TypedValidator, validatorScript)
+import Plutus.V1.Ledger.Scripts (Script, getValidator)
 import PlutusTx.Natural (Natural, nat)
 import PlutusTx.Numeric.Extra (addExtend, divMod)
 import PlutusTx.Prelude qualified as PTx
@@ -118,6 +124,13 @@ bytes = ByteSize
 kbytes :: Natural -> ByteSize
 kbytes = ByteSize . (PTx.* [nat| 1024 |])
 
+{- | A helper for converting a 'TypedValidator' into its underlying 'Script'.
+
+ @since 3.4
+-}
+validatorToScript :: forall (a :: Type). TypedValidator a -> Script
+validatorToScript = getValidator . validatorScript
+
 -- Helpers
 
 prettyByteSize :: ByteSize -> String
@@ -144,7 +157,15 @@ instance IsTest FitTest where
             _ -> testPassed . produceSize $ serializedSize
     where
       produceSize :: Int64 -> String
-      produceSize i = renderStyle ourStyle $ case i `quotRem` 1024 of
-        (d, 0) -> "Size:" <+> dumpDoc d <+> "KiB"
-        _ -> "Size:" <+> dumpDoc i <+> "B"
+      produceSize i =
+        renderStyle ourStyle $
+          "Size:" <+> case i `quotRem` 1024 of
+            (d, 0) -> dumpDoc d <> "KiB"
+            (d, r) ->
+              dumpDoc i <> "B (~"
+                <> ( if
+                        | r <= 256 -> dumpDoc d <> "KiB)"
+                        | r > 256 && r < 768 -> dumpDoc d <> ".5KiB)"
+                        | otherwise -> dumpDoc (d + 1) <> "KiB)"
+                   )
   testOptions = Tagged []

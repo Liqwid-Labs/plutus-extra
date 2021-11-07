@@ -54,6 +54,8 @@ newtype Natural = Natural Integer
       ToArgument
     , -- | @since 1.0
       Prelude.Eq
+    , -- | @since 1.1
+      Prelude.Ord
     , -- | @since 1.0
       OpenApi.ToSchema
     )
