@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module PlutusTx.NatRatio.Internal (
@@ -12,12 +13,23 @@ module PlutusTx.NatRatio.Internal (
   properFraction,
   recip,
   toRational,
+  NatRatioSchema (..),
 ) where
 
 import Control.Monad (guard)
-import Data.Aeson (FromJSON (parseJSON), ToJSON)
-import Data.OpenApi.Schema qualified as OpenApi
-import Data.Proxy (Proxy (Proxy))
+import Data.Aeson (
+  FromJSON (parseJSON),
+  ToJSON (toJSON),
+  Value,
+  object,
+  withObject,
+  (.:),
+ )
+import Data.Aeson.Types (Parser)
+import Data.Coerce
+import Data.OpenApi qualified as OpenApi
+import GHC.Generics (Generic)
+import GHC.TypeLits (KnownSymbol, Symbol)
 import PlutusTx.IsData.Class (
   FromData (fromBuiltinData),
   ToData,
@@ -27,7 +39,21 @@ import PlutusTx.Lift (makeLift)
 import PlutusTx.Natural.Internal (Natural (Natural))
 import PlutusTx.Prelude
 import PlutusTx.Ratio qualified as Ratio
-import Schema (ToArgument, ToSchema)
+import PlutusTx.SchemaUtils (
+  RatioDirection ((:->)),
+  jsonFieldSym,
+  ratioDeclareNamedSchema,
+  ratioFixFormArgument,
+  ratioFormSchema,
+  ratioTypeName,
+ )
+import Schema (
+  FormSchema,
+  ToArgument,
+  ToSchema,
+  toArgument,
+  toSchema,
+ )
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Test.QuickCheck.Gen (suchThat)
 import Text.Show.Pretty (PrettyVal (prettyVal))
@@ -65,15 +91,16 @@ newtype NatRatio = NatRatio Rational
     , -- | @since 1.0
       ToJSON
     , -- | @since 1.0
-      ToSchema
-    , -- | @since 1.0
       ToArgument
     )
     via Rational
-
--- | @since 1.1
-instance OpenApi.ToSchema NatRatio where
-  declareNamedSchema _ = OpenApi.declareNamedSchema (Proxy @(Natural, Natural))
+  deriving
+    ( -- | @since @1.2
+      ToSchema
+    , -- | @since @1.2
+      OpenApi.ToSchema
+    )
+    via (NatRatioSchema ("denominator" ':-> "numerator"))
 
 {- | Represents this like a positive-only ratio.
 
@@ -211,5 +238,83 @@ properFraction (NatRatio r) =
 -}
 toRational :: NatRatio -> Rational
 toRational (NatRatio r) = r
+
+{- | Newtype for deriving Schema and JSON instances
+
+ @since 1.2
+-}
+newtype NatRatioSchema (dir :: RatioDirection)
+  = NatRatioSchema NatRatio
+  deriving stock (Prelude.Show, Generic)
+
+-- | @since 1.2
+instance
+  forall (from :: Symbol) (to :: Symbol).
+  ( KnownSymbol to
+  , KnownSymbol from
+  ) =>
+  ToJSON (NatRatioSchema (from ':-> to))
+  where
+  toJSON :: NatRatioSchema (from ':-> to) -> Value
+  toJSON (NatRatioSchema ratio) =
+    object
+      [ (jsonFieldSym @from, toJSON @Natural $ denominator ratio)
+      , (jsonFieldSym @to, toJSON @Natural $ numerator ratio)
+      ]
+
+-- | @since 1.2
+instance
+  forall (from :: Symbol) (to :: Symbol).
+  ( KnownSymbol to
+  , KnownSymbol from
+  ) =>
+  FromJSON (NatRatioSchema (from ':-> to))
+  where
+  parseJSON :: Value -> Parser (NatRatioSchema (from ':-> to))
+  parseJSON =
+    withObject (ratioTypeName @from @to "NatRatio") $ \obj -> do
+      from' <- obj .: jsonFieldSym @from
+      to' <- obj .: jsonFieldSym @to
+      case natRatio to' from' of
+        Nothing -> Prelude.fail "Zero is not a valid NatRatio denominator"
+        Just nr -> Prelude.pure . NatRatioSchema $ nr
+
+-- | @since 1.2
+instance
+  forall (from :: Symbol) (to :: Symbol).
+  ( KnownSymbol from
+  , KnownSymbol to
+  ) =>
+  ToSchema (NatRatioSchema (from ':-> to))
+  where
+  toSchema :: FormSchema
+  toSchema = ratioFormSchema @from @to
+
+-- | @since 1.2
+instance
+  forall (from :: Symbol) (to :: Symbol).
+  ( KnownSymbol from
+  , KnownSymbol to
+  ) =>
+  ToArgument (NatRatioSchema (from ':-> to))
+  where
+  toArgument (NatRatioSchema ratio) =
+    ratioFixFormArgument @from @to fromVal toVal
+    where
+      fromVal :: Integer
+      fromVal = coerce . denominator $ ratio
+      toVal :: Integer
+      toVal = coerce . numerator $ ratio
+
+-- | @since 1.2
+instance
+  forall (from :: Symbol) (to :: Symbol).
+  ( KnownSymbol from
+  , KnownSymbol to
+  ) =>
+  OpenApi.ToSchema (NatRatioSchema (from ':-> to))
+  where
+  declareNamedSchema _ =
+    ratioDeclareNamedSchema @from @to "NatRatioSchema"
 
 makeLift ''NatRatio

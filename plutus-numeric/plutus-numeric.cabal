@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-numeric
-version:            1.1
+version:            1.2
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -58,6 +58,8 @@ library
     PlutusTx.Natural
     PlutusTx.Numeric.Extra
     PlutusTx.Numeric.Gen
+    PlutusTx.Ratio.Extra
+    PlutusTx.SchemaUtils
 
   other-modules:
     PlutusTx.NatRatio.Internal
@@ -72,6 +74,8 @@ library
     , playground-common
     , plutus-tx
     , pretty-show        ^>=1.10
+    , recursion-schemes
+    , text
     , QuickCheck         ^>=2.14.2
     , template-haskell   ^>=2.16.0.0
 
