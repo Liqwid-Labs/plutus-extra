@@ -31,6 +31,9 @@ module PlutusTx.NatRatio (
   Internal.properFraction,
   Internal.recip,
   Internal.toRational,
+
+  -- ** NatRatio
+  Internal.NatRatioSchema (NatRatioSchema)
 ) where
 
 import PlutusTx.NatRatio.Internal qualified as Internal
