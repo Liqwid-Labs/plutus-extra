@@ -33,7 +33,7 @@ module PlutusTx.NatRatio (
   Internal.toRational,
 
   -- ** NatRatio
-  Internal.NatRatioSchema (NatRatioSchema)
+  Internal.NatRatioSchema (NatRatioSchema),
 ) where
 
 import PlutusTx.NatRatio.Internal qualified as Internal
