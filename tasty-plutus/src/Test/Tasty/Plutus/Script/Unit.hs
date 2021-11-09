@@ -266,8 +266,8 @@ instance (Typeable p) => IsTest (ValidatorTest p) where
             Left err -> handleError mPred shouldChat expected conf context td err
             Right (_, logs) ->
               deliverResult mPred shouldChat expected logs conf context td
-    Minter expected mPred td@(MintingTest r) cb mp ->
-      let context = compileMinting conf cb
+    Minter expected mPred td@(MintingTest r v) cb mp ->
+      let context = compileMinting conf cb v
           context' = Context . toBuiltinData $ context
           r' = Redeemer . toBuiltinData $ r
        in case runMintingPolicyScript context' mp r' of
@@ -378,8 +378,11 @@ handleError mPred shouldChat expected conf sc td = \case
           $+$ ppDoc r
           $+$ "Value"
           $+$ ppDoc v
-      MintingTest r ->
-        "Redeemer" $+$ ppDoc r
+      MintingTest r v ->
+        "Redeemer"
+          $+$ ppDoc r
+          $+$ "Value"
+          $+$ ppDoc v
 
 deliverResult ::
   forall (p :: Purpose).
@@ -461,8 +464,11 @@ deliverResult mPred shouldChat expected logs conf sc td =
           $+$ ppDoc r
           $+$ "Value"
           $+$ ppDoc v
-      MintingTest r ->
-        "Redeemer" $+$ ppDoc r
+      MintingTest r v ->
+        "Redeemer"
+          $+$ ppDoc r
+          $+$ "Value"
+          $+$ ppDoc v
 
 dumpLogs :: [Text] -> Doc
 dumpLogs = vcat . fmap go . zip [1 ..]

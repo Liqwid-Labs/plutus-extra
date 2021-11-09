@@ -163,10 +163,10 @@ scriptProperty name gen mkCB = case gen of
       . singleTest name
       . Spender val generator shrinker
       $ mkCB
-  GenForMinting f mRed -> WithMinting $ do
+  GenForMinting f mRed mVal -> WithMinting $ do
     mp <- ask
-    let generator = mintingTupleGen f mRed
-    let shrinker = mintingTupleShrink f mRed
+    let generator = mintingTupleGen f mRed mVal
+    let shrinker = mintingTupleShrink f mRed mVal
     tell
       . Seq.singleton
       . singleTest name
@@ -195,8 +195,8 @@ data PropertyTest (p :: Purpose) where
     , Show redeemer
     ) =>
     MintingPolicy ->
-    Gen (Example, redeemer) ->
-    ((Example, redeemer) -> [(Example, redeemer)]) ->
+    Gen (Example, redeemer, Value) ->
+    ((Example, redeemer, Value) -> [(Example, redeemer, Value)]) ->
     (TestData 'ForMinting -> ContextBuilder 'ForMinting) ->
     PropertyTest 'ForMinting
 
@@ -301,11 +301,11 @@ minterProperty ::
   MintingPolicy ->
   TransactionConfig ->
   (TestData 'ForMinting -> ContextBuilder 'ForMinting) ->
-  (Example, redeemer) ->
+  (Example, redeemer, Value) ->
   Property
-minterProperty mp tc mkCB (ex, r) =
-  let td = MintingTest r
-      context = compileMinting tc . mkCB $ td
+minterProperty mp tc mkCB (ex, r, v) =
+  let td = MintingTest r v
+      context = compileMinting tc (mkCB td) v
       context' = Context . toBuiltinData $ context
       r' = Redeemer . toBuiltinData $ r
    in checkCoverage
@@ -317,16 +317,20 @@ minterProperty mp tc mkCB (ex, r) =
 prettyMinter ::
   forall (redeemer :: Type).
   (Show redeemer) =>
-  (Example, redeemer) ->
+  (Example, redeemer, Value) ->
   String
-prettyMinter (ex, r) =
+prettyMinter (ex, r, v) =
   renderStyle ourStyle $
     ""
       $+$ hang "Case" 4 (text . show $ ex)
-      $+$ hang "Inputs" 4 dumpRedeemer
+      $+$ hang "Inputs" 4 dumpInputs
   where
-    dumpRedeemer :: Doc
-    dumpRedeemer = "Redeemer" $+$ ppDoc r
+    dumpInputs :: Doc
+    dumpInputs =
+      "Redeemer"
+        $+$ ppDoc r
+        $+$ "Value"
+        $+$ ppDoc v
 
 spendingTupleGen ::
   forall (datum :: Type) (redeemer :: Type).
@@ -360,25 +364,29 @@ spendingTupleShrink f mDat mRed mVal (ex, d, r, v) = do
 
 mintingTupleGen ::
   forall (redeemer :: Type).
-  (redeemer -> Example) ->
+  (redeemer -> Value -> Example) ->
   Methodology redeemer ->
-  Gen (Example, redeemer)
-mintingTupleGen f mRed = do
+  Methodology Value ->
+  Gen (Example, redeemer, Value)
+mintingTupleGen f mRed mVal = do
   let Methodology genR _ = mRed
-  r <- genR
-  pure (f r, r)
+  let Methodology genVal _ = mVal
+  (r, v) <- (,) <$> genR <*> genVal
+  pure (f r v, r, v)
 
 mintingTupleShrink ::
   forall (redeemer :: Type).
-  (redeemer -> Example) ->
+  (redeemer -> Value -> Example) ->
   Methodology redeemer ->
-  (Example, redeemer) ->
-  [(Example, redeemer)]
-mintingTupleShrink f mRed (ex, r) = do
+  Methodology Value ->
+  (Example, redeemer, Value) ->
+  [(Example, redeemer, Value)]
+mintingTupleShrink f mRed mVal (ex, r, v) = do
   let Methodology _ shrinkR = mRed
-  r' <- shrinkR r
-  guard (f r == ex)
-  pure (ex, r')
+  let Methodology _ shrinkV = mVal
+  (r', v') <- (,) <$> shrinkR r <*> shrinkV v
+  guard (f r v == ex)
+  pure (ex, r', v')
 
 produceResult ::
   Example ->

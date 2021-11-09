@@ -62,6 +62,7 @@ data TestData (p :: Purpose) where
   MintingTest ::
     (ToData redeemer, FromData redeemer, Show redeemer) =>
     redeemer ->
+    Value ->
     TestData 'ForMinting
 
 {- | Describes whether a case is good (i.e. should pass) or bad (i.e. should
@@ -142,8 +143,9 @@ data Generator (p :: Purpose) where
     , FromData redeemer
     , Show redeemer
     ) =>
-    (redeemer -> Example) ->
+    (redeemer -> Value -> Example) ->
     Methodology redeemer ->
+    Methodology Value ->
     Generator 'ForMinting
 
 {- | Generate using 'Arbitrary' instances. A 'Methodology' for 'Value' has to be
@@ -178,6 +180,7 @@ fromArbitraryMinting ::
   , Show redeemer
   , Arbitrary redeemer
   ) =>
-  (redeemer -> Example) ->
+  (redeemer -> Value -> Example) ->
+  Methodology Value ->
   Generator 'ForMinting
 fromArbitraryMinting f = GenForMinting f fromArbitrary
