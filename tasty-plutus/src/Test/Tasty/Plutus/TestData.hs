@@ -28,7 +28,9 @@ import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.IsData.Class (FromData, ToData)
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Test.QuickCheck.Gen (Gen)
-import Test.Tasty.Plutus.Context (Purpose (ForMinting, ForSpending))
+import Test.Tasty.Plutus.Internal.Context (
+  Purpose (ForMinting, ForSpending),
+ )
 import Prelude
 
 {- | All the data needed to test a validator or minting policy.

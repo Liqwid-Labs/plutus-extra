@@ -35,9 +35,15 @@ module Test.Tasty.Plutus.Script.Size (
   validatorToScript,
 ) where
 
+import Cardano.Api.Shelley (
+  PlutusScript (PlutusScriptSerialised),
+  PlutusScriptV1,
+  serialiseToCBOR,
+ )
 import Codec.Serialise (serialise)
+import Data.ByteString qualified as BSS
 import Data.ByteString.Lazy qualified as BS
-import Data.Int (Int64)
+import Data.ByteString.Short qualified as SBS
 import Data.Kind (Type)
 import Data.Tagged (Tagged (Tagged))
 import Ledger.Typed.Scripts (TypedValidator, validatorScript)
@@ -144,19 +150,19 @@ data FitTest = FitsOnChain Script | FitsInto ByteSize Script
 instance IsTest FitTest where
   run _ ft _ = pure $ case ft of
     FitsOnChain script ->
-      let serializedSize = BS.length . serialise $ script
+      let serializedSize = serialisedScriptSize script
           limit = 16 * 1024 -- 16KiB is the current limit for on-chain
        in case compare serializedSize limit of
             GT -> testFailed . produceSize $ serializedSize
             _ -> testPassed . produceSize $ serializedSize
     FitsInto (ByteSize maxSize) script ->
-      let serializedSize = BS.length . serialise $ script
+      let serializedSize = serialisedScriptSize script
           limit = fromIntegral . addExtend $ maxSize
        in case compare serializedSize limit of
             GT -> testFailed . produceSize $ serializedSize
             _ -> testPassed . produceSize $ serializedSize
     where
-      produceSize :: Int64 -> String
+      produceSize :: Int -> String
       produceSize i =
         renderStyle ourStyle $
           "Size:" <+> case i `quotRem` 1024 of
@@ -169,3 +175,12 @@ instance IsTest FitTest where
                         | otherwise -> dumpDoc (d + 1) <> "KiB)"
                    )
   testOptions = Tagged []
+
+serialisedScriptSize :: Script -> Int
+serialisedScriptSize =
+  BSS.length
+    . serialiseToCBOR
+    . PlutusScriptSerialised @PlutusScriptV1
+    . SBS.toShort
+    . BS.toStrict
+    . serialise

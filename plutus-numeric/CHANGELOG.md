@@ -12,6 +12,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   `PlutusTx.Numeric.Gen`.
 * `ToSchema` (from OpenAPI) instance for `NatRatio`.
 * Golden tests, based on `plutus-golden`.
+* `Prelude.Ord` instances for `Natural` and `NatRatio`.
 
 ## 1.0 -- 2021-10-19
 

@@ -46,6 +46,8 @@ newtype NatRatio = NatRatio Rational
   deriving
     ( -- | @since 1.0
       Prelude.Eq
+    , -- | @since 1.1
+      Prelude.Ord
     , -- | @since 1.0
       Eq
     , -- | @since 1.0

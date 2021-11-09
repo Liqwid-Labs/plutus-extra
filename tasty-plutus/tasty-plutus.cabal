@@ -55,11 +55,16 @@ library
 
   other-modules:
     Test.Tasty.Plutus.Internal
+    Test.Tasty.Plutus.Internal.Context
+    Test.Tasty.Plutus.Internal.Options
+    Test.Tasty.Plutus.Internal.Run
+    Test.Tasty.Plutus.Internal.WithScript
     Test.Tasty.Plutus.Options.QQ
 
   build-depends:
     , base               ^>=4.14
     , bytestring         ^>=0.10.12.0
+    , cardano-api
     , containers         ^>=0.6.2.1
     , mtl                ^>=2.2.2
     , plutus-contract

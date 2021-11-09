@@ -94,10 +94,10 @@ import Test.Tasty.Options (
   OptionDescription (Option),
   lookupOption,
  )
-import Test.Tasty.Plutus.Internal (
+import Test.Tasty.Plutus.Internal (ourStyle)
+import Test.Tasty.Plutus.Internal.Context (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
-  ScriptInputPosition,
   TransactionConfig (
     TransactionConfig,
     scriptInputPosition,
@@ -107,14 +107,16 @@ import Test.Tasty.Plutus.Internal (
     testTxId,
     testValidatorHash
   ),
-  WithScript (WithMinting, WithSpending),
   compileMinting,
   compileSpending,
-  ourStyle,
+ )
+import Test.Tasty.Plutus.Internal.WithScript (
+  WithScript (WithMinting, WithSpending),
  )
 import Test.Tasty.Plutus.Options (
   Fee (Fee),
   PlutusTracing (Always, OnlyOnFail),
+  ScriptInputPosition,
   TestCurrencySymbol (TestCurrencySymbol),
   TestTxId (TestTxId),
   TestValidatorHash (TestValidatorHash),
