@@ -62,7 +62,6 @@ module Test.Tasty.Plutus.Context (
 
 import Data.Kind (Type)
 import Data.Sequence qualified as Seq
-import Ledger.Crypto (pubKeyHash)
 import Plutus.V1.Ledger.Ada (lovelaceValueOf)
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Scripts (ValidatorHash)
@@ -77,7 +76,7 @@ import Test.Tasty.Plutus.Internal.Context (
   Output (Output),
   Purpose (ForMinting, ForSpending),
  )
-import Wallet.Emulator.Types (Wallet, walletPubKey)
+import Wallet.Emulator.Types (Wallet, walletPubKeyHash)
 
 {- | Single-input context.
 
@@ -299,8 +298,3 @@ mintsValue ::
   Value ->
   ContextBuilder p
 mintsValue = minting . OtherMint
-
--- Helpers
-
-walletPubKeyHash :: Wallet -> PubKeyHash
-walletPubKeyHash = pubKeyHash . walletPubKey
