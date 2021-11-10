@@ -33,8 +33,8 @@ import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Row (Row)
 import Data.Void (Void)
-import Prelude
 import Prettyprinter (Doc, Pretty, colon, indent, line, pretty, viaShow, vsep, (<+>))
+import Prelude
 
 --------------------------------------------------------------------------------
 
