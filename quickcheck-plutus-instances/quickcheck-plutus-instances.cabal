@@ -47,8 +47,10 @@ library
   import:          lang
   exposed-modules: Test.QuickCheck.Plutus.Instances
   build-depends:
-    , bytestring  ^>=0.10.12.0
+    , bytestring         ^>=0.10.12.0
+    , plutus-ledger
+    , plutus-ledger-api
     , plutus-tx
-    , QuickCheck  ^>=2.14.2
+    , QuickCheck         ^>=2.14.2
 
   hs-source-dirs:  src
