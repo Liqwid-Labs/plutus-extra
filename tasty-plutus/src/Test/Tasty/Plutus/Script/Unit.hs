@@ -99,7 +99,10 @@ import Test.Tasty.Plutus.Options (
   TestValidatorHash,
   TimeRange,
  )
-import Test.Tasty.Plutus.TestData (TestData (MintingTest, SpendingTest))
+import Test.Tasty.Plutus.TestData (
+  Outcome (Fail, Pass),
+  TestData (MintingTest, SpendingTest),
+ )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
   Result,
@@ -200,8 +203,6 @@ shouldn'tValidateTracing name f td cb = case td of
     tell . Seq.singleton $ tt
 
 -- Helpers
-
-data Outcome = Fail | Pass
 
 data ScriptTest (p :: Purpose) where
   Spender ::

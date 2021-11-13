@@ -11,9 +11,9 @@
 module Test.Tasty.Plutus.TestData (
   -- * Data type
   TestData (..),
+  Outcome (..),
 
   -- * QuickCheck support
-  Example (..),
   Methodology (..),
   fromArbitrary,
   static,
@@ -66,28 +66,29 @@ data TestData (p :: Purpose) where
     redeemer ->
     TestData 'ForMinting
 
-{- | Describes whether a case is good (i.e. should pass) or bad (i.e. should
- fail). Used to classify generated outputs for QuickCheck-based tests.
+{- | Describes whether a case, comprised of a script and a test data for the
+ script, should pass or fail. Used to classify generated outputs for
+ QuickCheck-based tests; also internally used to classify unit tests.
 
- @since 3.1
+ @since 5.0
 -}
-data Example = Good | Bad
+data Outcome = Fail | Pass
   deriving stock
-    ( -- | @since 3.1
+    ( -- | @since 5.0
       Eq
-    , -- | @since 3.1
+    , -- | @since 5.0
       Show
     )
 
-{- | \'Maximal badness\': gives 'Bad' when any argument is 'Bad'.
+{- | \'Maximal badness\': gives 'Fail' when any argument is 'Fail'.
 
- @since 3.1
+ @since 4.0
 -}
-instance Semigroup Example where
+instance Semigroup Outcome where
   {-# INLINEABLE (<>) #-}
-  Bad <> _ = Bad
-  _ <> Bad = Bad
-  _ <> _ = Good
+  Fail <> _ = Fail
+  _ <> Fail = Fail
+  _ <> _ = Pass
   {-# INLINEABLE stimes #-}
   stimes = stimesIdempotent
 
@@ -133,7 +134,7 @@ data Generator (p :: Purpose) where
     , Show datum
     , Show redeemer
     ) =>
-    (datum -> redeemer -> Value -> Example) ->
+    (datum -> redeemer -> Value -> Outcome) ->
     Methodology datum ->
     Methodology redeemer ->
     Methodology Value ->
@@ -144,7 +145,7 @@ data Generator (p :: Purpose) where
     , FromData redeemer
     , Show redeemer
     ) =>
-    (redeemer -> Example) ->
+    (redeemer -> Outcome) ->
     Methodology redeemer ->
     Generator 'ForMinting
 
@@ -164,7 +165,7 @@ fromArbitrarySpending ::
   , Show redeemer
   , Arbitrary redeemer
   ) =>
-  (datum -> redeemer -> Value -> Example) ->
+  (datum -> redeemer -> Value -> Outcome) ->
   Methodology Value ->
   Generator 'ForSpending
 fromArbitrarySpending f = GenForSpending f fromArbitrary fromArbitrary
@@ -180,6 +181,6 @@ fromArbitraryMinting ::
   , Show redeemer
   , Arbitrary redeemer
   ) =>
-  (redeemer -> Example) ->
+  (redeemer -> Outcome) ->
   Generator 'ForMinting
 fromArbitraryMinting f = GenForMinting f fromArbitrary
