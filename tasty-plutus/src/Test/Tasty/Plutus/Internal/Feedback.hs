@@ -10,6 +10,7 @@ module Test.Tasty.Plutus.Internal.Feedback (
   didn'tLog,
   dumpState,
   dumpState',
+  ourStyle,
 ) where
 
 import Data.Kind (Type)
@@ -18,9 +19,6 @@ import Plutus.V1.Ledger.Api (
   ScriptContext,
  )
 import Plutus.V1.Pretty (scriptContextToValue)
-import Test.Tasty.Plutus.Internal (
-  ourStyle,
- )
 import Test.Tasty.Plutus.Internal.Context (ContextBuilder, Purpose, TransactionConfig)
 import Test.Tasty.Plutus.Internal.Env (getScriptContext)
 import Test.Tasty.Plutus.Options (
@@ -29,10 +27,12 @@ import Test.Tasty.Plutus.Options (
 import Test.Tasty.Plutus.TestData (TestData (MintingTest, SpendingTest))
 import Text.PrettyPrint (
   Doc,
+  Style (lineLength),
   colon,
   hang,
   int,
   renderStyle,
+  style,
   text,
   vcat,
   ($+$),
@@ -41,6 +41,9 @@ import Text.PrettyPrint (
  )
 import Text.Show.Pretty (ppDoc, valToDoc)
 import Prelude hiding ((<>))
+
+ourStyle :: Style
+ourStyle = style {lineLength = 80}
 
 unexpectedFailure ::
   forall (a :: Type).

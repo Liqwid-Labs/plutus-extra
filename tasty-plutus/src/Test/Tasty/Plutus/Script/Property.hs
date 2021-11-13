@@ -66,7 +66,6 @@ import Test.QuickCheck (
   stdArgs,
  )
 import Test.Tasty.Options (OptionDescription (Option), OptionSet, lookupOption)
-import Test.Tasty.Plutus.Internal (ourStyle)
 import Test.Tasty.Plutus.Internal.Context (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
@@ -85,6 +84,7 @@ import Test.Tasty.Plutus.Internal.Feedback (
   malformedScript,
   noOutcome,
   noParse,
+  ourStyle,
   scriptException,
   unexpectedFailure,
   unexpectedSuccess,
