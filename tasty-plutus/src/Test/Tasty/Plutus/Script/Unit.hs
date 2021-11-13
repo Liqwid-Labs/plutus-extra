@@ -54,18 +54,10 @@ import Test.Tasty.Options (
   OptionSet,
   lookupOption,
  )
-import Test.Tasty.Plutus.Internal (
+import Test.Tasty.Plutus.Internal.Context (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
-  ScriptResult (
-    InternalError,
-    NoOutcome,
-    ParseFailed,
-    ScriptFailed,
-    ScriptPassed
-  ),
   TransactionConfig,
-  WithScript (WithMinting, WithSpending),
  )
 import Test.Tasty.Plutus.Internal.Env (
   SomeScript (SomeMinter, SomeSpender),
@@ -86,9 +78,22 @@ import Test.Tasty.Plutus.Internal.Feedback (
   unexpectedFailure,
   unexpectedSuccess,
  )
+import Test.Tasty.Plutus.Internal.Run (
+  ScriptResult (
+    InternalError,
+    NoOutcome,
+    ParseFailed,
+    ScriptFailed,
+    ScriptPassed
+  ),
+ )
+import Test.Tasty.Plutus.Internal.WithScript (
+  WithScript (WithMinting, WithSpending),
+ )
 import Test.Tasty.Plutus.Options (
   Fee,
   PlutusTracing,
+  ScriptInputPosition,
   TestCurrencySymbol,
   TestTxId,
   TestValidatorHash,
@@ -310,6 +315,7 @@ instance (Typeable p) => IsTest (ScriptTest p) where
       , Option @TestCurrencySymbol Proxy
       , Option @TestValidatorHash Proxy
       , Option @PlutusTracing Proxy
+      , Option @ScriptInputPosition Proxy
       ]
 
 handleError ::

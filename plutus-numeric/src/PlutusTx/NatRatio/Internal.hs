@@ -16,6 +16,8 @@ module PlutusTx.NatRatio.Internal (
 
 import Control.Monad (guard)
 import Data.Aeson (FromJSON (parseJSON), ToJSON)
+import Data.OpenApi.Schema qualified as OpenApi
+import Data.Proxy (Proxy (Proxy))
 import PlutusTx.IsData.Class (
   FromData (fromBuiltinData),
   ToData,
@@ -44,6 +46,8 @@ newtype NatRatio = NatRatio Rational
   deriving
     ( -- | @since 1.0
       Prelude.Eq
+    , -- | @since 1.1
+      Prelude.Ord
     , -- | @since 1.0
       Eq
     , -- | @since 1.0
@@ -66,6 +70,10 @@ newtype NatRatio = NatRatio Rational
       ToArgument
     )
     via Rational
+
+-- | @since 1.1
+instance OpenApi.ToSchema NatRatio where
+  declareNamedSchema _ = OpenApi.declareNamedSchema (Proxy @(Natural, Natural))
 
 {- | Represents this like a positive-only ratio.
 

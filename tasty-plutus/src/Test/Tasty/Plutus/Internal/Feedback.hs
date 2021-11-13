@@ -19,11 +19,9 @@ import Plutus.V1.Ledger.Api (
  )
 import Plutus.V1.Pretty (scriptContextToValue)
 import Test.Tasty.Plutus.Internal (
-  ContextBuilder,
-  Purpose,
-  TransactionConfig,
   ourStyle,
  )
+import Test.Tasty.Plutus.Internal.Context (ContextBuilder, Purpose, TransactionConfig)
 import Test.Tasty.Plutus.Internal.Env (getScriptContext)
 import Test.Tasty.Plutus.Options (
   PlutusTracing (Always, OnlyOnFail),

@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-numeric
-version:            1.1
+version:            2.0
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -43,6 +43,14 @@ common lang
     -Wmissing-export-lists -Werror -Wincomplete-record-updates
     -Wmissing-deriving-strategies
 
+common test-lang
+  import:        lang
+  build-depends:
+    , plutus-numeric
+    , tasty           ^>=1.4.1
+
+  ghc-options:   -threaded -O2 -rtsopts -with-rtsopts=-N
+
 library
   import:          lang
   exposed-modules:
@@ -59,7 +67,7 @@ library
 
   build-depends:
     , aeson              ^>=1.5.6.0
-    , hedgehog           ^>=1.0.1
+    , hedgehog           ^>=1.0.5
     , openapi3           ^>=3.1.0
     , playground-common
     , plutus-tx
@@ -69,8 +77,8 @@ library
 
   hs-source-dirs:  src
 
-test-suite tests
-  import:         lang
+test-suite property
+  import:         test-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
@@ -81,13 +89,30 @@ test-suite tests
     Suites.Numeric
 
   build-depends:
-    , plutus-numeric
     , plutus-tx
     , plutus-tx-plugin
     , QuickCheck        ^>=2.14.2
-    , tasty             ^>=1.4.1
     , tasty-hunit       ^>=0.10.0.3
     , tasty-quickcheck  ^>=0.10.1.2
 
-  ghc-options:    -threaded -O2 -rtsopts -with-rtsopts=-N
-  hs-source-dirs: test
+  hs-source-dirs: test/property
+
+test-suite golden
+  import:         test-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-golden  ^>=2.0
+    , plutus-tx
+
+  hs-source-dirs: test/golden
+
+test-suite laws
+  import:         test-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-laws       ^>=2.0
+    , tasty-quickcheck  ^>=0.10.1.2
+
+  hs-source-dirs: test/laws
