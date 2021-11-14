@@ -20,7 +20,18 @@ module PlutusTx.Natural (
 
   -- * Functions
   Internal.parity,
+  natToInteger,
 ) where
 
 import PlutusTx.Natural.Internal as Internal
 import PlutusTx.Natural.QQ as QQ
+import PlutusTx.Numeric.Extra (addExtend)
+import PlutusTx.Prelude qualified as PTx
+
+{- | The same as 'addExtend', but specialized for the
+ 'Internal.Natural' to 'PTx.Integer' case.
+
+ @since 2.1
+-}
+natToInteger :: Internal.Natural -> PTx.Integer
+natToInteger = addExtend

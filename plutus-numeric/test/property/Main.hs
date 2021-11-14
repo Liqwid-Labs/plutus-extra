@@ -2,6 +2,7 @@ module Main (main) where
 
 -- ensures compilation on-chain gets tested
 import Compilation ()
+import Suites.Consistency qualified as Consistency
 import Suites.NatRatio qualified as NatRatio
 import Suites.Natural qualified as Natural
 import Suites.Numeric qualified as Numeric
@@ -13,4 +14,5 @@ main =
     [ testGroup "Natural" Natural.tests
     , testGroup "NatRatio" NatRatio.tests
     , testGroup "Numeric.Extra instances for Plutus builtins" Numeric.tests
+    , testGroup "Consistency" Consistency.tests
     ]
