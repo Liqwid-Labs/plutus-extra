@@ -8,7 +8,7 @@ A collection of instances for Plutus types to support general use of QuickCheck.
 
 Currently, where possible, we define instances of the following type classes:
 
-* `Arbitrary` (and `Arbitrary1`)
+* `Arbitrary`, `Arbitrary1` and `Arbitrary2`
 * `CoArbitrary`
 * `Function`
 
