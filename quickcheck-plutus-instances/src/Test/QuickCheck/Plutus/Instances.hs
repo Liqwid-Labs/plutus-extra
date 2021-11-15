@@ -1,5 +1,26 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
+{- | Module: Test.QuickCheck.Plutus.Instances
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ Instances of various QuickCheck type classes for Plutus types. Where
+ possible, we have instances of:
+
+ * 'Arbitrary' (and 'Arbitrary1'), with shrinker support
+ * 'CoArbitrary'
+ * 'Function'
+
+ Some types may lack certain instances; for example, 'SignedMessage' lacks an
+ 'Arbitrary1' instance, as we generally can't lift shrinking into it.
+
+ This module defines no exports; to use it, import it like so:
+
+ > import Test.QuickCheck.Plutus.Instances ()
+-}
 module Test.QuickCheck.Plutus.Instances () where
 
 import Data.ByteString (ByteString)
