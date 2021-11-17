@@ -16,13 +16,19 @@ module Test.Tasty.Plutus.Arbitrary (
   Triple (..),
   Entangled (Entangled, Disentangled),
   Entangled3 (Entangled3, Disentangled3),
+  PA,
 ) where
 
 import Data.Kind (Type)
+import PlutusTx.Prelude qualified as PlutusTx
 import Test.QuickCheck.Arbitrary (
+  Arbitrary,
   Arbitrary1 (liftArbitrary, liftShrink),
+  CoArbitrary,
   arbitrary,
  )
+import Test.QuickCheck.Function (Function (function), functionMap)
+import Test.QuickCheck.Poly (A (A))
 
 {- | A single-type tuple. Its 'Arbitrary1' instance makes it convenient to
  generate pairs of the same type with an explicit generator:
@@ -198,6 +204,40 @@ instance Arbitrary1 Entangled3 where
     Same3 x -> Same3 <$> shr x
     PossiblyDifferent3 x y z ->
       PossiblyDifferent3 <$> shr x <*> shr y <*> shr z
+
+{- | A newtype wrapper for testing polymorphic properties. This is mostly useful
+ for function tests involving 'CoArbitrary' and 'Function', when the result
+ type isn't important. This newtype also defines several instances of Plutus
+ type classes (hence 'PA'), but is otherwise identical to 'A' from QuickCheck.
+
+ @since 2.1
+-}
+newtype PA = PA A
+  deriving
+    ( -- | @since 2.1
+      Eq
+    , -- | @since 2.1
+      Show
+    , -- | @since 2.1
+      Arbitrary
+    , -- | @since 2.1
+      CoArbitrary
+    )
+    via A
+  deriving
+    ( -- | @since 2.1
+      PlutusTx.Eq
+    , -- | @since 2.1
+      PlutusTx.Ord
+    )
+    via Integer
+
+-- | @since 2.1
+instance Function PA where
+  function = functionMap into PA
+    where
+      into :: PA -> A
+      into (PA x) = x
 
 -- Helpers
 

@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-numeric
-version:            2.1
+version:            2.2
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -113,7 +113,7 @@ test-suite laws
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   build-depends:
-    , plutus-laws       ^>=2.0
+    , plutus-laws       ^>=2.1
     , tasty-quickcheck  ^>=0.10.1.2
 
   hs-source-dirs: test/laws
