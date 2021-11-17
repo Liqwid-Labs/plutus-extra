@@ -49,12 +49,14 @@ import PlutusTx.SchemaUtils (
  )
 import Schema (
   FormSchema,
-  ToArgument,
-  ToSchema,
-  toArgument,
-  toSchema,
+  ToArgument (toArgument),
+  ToSchema (toSchema),
  )
-import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
+import Test.QuickCheck.Arbitrary (
+  Arbitrary (arbitrary, shrink),
+  CoArbitrary (coarbitrary),
+ )
+import Test.QuickCheck.Function (Function (function), functionMap)
 import Test.QuickCheck.Gen (suchThat)
 import Text.Show.Pretty (PrettyVal (prettyVal))
 import Prelude qualified
@@ -148,6 +150,22 @@ instance Arbitrary NatRatio where
     num' <- Prelude.filter (> 0) . shrink $ num
     den' <- Prelude.filter (> 0) . shrink $ den
     Prelude.pure . NatRatio $ num' Ratio.% den'
+
+-- | @since 2.2
+instance CoArbitrary NatRatio where
+  coarbitrary nr gen = do
+    let num = numerator nr
+    let den = denominator nr
+    coarbitrary num . coarbitrary den $ gen
+
+-- | @since 2.2
+instance Function NatRatio where
+  function = functionMap into outOf
+    where
+      into :: NatRatio -> (Natural, Natural)
+      into nr = (numerator nr, denominator nr)
+      outOf :: (Natural, Natural) -> NatRatio
+      outOf (Natural num, Natural den) = NatRatio $ num Ratio.% den
 
 {- | Safely construct a 'NatRatio'. Checks for a zero denominator.
 

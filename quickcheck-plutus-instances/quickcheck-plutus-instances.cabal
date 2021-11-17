@@ -1,6 +1,6 @@
 cabal-version:      3.0
-name:               tasty-plutus
-version:            4.0
+name:               quickcheck-plutus-instances
+version:            1.1
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -37,6 +37,7 @@ common lang
     TypeSynonymInstances
     UndecidableInstances
 
+  build-depends:      base ^>=4.14
   ghc-options:
     -Wall -Wcompat -Wincomplete-uni-patterns -Wredundant-constraints
     -Wmissing-export-lists -Werror -Wincomplete-record-updates
@@ -44,44 +45,12 @@ common lang
 
 library
   import:          lang
-  exposed-modules:
-    Test.Tasty.Plutus.Context
-    Test.Tasty.Plutus.Options
-    Test.Tasty.Plutus.Script.Property
-    Test.Tasty.Plutus.Script.Size
-    Test.Tasty.Plutus.Script.Unit
-    Test.Tasty.Plutus.TestData
-    Test.Tasty.Plutus.WithScript
-
-  other-modules:
-    Test.Tasty.Plutus.Internal
-    Test.Tasty.Plutus.Internal.Context
-    Test.Tasty.Plutus.Internal.Options
-    Test.Tasty.Plutus.Internal.Run
-    Test.Tasty.Plutus.Internal.WithScript
-    Test.Tasty.Plutus.Options.QQ
-
+  exposed-modules: Test.QuickCheck.Plutus.Instances
   build-depends:
-    , base               ^>=4.14
     , bytestring         ^>=0.10.12.0
-    , cardano-api
-    , containers         ^>=0.6.2.1
-    , mtl                ^>=2.2.2
-    , plutus-contract
     , plutus-ledger
     , plutus-ledger-api
-    , plutus-numeric     ^>=2.3
-    , plutus-pretty      ^>=2.0
     , plutus-tx
-    , pretty             ^>=1.1.3.6
-    , pretty-show        ^>=1.10
     , QuickCheck         ^>=2.14.2
-    , safe               ^>=0.3.19
-    , serialise          ^>=0.2.3.0
-    , tagged             ^>=0.8.6.1
-    , tasty              ^>=1.4.1
-    , template-haskell   ^>=2.16.0.0
-    , text               ^>=1.2.4.1
-    , vector             ^>=0.12.3.0
 
   hs-source-dirs:  src
