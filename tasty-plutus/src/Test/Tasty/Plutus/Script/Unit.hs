@@ -21,41 +21,13 @@
  >    shouldValidateTracing "Gotta get good messages" tracePred validData validContext
  >    shouldn'tValidateTracing "Oh damn" tracePred invalidData validContext
  >    ...
-
- = Note
-
- This re-exports multiple definitions for backwards-compatibility reasons.
- Many of these will disappear on the next major version bump: the only definitions
- that are guaranteed to remain are:
-
- * 'shouldValidate'
- * 'shouldn'tValidate'
- * 'shouldValidateTracing'
- * 'shouldn'tValidateTracing'
 -}
 module Test.Tasty.Plutus.Script.Unit (
-  -- * Validator context types
-  TestData (..),
-  WithScript,
-
-  -- * Wrappers
-  toTestValidator,
-  toTestMintingPolicy,
-
   -- * Testing API
-  withValidator,
-  withMintingPolicy,
   shouldValidate,
   shouldn'tValidate,
   shouldValidateTracing,
   shouldn'tValidateTracing,
-
-  -- * Options
-  Fee (..),
-  TimeRange (..),
-  TestTxId (..),
-  TestCurrencySymbol (..),
-  TestValidatorHash (..),
 ) where
 
 import Control.Monad.Reader (asks)
@@ -123,12 +95,6 @@ import Test.Tasty.Plutus.Options (
   TimeRange (TimeRange),
  )
 import Test.Tasty.Plutus.TestData (TestData (MintingTest, SpendingTest))
-import Test.Tasty.Plutus.WithScript (
-  toTestMintingPolicy,
-  toTestValidator,
-  withMintingPolicy,
-  withValidator,
- )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
   Result,
@@ -241,23 +207,23 @@ shouldn'tValidateTracing name f td cb = case td of
 
 data Outcome = Fail | Pass
 
-data ValidatorTest (p :: Purpose) where
+data ScriptTest (p :: Purpose) where
   Spender ::
     Outcome ->
     Maybe (Vector Text -> Bool) ->
     TestData 'ForSpending ->
     ContextBuilder 'ForSpending ->
     Validator ->
-    ValidatorTest 'ForSpending
+    ScriptTest 'ForSpending
   Minter ::
     Outcome ->
     Maybe (Vector Text -> Bool) ->
     TestData 'ForMinting ->
     ContextBuilder 'ForMinting ->
     MintingPolicy ->
-    ValidatorTest 'ForMinting
+    ScriptTest 'ForMinting
 
-instance (Typeable p) => IsTest (ValidatorTest p) where
+instance (Typeable p) => IsTest (ScriptTest p) where
   run opts vt _ = pure $ case vt of
     Spender expected mPred td@(SpendingTest d r v) cb val ->
       let context = compileSpending conf cb d v

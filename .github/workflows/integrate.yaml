@@ -7,6 +7,7 @@ on:
       - 'plutus-extra.cabal'
     branches:
       - master
+      - staging
   pull_request:
     paths:
       - '**.hs'

@@ -4,6 +4,16 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+### Changed
+
+* Rename `paysSelf` and `paysOther` into `paysToSelf` and `paysToOther` for
+  consistency.
+* Rename `ValidatorTest` to `ScriptTest`.
+
+### Removed
+
+* Various re-exports from `Test.Tasty.Plutus.Script.Unit`.
+
 ## 3.4 -- 2021-11-03
 
 * Add `ScriptInputPosition` option to control where in `txInfoInputs` the script
