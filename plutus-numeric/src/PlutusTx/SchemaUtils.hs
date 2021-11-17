@@ -1,7 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
 module PlutusTx.SchemaUtils (
-  RatioDirection (..),
+  RatioFields ((:%:)),
   ratioDeclareNamedSchema,
   ratioFixFormArgument,
   ratioFormSchema,
@@ -27,19 +27,19 @@ import Prelude
 
 {- | Type-level data representing the "direction" that a ratio converts to or from.
 
- @since 1.2
+ @since 1.3
 -}
-data RatioDirection = Symbol :-> Symbol
+data RatioFields = Symbol :%: Symbol
 
--- | @since 1.2
+-- | @since 1.3
 jsonFieldSym :: forall (s :: Symbol). (KnownSymbol s) => Text
 jsonFieldSym = pack $ symbolVal (Proxy @s)
 
--- | @since 1.2
+-- | @since 1.3
 ratioDeclareNamedSchema ::
-  forall (from :: Symbol) (to :: Symbol).
-  ( KnownSymbol from
-  , KnownSymbol to
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
   ) =>
   Text ->
   Declare (OpenApi.Definitions OpenApi.Schema) OpenApi.NamedSchema
@@ -51,44 +51,44 @@ ratioDeclareNamedSchema name = do
         { OpenApi._schemaType = Just OpenApi.OpenApiObject
         , OpenApi._schemaProperties =
             fromList
-              [ (Text.pack $ symbolVal (Proxy @from), integerSchema)
-              , (Text.pack $ symbolVal (Proxy @to), integerSchema)
+              [ (Text.pack $ symbolVal (Proxy @numerator), integerSchema)
+              , (Text.pack $ symbolVal (Proxy @denominator), integerSchema)
               ]
         }
 
--- | @since 1.2
+-- | @since 1.3
 ratioFixFormArgument ::
-  forall (from :: Symbol) (to :: Symbol).
-  ( KnownSymbol from
-  , KnownSymbol to
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
   ) =>
   Integer ->
   Integer ->
   Fix FormArgumentF
-ratioFixFormArgument fromVal toVal =
+ratioFixFormArgument num denom =
   Fix $
     FormObjectF
-      [ (symbolVal (Proxy @from), toArgument fromVal)
-      , (symbolVal (Proxy @to), toArgument toVal)
+      [ (symbolVal (Proxy @numerator), toArgument num)
+      , (symbolVal (Proxy @denominator), toArgument denom)
       ]
 
--- | @since 1.2
+-- | @since 1.3
 ratioFormSchema ::
-  forall (from :: Symbol) (to :: Symbol).
-  ( KnownSymbol from
-  , KnownSymbol to
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
   ) =>
   FormSchema
 ratioFormSchema =
   FormSchemaObject
-    [ (symbolVal (Proxy @from), toSchema @Integer)
-    , (symbolVal (Proxy @to), toSchema @Integer)
+    [ (symbolVal (Proxy @numerator), toSchema @Integer)
+    , (symbolVal (Proxy @denominator), toSchema @Integer)
     ]
 
 ratioTypeName ::
-  forall (from :: Symbol) (to :: Symbol).
-  ( KnownSymbol from
-  , KnownSymbol to
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
   ) =>
   Prelude.String ->
   Prelude.String
@@ -96,7 +96,7 @@ ratioTypeName ratioName =
   Prelude.mconcat
     [ ratioName
     , " "
-    , symbolVal (Proxy @from)
+    , symbolVal (Proxy @numerator)
     , " : "
-    , symbolVal (Proxy @to)
+    , symbolVal (Proxy @denominator)
     ]

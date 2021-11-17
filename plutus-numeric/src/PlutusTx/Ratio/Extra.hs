@@ -1,5 +1,5 @@
 module PlutusTx.Ratio.Extra (
-  RatioSchema (..),
+  RatioSchema (RatioSchema),
 ) where
 
 import Data.Aeson (
@@ -17,7 +17,7 @@ import GHC.TypeLits (KnownSymbol, Symbol)
 import PlutusTx.Prelude qualified
 import PlutusTx.Ratio qualified as Ratio
 import PlutusTx.SchemaUtils (
-  RatioDirection ((:->)),
+  RatioFields ((:%:)),
   jsonFieldSym,
   ratioDeclareNamedSchema,
   ratioFixFormArgument,
@@ -35,83 +35,88 @@ import Prelude
 
 {- | Newtype for deriving Schema and JSON instances
 
- @since 1.2
+ @since 1.3
 -}
-newtype RatioSchema (dir :: RatioDirection)
+newtype RatioSchema (dir :: RatioFields)
   = RatioSchema PlutusTx.Prelude.Rational
-  deriving stock (Prelude.Show, Generic)
+  deriving stock
+    ( -- | @since 1.3
+      Prelude.Show
+    , -- | @since 1.3
+      Generic
+    )
 
 mkRatioSchema ::
-  forall (from :: Symbol) (to :: Symbol).
+  forall (numerator :: Symbol) (denominator :: Symbol).
   Integer ->
   Integer ->
-  RatioSchema (from ':-> to)
-mkRatioSchema from to = RatioSchema (to PlutusTx.Prelude.% from)
+  RatioSchema (numerator ':%: denominator)
+mkRatioSchema num denom = RatioSchema (num PlutusTx.Prelude.% denom)
 
--- | @since 1.2
+-- | @since 1.3
 instance
-  forall (from :: Symbol) (to :: Symbol).
-  ( KnownSymbol to
-  , KnownSymbol from
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
   ) =>
-  ToJSON (RatioSchema (from ':-> to))
+  ToJSON (RatioSchema (numerator ':%: denominator))
   where
-  toJSON :: RatioSchema (from ':-> to) -> Value
+  toJSON :: RatioSchema (numerator ':%: denominator) -> Value
   toJSON (RatioSchema ratio) =
     object
-      [ (jsonFieldSym @from, toJSON @Integer $ Ratio.denominator ratio)
-      , (jsonFieldSym @to, toJSON @Integer $ Ratio.numerator ratio)
+      [ (jsonFieldSym @numerator, toJSON @Integer $ Ratio.numerator ratio)
+      , (jsonFieldSym @denominator, toJSON @Integer $ Ratio.denominator ratio)
       ]
 
--- | @since 1.2
+-- | @since 1.3
 instance
-  forall (from :: Symbol) (to :: Symbol).
-  ( KnownSymbol to
-  , KnownSymbol from
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
   ) =>
-  FromJSON (RatioSchema (from ':-> to))
+  FromJSON (RatioSchema (numerator ':%: denominator))
   where
-  parseJSON :: Value -> Parser (RatioSchema (from ':-> to))
+  parseJSON :: Value -> Parser (RatioSchema (numerator ':%: denominator))
   parseJSON =
-    withObject (ratioTypeName @from @to "Ratio") $ \obj ->
+    withObject (ratioTypeName @numerator @denominator "Ratio") $ \obj ->
       mkRatioSchema
-        <$> obj .: jsonFieldSym @from
-        <*> obj .: jsonFieldSym @to
+        <$> obj .: jsonFieldSym @numerator
+        <*> obj .: jsonFieldSym @denominator
 
--- | @since 1.2
+-- | @since 1.3
 instance
-  forall (from :: Symbol) (to :: Symbol).
-  ( KnownSymbol from
-  , KnownSymbol to
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
   ) =>
-  ToSchema (RatioSchema (from ':-> to))
+  ToSchema (RatioSchema (numerator ':%: denominator))
   where
   toSchema :: FormSchema
-  toSchema = ratioFormSchema @from @to
+  toSchema = ratioFormSchema @numerator @denominator
 
--- | @since 1.2
+-- | @since 1.3
 instance
-  forall (from :: Symbol) (to :: Symbol).
-  ( KnownSymbol from
-  , KnownSymbol to
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
   ) =>
-  ToArgument (RatioSchema (from ':-> to))
+  ToArgument (RatioSchema (numerator ':%: denominator))
   where
   toArgument (RatioSchema ratio) =
-    ratioFixFormArgument @from @to fromVal toVal
+    ratioFixFormArgument @numerator @denominator num denom
     where
-      fromVal :: Integer
-      fromVal = Ratio.denominator ratio
-      toVal :: Integer
-      toVal = Ratio.numerator ratio
+      num :: Integer
+      num = Ratio.numerator ratio
+      denom :: Integer
+      denom = Ratio.denominator ratio
 
--- | @since 1.2
+-- | @since 1.3
 instance
-  forall (from :: Symbol) (to :: Symbol).
-  ( KnownSymbol from
-  , KnownSymbol to
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
   ) =>
-  OpenApi.ToSchema (RatioSchema (from ':-> to))
+  OpenApi.ToSchema (RatioSchema (numerator ':%: denominator))
   where
   declareNamedSchema _ =
-    ratioDeclareNamedSchema @from @to "RatioSchema"
+    ratioDeclareNamedSchema @numerator @denominator "RatioSchema"

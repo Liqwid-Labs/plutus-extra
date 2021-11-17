@@ -13,7 +13,7 @@ module PlutusTx.NatRatio.Internal (
   properFraction,
   recip,
   toRational,
-  NatRatioSchema (..),
+  NatRatioSchema (NatRatioSchema),
 ) where
 
 import Control.Monad (guard)
@@ -26,7 +26,7 @@ import Data.Aeson (
   (.:),
  )
 import Data.Aeson.Types (Parser)
-import Data.Coerce
+import Data.Coerce (coerce)
 import Data.OpenApi qualified as OpenApi
 import GHC.Generics (Generic)
 import GHC.TypeLits (KnownSymbol, Symbol)
@@ -40,7 +40,7 @@ import PlutusTx.Natural.Internal (Natural (Natural))
 import PlutusTx.Prelude
 import PlutusTx.Ratio qualified as Ratio
 import PlutusTx.SchemaUtils (
-  RatioDirection ((:->)),
+  RatioFields ((:%:)),
   jsonFieldSym,
   ratioDeclareNamedSchema,
   ratioFixFormArgument,
@@ -100,7 +100,7 @@ newtype NatRatio = NatRatio Rational
     , -- | @since @1.2
       OpenApi.ToSchema
     )
-    via (NatRatioSchema ("denominator" ':-> "numerator"))
+    via (NatRatioSchema ("denominator" ':%: "numerator"))
 
 {- | Represents this like a positive-only ratio.
 
@@ -241,80 +241,85 @@ toRational (NatRatio r) = r
 
 {- | Newtype for deriving Schema and JSON instances
 
- @since 1.2
+ @since 1.3
 -}
-newtype NatRatioSchema (dir :: RatioDirection)
+newtype NatRatioSchema (dir :: RatioFields)
   = NatRatioSchema NatRatio
-  deriving stock (Prelude.Show, Generic)
+  deriving stock
+    ( -- | @since 1.3
+      Prelude.Show
+    , -- | @since 1.3
+      Generic
+    )
 
--- | @since 1.2
+-- | @since 1.3
 instance
-  forall (from :: Symbol) (to :: Symbol).
-  ( KnownSymbol to
-  , KnownSymbol from
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
   ) =>
-  ToJSON (NatRatioSchema (from ':-> to))
+  ToJSON (NatRatioSchema (numerator ':%: denominator))
   where
-  toJSON :: NatRatioSchema (from ':-> to) -> Value
+  toJSON :: NatRatioSchema (numerator ':%: denominator) -> Value
   toJSON (NatRatioSchema ratio) =
     object
-      [ (jsonFieldSym @from, toJSON @Natural $ denominator ratio)
-      , (jsonFieldSym @to, toJSON @Natural $ numerator ratio)
+      [ (jsonFieldSym @numerator, toJSON @Natural $ numerator ratio)
+      , (jsonFieldSym @denominator, toJSON @Natural $ denominator ratio)
       ]
 
--- | @since 1.2
+-- | @since 1.3
 instance
-  forall (from :: Symbol) (to :: Symbol).
-  ( KnownSymbol to
-  , KnownSymbol from
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
   ) =>
-  FromJSON (NatRatioSchema (from ':-> to))
+  FromJSON (NatRatioSchema (numerator ':%: denominator))
   where
-  parseJSON :: Value -> Parser (NatRatioSchema (from ':-> to))
+  parseJSON :: Value -> Parser (NatRatioSchema (numerator ':%: denominator))
   parseJSON =
-    withObject (ratioTypeName @from @to "NatRatio") $ \obj -> do
-      from' <- obj .: jsonFieldSym @from
-      to' <- obj .: jsonFieldSym @to
-      case natRatio to' from' of
+    withObject (ratioTypeName @numerator @denominator "NatRatio") $ \obj -> do
+      num <- obj .: jsonFieldSym @numerator
+      denom <- obj .: jsonFieldSym @denominator
+      case natRatio num denom of
         Nothing -> Prelude.fail "Zero is not a valid NatRatio denominator"
         Just nr -> Prelude.pure . NatRatioSchema $ nr
 
--- | @since 1.2
+-- | @since 1.3
 instance
-  forall (from :: Symbol) (to :: Symbol).
-  ( KnownSymbol from
-  , KnownSymbol to
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
   ) =>
-  ToSchema (NatRatioSchema (from ':-> to))
+  ToSchema (NatRatioSchema (numerator ':%: denominator))
   where
   toSchema :: FormSchema
-  toSchema = ratioFormSchema @from @to
+  toSchema = ratioFormSchema @numerator @denominator
 
--- | @since 1.2
+-- | @since 1.3
 instance
-  forall (from :: Symbol) (to :: Symbol).
-  ( KnownSymbol from
-  , KnownSymbol to
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
   ) =>
-  ToArgument (NatRatioSchema (from ':-> to))
+  ToArgument (NatRatioSchema (numerator ':%: denominator))
   where
   toArgument (NatRatioSchema ratio) =
-    ratioFixFormArgument @from @to fromVal toVal
+    ratioFixFormArgument @numerator @denominator num denom
     where
-      fromVal :: Integer
-      fromVal = coerce . denominator $ ratio
-      toVal :: Integer
-      toVal = coerce . numerator $ ratio
+      num :: Integer
+      num = coerce . numerator $ ratio
+      denom :: Integer
+      denom = coerce . denominator $ ratio
 
--- | @since 1.2
+-- | @since 1.3
 instance
-  forall (from :: Symbol) (to :: Symbol).
-  ( KnownSymbol from
-  , KnownSymbol to
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
   ) =>
-  OpenApi.ToSchema (NatRatioSchema (from ':-> to))
+  OpenApi.ToSchema (NatRatioSchema (numerator ':%: denominator))
   where
   declareNamedSchema _ =
-    ratioDeclareNamedSchema @from @to "NatRatioSchema"
+    ratioDeclareNamedSchema @numerator @denominator "NatRatioSchema"
 
 makeLift ''NatRatio
