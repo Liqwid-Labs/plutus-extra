@@ -10,7 +10,7 @@
  Instances of various QuickCheck type classes for Plutus types. Where
  possible, we have instances of:
 
- * 'Arbitrary' (and 'Arbitrary1'), with shrinker support
+ * 'Arbitrary', 'Arbitrary1' and 'Arbitrary2', with shrinker support
  * 'CoArbitrary'
  * 'Function'
 
@@ -50,6 +50,7 @@ import Plutus.V1.Ledger.TxId (TxId (TxId))
 import Plutus.V1.Ledger.Value (
   CurrencySymbol (CurrencySymbol),
   TokenName (TokenName),
+  Value (Value),
  )
 import PlutusTx (
   Data (B, Constr, I, List, Map),
@@ -57,6 +58,7 @@ import PlutusTx (
   ToData (toBuiltinData),
   UnsafeFromData (unsafeFromBuiltinData),
  )
+import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins.Internal (
   BuiltinByteString (BuiltinByteString),
   BuiltinData (BuiltinData),
@@ -64,6 +66,7 @@ import PlutusTx.Builtins.Internal (
 import Test.QuickCheck.Arbitrary (
   Arbitrary (arbitrary, shrink),
   Arbitrary1 (liftArbitrary, liftShrink),
+  Arbitrary2 (liftArbitrary2, liftShrink2),
   CoArbitrary (coarbitrary),
  )
 import Test.QuickCheck.Function (Function (function), functionMap)
@@ -381,10 +384,14 @@ instance Function CurrencySymbol where
       into :: CurrencySymbol -> BuiltinByteString
       into (CurrencySymbol bs) = bs
 
--- | @since 1.0
+-- | @since 1.1
 instance Arbitrary TxOutRef where
-  arbitrary = TxOutRef <$> arbitrary <*> arbitrary
-  shrink (TxOutRef tid tidx) = TxOutRef <$> shrink tid <*> shrink tidx
+  arbitrary = do
+    NonNegative tidx <- arbitrary
+    TxOutRef <$> arbitrary <*> pure tidx
+  shrink (TxOutRef tid tidx) = do
+    NonNegative tidx' <- shrink . NonNegative $ tidx
+    TxOutRef <$> shrink tid <*> pure tidx'
 
 -- | @since 1.0
 instance CoArbitrary TxOutRef where
@@ -399,6 +406,56 @@ instance Function TxOutRef where
       into (TxOutRef tid tidx) = (tid, tidx)
       outOf :: (TxId, Integer) -> TxOutRef
       outOf (tid, tidx) = TxOutRef tid tidx
+
+-- | @since 1.1
+instance (Arbitrary k, Arbitrary v) => Arbitrary (AssocMap.Map k v) where
+  arbitrary = liftArbitrary2 arbitrary arbitrary
+  shrink = liftShrink2 shrink shrink
+
+-- | @since 1.1
+instance (Arbitrary k) => Arbitrary1 (AssocMap.Map k) where
+  liftArbitrary = liftArbitrary2 arbitrary
+  liftShrink = liftShrink2 shrink
+
+-- | @since 1.1
+instance Arbitrary2 AssocMap.Map where
+  liftArbitrary2 genKey genVal =
+    AssocMap.fromList <$> liftArbitrary (liftArbitrary2 genKey genVal)
+  liftShrink2 shrinkKey shrinkValue =
+    fmap AssocMap.fromList
+      . liftShrink (liftShrink2 shrinkKey shrinkValue)
+      . AssocMap.toList
+
+-- | @since 1.1
+instance (CoArbitrary k, CoArbitrary v) => CoArbitrary (AssocMap.Map k v) where
+  coarbitrary aMap gen = case AssocMap.toList aMap of
+    [] -> variant (0 :: Int) gen
+    (kv : kvs) -> variant (1 :: Int) . coarbitrary (kv, kvs) $ gen
+
+-- | @since 1.1
+instance (Function k, Function v) => Function (AssocMap.Map k v) where
+  function = functionMap AssocMap.toList AssocMap.fromList
+
+-- | @since 1.1
+deriving via
+  (AssocMap.Map CurrencySymbol (AssocMap.Map TokenName Integer))
+  instance
+    Arbitrary Value
+
+-- | @since 1.1
+deriving via
+  (AssocMap.Map CurrencySymbol (AssocMap.Map TokenName Integer))
+  instance
+    CoArbitrary Value
+
+-- | @since 1.1
+instance Function Value where
+  function = functionMap into Value
+    where
+      into ::
+        Value ->
+        AssocMap.Map CurrencySymbol (AssocMap.Map TokenName Integer)
+      into (Value v) = v
 
 -- Helpers
 
