@@ -27,15 +27,15 @@ import Prelude
 
 {- | Type-level data representing the "direction" that a ratio converts to or from.
 
- @since 1.3
+ @since 2.3
 -}
 data RatioFields = Symbol :%: Symbol
 
--- | @since 1.3
+-- | @since 2.3
 jsonFieldSym :: forall (s :: Symbol). (KnownSymbol s) => Text
 jsonFieldSym = pack $ symbolVal (Proxy @s)
 
--- | @since 1.3
+-- | @since 2.3
 ratioDeclareNamedSchema ::
   forall (numerator :: Symbol) (denominator :: Symbol).
   ( KnownSymbol numerator
@@ -56,7 +56,7 @@ ratioDeclareNamedSchema name = do
               ]
         }
 
--- | @since 1.3
+-- | @since 2.3
 ratioFixFormArgument ::
   forall (numerator :: Symbol) (denominator :: Symbol).
   ( KnownSymbol numerator
@@ -72,7 +72,7 @@ ratioFixFormArgument num denom =
       , (symbolVal (Proxy @denominator), toArgument denom)
       ]
 
--- | @since 1.3
+-- | @since 2.3
 ratioFormSchema ::
   forall (numerator :: Symbol) (denominator :: Symbol).
   ( KnownSymbol numerator

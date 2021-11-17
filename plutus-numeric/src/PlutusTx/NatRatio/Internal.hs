@@ -241,18 +241,18 @@ toRational (NatRatio r) = r
 
 {- | Newtype for deriving Schema and JSON instances
 
- @since 1.3
+ @since 2.3
 -}
 newtype NatRatioSchema (dir :: RatioFields)
   = NatRatioSchema NatRatio
   deriving stock
-    ( -- | @since 1.3
+    ( -- | @since 2.3
       Prelude.Show
-    , -- | @since 1.3
+    , -- | @since 2.3
       Generic
     )
 
--- | @since 1.3
+-- | @since 2.3
 instance
   forall (numerator :: Symbol) (denominator :: Symbol).
   ( KnownSymbol numerator
@@ -267,7 +267,7 @@ instance
       , (jsonFieldSym @denominator, toJSON @Natural $ denominator ratio)
       ]
 
--- | @since 1.3
+-- | @since 2.3
 instance
   forall (numerator :: Symbol) (denominator :: Symbol).
   ( KnownSymbol numerator
@@ -284,7 +284,7 @@ instance
         Nothing -> Prelude.fail "Zero is not a valid NatRatio denominator"
         Just nr -> Prelude.pure . NatRatioSchema $ nr
 
--- | @since 1.3
+-- | @since 2.3
 instance
   forall (numerator :: Symbol) (denominator :: Symbol).
   ( KnownSymbol numerator
@@ -295,7 +295,7 @@ instance
   toSchema :: FormSchema
   toSchema = ratioFormSchema @numerator @denominator
 
--- | @since 1.3
+-- | @since 2.3
 instance
   forall (numerator :: Symbol) (denominator :: Symbol).
   ( KnownSymbol numerator
@@ -311,7 +311,7 @@ instance
       denom :: Integer
       denom = coerce . denominator $ ratio
 
--- | @since 1.3
+-- | @since 2.3
 instance
   forall (numerator :: Symbol) (denominator :: Symbol).
   ( KnownSymbol numerator

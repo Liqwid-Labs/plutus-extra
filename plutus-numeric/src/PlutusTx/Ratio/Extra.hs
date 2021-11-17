@@ -35,14 +35,14 @@ import Prelude
 
 {- | Newtype for deriving Schema and JSON instances
 
- @since 1.3
+ @since 2.3
 -}
 newtype RatioSchema (dir :: RatioFields)
   = RatioSchema PlutusTx.Prelude.Rational
   deriving stock
-    ( -- | @since 1.3
+    ( -- | @since 2.3
       Prelude.Show
-    , -- | @since 1.3
+    , -- | @since 2.3
       Generic
     )
 
@@ -53,7 +53,7 @@ mkRatioSchema ::
   RatioSchema (numerator ':%: denominator)
 mkRatioSchema num denom = RatioSchema (num PlutusTx.Prelude.% denom)
 
--- | @since 1.3
+-- | @since 2.3
 instance
   forall (numerator :: Symbol) (denominator :: Symbol).
   ( KnownSymbol numerator
@@ -68,7 +68,7 @@ instance
       , (jsonFieldSym @denominator, toJSON @Integer $ Ratio.denominator ratio)
       ]
 
--- | @since 1.3
+-- | @since 2.3
 instance
   forall (numerator :: Symbol) (denominator :: Symbol).
   ( KnownSymbol numerator
@@ -83,7 +83,7 @@ instance
         <$> obj .: jsonFieldSym @numerator
         <*> obj .: jsonFieldSym @denominator
 
--- | @since 1.3
+-- | @since 2.3
 instance
   forall (numerator :: Symbol) (denominator :: Symbol).
   ( KnownSymbol numerator
@@ -94,7 +94,7 @@ instance
   toSchema :: FormSchema
   toSchema = ratioFormSchema @numerator @denominator
 
--- | @since 1.3
+-- | @since 2.3
 instance
   forall (numerator :: Symbol) (denominator :: Symbol).
   ( KnownSymbol numerator
@@ -110,7 +110,7 @@ instance
       denom :: Integer
       denom = Ratio.denominator ratio
 
--- | @since 1.3
+-- | @since 2.3
 instance
   forall (numerator :: Symbol) (denominator :: Symbol).
   ( KnownSymbol numerator
