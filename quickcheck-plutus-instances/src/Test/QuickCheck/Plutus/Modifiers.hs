@@ -11,6 +11,7 @@
 module Test.QuickCheck.Plutus.Modifiers (
   UniqueList (..),
   UniqueKeys (..),
+  NonNegative (..),
 ) where
 
 import Control.Monad (guard)
@@ -24,7 +25,13 @@ import Test.QuickCheck.Arbitrary (
   CoArbitrary (coarbitrary),
  )
 import Test.QuickCheck.Function (Function (function), functionMap)
-import Test.QuickCheck.Gen (Gen, chooseInt, sized, variant)
+import Test.QuickCheck.Gen (
+  Gen,
+  chooseInt,
+  sized,
+  suchThat,
+  variant,
+ )
 
 {- | A wrapper around (Plutus) lists that ensures elements are unique. The
  elements are also ordered ascending according to the 'PlutusTx.Ord' instance
@@ -46,6 +53,11 @@ newtype UniqueList (a :: Type) = UniqueList [a]
       CoArbitrary
     )
     via [a]
+  deriving
+    ( -- | @since 1.1
+      PlutusTx.Functor
+    )
+    via []
 
 -- | @since 1.1
 instance (Arbitrary a, PlutusTx.Ord a) => Arbitrary (UniqueList a) where
@@ -90,6 +102,11 @@ newtype UniqueKeys (k :: Type) (v :: Type) = UniqueKeys (AssocMap.Map k v)
       PlutusTx.Eq
     )
     via (AssocMap.Map k v)
+  deriving
+    ( -- | @since 1.1
+      PlutusTx.Functor
+    )
+    via (AssocMap.Map k)
 
 -- | @since 1.1
 instance
@@ -130,6 +147,45 @@ instance (Function k, Function v) => Function (UniqueKeys k v) where
       into (UniqueKeys aMap) = AssocMap.toList aMap
       outOf :: [(k, v)] -> UniqueKeys k v
       outOf = UniqueKeys . AssocMap.fromList
+
+{- | A newtype around numerical types which ensures they are not negative; that
+ is, they are greater or equal to 'PlutusTx.zero'. This is a Plutus-specific
+ generalization of the wrapper of the same name from QuickCheck.
+
+ @since 1.1
+-}
+newtype NonNegative (a :: Type) = NonNegative a
+  deriving stock
+    ( -- | @since 1.1
+      Show
+    )
+  deriving
+    ( -- | @since 1.1
+      Eq
+    , -- | @since 1.1
+      PlutusTx.Eq
+    , -- | @since 1.1
+      CoArbitrary
+    )
+    via a
+
+-- | @since 1.1
+instance
+  (Arbitrary a, PlutusTx.Ord a, PlutusTx.AdditiveMonoid a) =>
+  Arbitrary (NonNegative a)
+  where
+  arbitrary = NonNegative <$> suchThat arbitrary (PlutusTx.>= PlutusTx.zero)
+  shrink (NonNegative x) = do
+    x' <- shrink x
+    guard (x' PlutusTx.>= PlutusTx.zero)
+    pure . NonNegative $ x'
+
+-- | @since 1.1
+instance (Function a) => Function (NonNegative a) where
+  function = functionMap into NonNegative
+    where
+      into :: NonNegative a -> a
+      into (NonNegative x) = x
 
 -- Helpers
 
