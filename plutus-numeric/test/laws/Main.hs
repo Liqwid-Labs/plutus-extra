@@ -7,6 +7,7 @@ import Test.Tasty.Plutus.Laws (
   dataLaws,
   jsonLaws,
   plutusEqLaws,
+  plutusEqLawsSubstitution,
   plutusOrdLaws,
  )
 import Test.Tasty.QuickCheck (QuickCheckTests)
@@ -19,7 +20,9 @@ main =
     , dataLaws @Natural
     , dataLaws @NatRatio
     , plutusEqLaws @Natural
+    , plutusEqLawsSubstitution @Natural
     , plutusEqLaws @NatRatio
+    , plutusEqLawsSubstitution @NatRatio
     , plutusOrdLaws @Natural
     , plutusOrdLaws @NatRatio
     ]
