@@ -198,15 +198,20 @@ compileSpending conf cb d val =
 compileMinting ::
   TransactionConfig ->
   ContextBuilder 'ForMinting ->
+  Value ->
   ScriptContext
-compileMinting conf cb =
+compileMinting conf cb val =
   ScriptContext go
     . Minting
     . testCurrencySymbol
     $ conf
   where
     go :: TxInfo
-    go = baseTxInfo conf cb
+    go =
+      let baseInfo = baseTxInfo conf cb
+       in baseInfo
+            { txInfoMint = val
+            }
 
 -- Helpers
 
