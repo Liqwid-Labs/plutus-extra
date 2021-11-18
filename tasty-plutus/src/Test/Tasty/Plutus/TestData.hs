@@ -60,10 +60,10 @@ data TestData (p :: Purpose) where
     -- @since 3.0
     Value ->
     TestData 'ForSpending
-  -- | @since 3.0
   MintingTest ::
     (ToData redeemer, FromData redeemer, Show redeemer) =>
     redeemer ->
+    -- @since 4.1
     Value ->
     TestData 'ForMinting
 
@@ -139,7 +139,7 @@ data Generator (p :: Purpose) where
     Methodology redeemer ->
     Methodology Value ->
     Generator 'ForSpending
-  -- | @since 3.1
+  -- | @since 4.1
   GenForMinting ::
     ( ToData redeemer
     , FromData redeemer
@@ -173,7 +173,7 @@ fromArbitrarySpending f = GenForSpending f fromArbitrary fromArbitrary
 
 {- | Generate using 'Arbitrary' instances.
 
- @since 3.1
+ @since 4.1
 -}
 fromArbitraryMinting ::
   forall (redeemer :: Type).
