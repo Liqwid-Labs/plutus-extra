@@ -220,9 +220,24 @@ compileMinting conf cb =
      partial context is missing. The input is a list
      of pairs where the first element is the partial
      context, and the second is the test message when
-     that particular context is missing.
+     that particular context is missing. e.g.
 
- @since
+     >>> makeIncompleteContexts
+     >>>   [ (context1, "Missing context 1")
+     >>>   , (context2, "Missing context 2")
+     >>>   , (context3, "Missing context 3")
+     >>>   ]
+     [ (context2 <> context3, "Missing context 1")
+     , (context1 <> context3, "Missing context 2")
+     , (context1 <> context2, "Missing context 3")
+     ]
+
+     This can then be run in a `withValidator` block
+     like so:
+
+     >>> mapM_ (\(ctx,str) -> shouldn'tValidate str input ctx) convertedContexts
+
+ @since 4.1
 -}
 makeIncompleteContexts ::
   forall (p :: Purpose).

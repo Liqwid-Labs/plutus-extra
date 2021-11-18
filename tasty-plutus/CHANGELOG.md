@@ -4,6 +4,11 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 4.1 -- 2021-11-18
+
+* Added `makeIncompleteContexts` to ease building of contexts that are missing
+  a single portion of the context.
+
 ## 4.0 -- 2021-11-11
 
 - Plutus upgraded
