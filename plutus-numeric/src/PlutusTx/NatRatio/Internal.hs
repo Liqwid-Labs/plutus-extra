@@ -257,7 +257,18 @@ properFraction (NatRatio r) =
 toRational :: NatRatio -> Rational
 toRational (NatRatio r) = r
 
-{- | Newtype for deriving Schema and JSON instances
+{- | Newtype for deriving
+'ToSchema', 'ToArgument', 'OpenApi.ToSchema', 'ToJSON' and 'FromJSON' instances
+for newtypes over NatRatio with the specified field names for the numerator and denominator.
+
+__Examples:__
+
+@
+newtype ExchangeRatio = ExchangeRatio NatRatio
+  deriving
+    (ToJSON, FromJSON, OpenApi.ToSchema)
+    via (NatRatioSchema ("Bitcoin" ':%: "USD"))
+@
 
  @since 2.3
 -}

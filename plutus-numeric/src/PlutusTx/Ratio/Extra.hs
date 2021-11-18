@@ -33,7 +33,18 @@ import Schema (
  )
 import Prelude
 
-{- | Newtype for deriving Schema and JSON instances
+{- | Newtype for deriving
+'ToSchema', 'ToArgument', 'OpenApi.ToSchema', 'ToJSON' and 'FromJSON' instances
+for newtypes over Rational with the specified field names for the numerator and denominator.
+
+__Examples:__
+
+@
+newtype PercentageChangeRatio = PercentageChangeRatio Rational
+  deriving
+    (ToJSON, FromJSON, OpenApi.ToSchema)
+    via (RatioSchema ("Change" ':%: "Value"))
+@
 
  @since 2.3
 -}
