@@ -261,7 +261,7 @@ toRational (NatRatio r) = r
 'ToSchema', 'ToArgument', 'OpenApi.ToSchema', 'ToJSON' and 'FromJSON' instances
 for newtypes over NatRatio with the specified field names for the numerator and denominator.
 
-__Examples:__
+# Example
 
 @
 newtype ExchangeRatio = ExchangeRatio NatRatio

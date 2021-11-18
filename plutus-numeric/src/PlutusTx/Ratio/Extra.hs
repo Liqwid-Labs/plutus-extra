@@ -37,7 +37,7 @@ import Prelude
 'ToSchema', 'ToArgument', 'OpenApi.ToSchema', 'ToJSON' and 'FromJSON' instances
 for newtypes over Rational with the specified field names for the numerator and denominator.
 
-__Examples:__
+# Example
 
 @
 newtype PercentageChangeRatio = PercentageChangeRatio Rational
