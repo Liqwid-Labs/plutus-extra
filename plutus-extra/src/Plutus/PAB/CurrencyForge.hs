@@ -38,11 +38,11 @@ giveTo ::
   Ledger.Value ->
   Contract w Builtin.EmptySchema Contract.ContractError ()
 giveTo wallet value = do
-  ownPK <- Contract.mapError fromCurrencyError (Ledger.pubKeyHash <$> Contract.ownPubKey)
-  let pubKeyHash = Ledger.pubKeyHash $ Wallet.walletPubKey wallet
+  ownPK <- Contract.mapError fromCurrencyError Contract.ownPubKeyHash
+  let pubKeyHash = Wallet.walletPubKeyHash wallet
   when (pubKeyHash /= ownPK) $ do
     tx <- Contract.submitTx $ Constraints.mustPayToPubKey pubKeyHash value
-    Contract.awaitTxConfirmed $ Ledger.txId tx
+    Contract.awaitTxConfirmed $ Ledger.getCardanoTxId tx
 
 -- | Mint currency and give to a specific wallet
 initCurrency ::
@@ -51,7 +51,7 @@ initCurrency ::
   Wallet ->
   Contract (OutputBus.OutputBus Ledger.AssetClass) Builtin.EmptySchema Contract.ContractError ()
 initCurrency tokenName forgedAmount receivingWallet = do
-  ownPK <- Contract.mapError fromCurrencyError (Ledger.pubKeyHash <$> Contract.ownPubKey)
+  ownPK <- Contract.mapError fromCurrencyError Contract.ownPubKeyHash
   cur <- Contract.mapError fromCurrencyError $ Currency.mintContract ownPK [(tokenName, forgedAmount)]
   let currencySymbol = Currency.currencySymbol cur
       assetClass = Value.assetClass currencySymbol tokenName
