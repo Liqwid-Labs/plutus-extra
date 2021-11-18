@@ -23,6 +23,7 @@
 -}
 module Test.QuickCheck.Plutus.Instances () where
 
+import Control.Monad (guard)
 import Data.ByteString (ByteString)
 import Data.Kind (Type)
 import Data.Maybe (maybeToList)
@@ -33,7 +34,12 @@ import Ledger.Oracle (
   SignedMessage (SignedMessage),
  )
 import Ledger.Scripts (datumHash)
+import Plutus.V1.Ledger.Address (Address (Address))
 import Plutus.V1.Ledger.Bytes (LedgerBytes (LedgerBytes))
+import Plutus.V1.Ledger.Credential (
+  Credential (PubKeyCredential, ScriptCredential),
+  StakingCredential (StakingHash, StakingPtr),
+ )
 import Plutus.V1.Ledger.Crypto (
   PubKey (PubKey),
   PubKeyHash (PubKeyHash),
@@ -45,7 +51,10 @@ import Plutus.V1.Ledger.Scripts (
   ValidatorHash (ValidatorHash),
  )
 import Plutus.V1.Ledger.Time (POSIXTime (POSIXTime))
-import Plutus.V1.Ledger.Tx (TxOutRef (TxOutRef))
+import Plutus.V1.Ledger.Tx (
+  TxOut (TxOut),
+  TxOutRef (TxOutRef),
+ )
 import Plutus.V1.Ledger.TxId (TxId (TxId))
 import Plutus.V1.Ledger.Value (
   CurrencySymbol (CurrencySymbol),
@@ -63,6 +72,7 @@ import PlutusTx.Builtins.Internal (
   BuiltinByteString (BuiltinByteString),
   BuiltinData (BuiltinData),
  )
+import PlutusTx.Prelude qualified as PTx
 import Test.QuickCheck.Arbitrary (
   Arbitrary (arbitrary, shrink),
   Arbitrary1 (liftArbitrary, liftShrink),
@@ -80,6 +90,7 @@ import Test.QuickCheck.Gen (
   vectorOf,
  )
 import Test.QuickCheck.Modifiers (NonNegative (NonNegative))
+import Test.QuickCheck.Plutus.Modifiers (UniqueKeys (UniqueKeys))
 
 -- | @since 1.0
 instance Arbitrary BuiltinByteString where
@@ -438,24 +449,156 @@ instance (Function k, Function v) => Function (AssocMap.Map k v) where
 
 -- | @since 1.1
 deriving via
-  (AssocMap.Map CurrencySymbol (AssocMap.Map TokenName Integer))
+  (UniqueKeys CurrencySymbol (UniqueKeys TokenName Integer))
   instance
     Arbitrary Value
 
 -- | @since 1.1
 deriving via
-  (AssocMap.Map CurrencySymbol (AssocMap.Map TokenName Integer))
+  (UniqueKeys CurrencySymbol (UniqueKeys TokenName Integer))
   instance
     CoArbitrary Value
 
 -- | @since 1.1
 instance Function Value where
-  function = functionMap into Value
+  function = functionMap into outOf
     where
       into ::
         Value ->
-        AssocMap.Map CurrencySymbol (AssocMap.Map TokenName Integer)
-      into (Value v) = v
+        UniqueKeys CurrencySymbol (UniqueKeys TokenName Integer)
+      into (Value v) = UniqueKeys . PTx.fmap UniqueKeys $ v
+      outOf ::
+        UniqueKeys CurrencySymbol (UniqueKeys TokenName Integer) ->
+        Value
+      outOf (UniqueKeys aMap) =
+        Value . PTx.fmap (\(UniqueKeys aMap') -> aMap') $ aMap
+
+-- | @since 1.1
+instance Arbitrary Credential where
+  arbitrary = oneof [PubKeyCredential <$> arbitrary, ScriptCredential <$> arbitrary]
+  shrink = \case
+    PubKeyCredential pk -> PubKeyCredential <$> shrink pk
+    ScriptCredential vh -> ScriptCredential <$> shrink vh
+
+-- | @since 1.1
+instance CoArbitrary Credential where
+  coarbitrary cred gen = case cred of
+    PubKeyCredential pk -> variant (0 :: Int) . coarbitrary pk $ gen
+    ScriptCredential vh -> variant (1 :: Int) . coarbitrary vh $ gen
+
+-- | @since 1.1
+instance Function Credential where
+  function = functionMap into outOf
+    where
+      into :: Credential -> Either PubKeyHash ValidatorHash
+      into = \case
+        PubKeyCredential pk -> Left pk
+        ScriptCredential vh -> Right vh
+      outOf :: Either PubKeyHash ValidatorHash -> Credential
+      outOf = \case
+        Left pk -> PubKeyCredential pk
+        Right vh -> ScriptCredential vh
+
+-- | @since 1.1
+instance Arbitrary StakingCredential where
+  arbitrary =
+    oneof
+      [ StakingHash <$> arbitrary
+      , go
+      ]
+    where
+      go :: Gen StakingCredential
+      go = do
+        NonNegative i <- arbitrary
+        StakingPtr i <$> arbitrary <*> arbitrary
+  shrink = \case
+    StakingHash cred -> StakingHash <$> shrink cred
+    StakingPtr i j k -> do
+      NonNegative i' <- shrink . NonNegative $ i
+      StakingPtr i' <$> shrink j <*> shrink k
+
+-- | @since 1.1
+instance CoArbitrary StakingCredential where
+  coarbitrary sCred gen = case sCred of
+    StakingHash cred -> variant (0 :: Int) . coarbitrary cred $ gen
+    StakingPtr i j k ->
+      variant (1 :: Int)
+        . coarbitrary i
+        . coarbitrary j
+        . coarbitrary k
+        $ gen
+
+-- | @since 1.1
+instance Function StakingCredential where
+  function = functionMap into outOf
+    where
+      into ::
+        StakingCredential ->
+        Either Credential (Integer, Integer, Integer)
+      into = \case
+        StakingHash cred -> Left cred
+        StakingPtr i j k -> Right (i, j, k)
+      outOf ::
+        Either Credential (Integer, Integer, Integer) ->
+        StakingCredential
+      outOf = \case
+        Left cred -> StakingHash cred
+        Right (i, j, k) -> StakingPtr i j k
+
+-- | @since 1.1
+instance Arbitrary Address where
+  arbitrary = Address <$> arbitrary <*> arbitrary
+  shrink (Address cred sCred) = Address <$> shrink cred <*> shrink sCred
+
+-- | @since 1.1
+instance CoArbitrary Address where
+  coarbitrary (Address cred sCred) gen =
+    coarbitrary cred . coarbitrary sCred $ gen
+
+-- | @since 1.1
+instance Function Address where
+  function = functionMap into outOf
+    where
+      into :: Address -> (Credential, Maybe StakingCredential)
+      into (Address cred mScred) = (cred, mScred)
+      outOf :: (Credential, Maybe StakingCredential) -> Address
+      outOf (cred, mScred) = Address cred mScred
+
+-- | @since 1.1
+instance Arbitrary TxOut where
+  arbitrary = do
+    UniqueKeys valMap <- PTx.fmap go <$> arbitrary
+    let val = Value valMap
+    TxOut <$> arbitrary <*> pure val <*> arbitrary
+    where
+      go ::
+        UniqueKeys TokenName (NonNegative Integer) ->
+        AssocMap.Map TokenName Integer
+      go (UniqueKeys aMap) = PTx.fmap (\(NonNegative i) -> i) aMap
+  shrink (TxOut addr val mDatumHash) =
+    TxOut <$> shrink addr <*> go val <*> shrink mDatumHash
+    where
+      go :: Value -> [Value]
+      go (Value aMap) = do
+        let uniqued = UniqueKeys . PTx.fmap UniqueKeys $ aMap
+        UniqueKeys aMap' <- shrink uniqued
+        let aMap'' = PTx.fmap (\(UniqueKeys m) -> m) aMap'
+        guard (PTx.all (PTx.all (PTx.>= PTx.zero)) aMap'')
+        pure . Value $ aMap''
+
+-- | @since 1.1
+instance CoArbitrary TxOut where
+  coarbitrary (TxOut addr val mDatumHash) gen =
+    coarbitrary addr . coarbitrary val . coarbitrary mDatumHash $ gen
+
+-- | @since 1.1
+instance Function TxOut where
+  function = functionMap into outOf
+    where
+      into :: TxOut -> (Address, Value, Maybe DatumHash)
+      into (TxOut addr val mDH) = (addr, val, mDH)
+      outOf :: (Address, Value, Maybe DatumHash) -> TxOut
+      outOf (addr, val, mDH) = TxOut addr val mDH
 
 -- Helpers
 
