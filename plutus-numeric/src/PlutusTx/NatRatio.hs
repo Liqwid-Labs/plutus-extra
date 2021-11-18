@@ -32,6 +32,9 @@ module PlutusTx.NatRatio (
   Internal.recip,
   Internal.toRational,
 
+  -- ** NatRatioSchema
+  Internal.NatRatioSchema (NatRatioSchema),
+
   -- ** Conversion
   natRatioToRational,
 ) where

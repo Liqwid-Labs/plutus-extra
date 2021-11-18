@@ -71,7 +71,7 @@ library
     , plutus-contract
     , plutus-ledger
     , plutus-ledger-api
-    , plutus-numeric     ^>=2.2
+    , plutus-numeric     ^>=2.3
     , plutus-pretty      ^>=2.0
     , plutus-tx
     , pretty             ^>=1.1.3.6
