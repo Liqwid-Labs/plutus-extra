@@ -222,20 +222,23 @@ compileMinting conf cb =
      context, and the second is the test message when
      that particular context is missing. e.g.
 
-     >>> makeIncompleteContexts
-     >>>   [ (context1, "Missing context 1")
-     >>>   , (context2, "Missing context 2")
-     >>>   , (context3, "Missing context 3")
-     >>>   ]
-     [ (context2 <> context3, "Missing context 1")
-     , (context1 <> context3, "Missing context 2")
-     , (context1 <> context2, "Missing context 3")
-     ]
+     > makeIncompleteContexts
+     >   [ (context1, "Missing context 1")
+     >   , (context2, "Missing context 2")
+     >   , (context3, "Missing context 3")
+     >   ]
+
+     is equivalent to
+
+     > [ (context2 <> context3, "Missing context 1")
+     > , (context1 <> context3, "Missing context 2")
+     > , (context1 <> context2, "Missing context 3")
+     > ]
 
      This can then be run in a `withValidator` block
      like so:
 
-     >>> mapM_ (\(ctx,str) -> shouldn'tValidate str input ctx) convertedContexts
+     > mapM_ (\(ctx,str) -> shouldn'tValidate str input ctx) convertedContexts
 
  @since 4.1
 -}
