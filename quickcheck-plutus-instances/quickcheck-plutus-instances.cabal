@@ -45,7 +45,10 @@ common lang
 
 library
   import:          lang
-  exposed-modules: Test.QuickCheck.Plutus.Instances
+  exposed-modules:
+    Test.QuickCheck.Plutus.Instances
+    Test.QuickCheck.Plutus.Modifiers
+
   build-depends:
     , bytestring         ^>=0.10.12.0
     , plutus-ledger
