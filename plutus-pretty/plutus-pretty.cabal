@@ -49,10 +49,15 @@ library
     PlutusTx.Skeleton
     Text.Show.Pretty.Extra
 
+  other-modules:
+    PlutusTx.Skeleton.Internal
+    PlutusTx.Skeleton.QQ
+
   build-depends:
     , base               ^>=4.14
     , plutus-ledger-api
     , plutus-tx
     , pretty-show        ^>=1.10
+    , template-haskell   ^>=2.16.0.0
 
   hs-source-dirs:  src

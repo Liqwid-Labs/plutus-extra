@@ -1,85 +1,80 @@
 module PlutusTx.Skeleton (
+  -- * Type and type class
   Skeleton,
+  Skeletal (skeletize),
+
+  -- * TH helper
+  makeSkeletal,
+
+  -- * Functions
+  showSkeleton,
+  traceSkeleton,
+  traceErrorSkeleton,
+  traceIfFalseSkeleton,
+  traceIfTrueSkeleton,
 ) where
 
+import Data.Kind (Type)
 import PlutusTx.Prelude qualified as PTx
+import PlutusTx.Skeleton.Internal (Skeletal (skeletize), Skeleton)
+import PlutusTx.Skeleton.QQ (makeSkeletal)
 
 -- | @since 2.1
-data Skeleton
-  = -- | @since 2.1
-    BuiltinS PTx.BuiltinData
-  | -- | @since 2.1
-    ConS PTx.BuiltinString [Skeleton]
-  | -- | @since 2.1
-    RecS (PTx.BuiltinString, Skeleton) [(PTx.BuiltinString, Skeleton)]
-  | -- | @since 2.1
-    TupleS Skeleton [Skeleton]
-  | -- | @since 2.1
-    ListS [Skeleton]
-  deriving stock
-    ( -- | @since 2.1
-      Eq
-    , -- | @since 2.1
-      Show
-    )
+showSkeleton ::
+  forall (a :: Type).
+  (Skeletal a) =>
+  a ->
+  [PTx.BuiltinString]
+showSkeleton = _
 
 -- | @since 2.1
-instance PTx.Eq Skeleton where
-  {-# INLINEABLE (==) #-}
-  sk == sk' = case (sk, sk') of
-    (BuiltinS dat, BuiltinS dat') -> dat PTx.== dat'
-    (ConS nam sks, ConS nam' sks') ->
-      nam PTx.== nam' PTx.&& sks PTx.== sks'
-    (RecS keyVal keyVals, RecS keyVal' keyVals') ->
-      keyVal PTx.== keyVal' PTx.&& keyVals PTx.== keyVals'
-    (TupleS x xs, TupleS x' xs') ->
-      x PTx.== x' PTx.&& xs PTx.== xs'
-    (ListS xs, ListS xs') -> xs PTx.== xs'
-    _ -> False
-
-{- | @since 2.1
-
- Instance must define a representable functor, that is, x == y iff skeletize
- x == skeletize y
--}
-class (PTx.Eq a) => Skeletal a where
-  skeletize :: a -> Skeleton
+{-# INLINEABLE traceSkeleton #-}
+traceSkeleton ::
+  forall (b :: Type) (a :: Type).
+  (Skeletal a) =>
+  a ->
+  b ->
+  b
+traceSkeleton x = foldTrace (showSkeleton x)
 
 -- | @since 2.1
-instance Skeletal PTx.BuiltinData where
-  {-# INLINEABLE skeletize #-}
-  skeletize = BuiltinS
+{-# INLINEABLE traceErrorSkeleton #-}
+traceErrorSkeleton ::
+  forall (b :: Type) (a :: Type).
+  (Skeletal a) =>
+  a ->
+  b
+traceErrorSkeleton x = foldTraceError (showSkeleton x)
 
 -- | @since 2.1
-instance (Skeletal a) => Skeletal [a] where
-  {-# INLINEABLE skeletize #-}
-  skeletize = ListS . PTx.fmap skeletize
+{-# INLINEABLE traceIfFalseSkeleton #-}
+traceIfFalseSkeleton ::
+  forall (a :: Type).
+  (Skeletal a) =>
+  a ->
+  Bool ->
+  Bool
+traceIfFalseSkeleton x b =
+  if b then True else foldTrace (showSkeleton x) False
 
 -- | @since 2.1
-instance (Skeletal a, Skeletal b) => Skeletal (a, b) where
-  {-# INLINEABLE skeletize #-}
-  skeletize (x, y) = (skeletize x, skeletize y)
+{-# INLINEABLE traceIfTrueSkeleton #-}
+traceIfTrueSkeleton ::
+  forall (a :: Type).
+  (Skeletal a) =>
+  a ->
+  Bool ->
+  Bool
+traceIfTrueSkeleton x b =
+  if b then foldTrace (showSkeleton x) True else False
 
--- | @since 2.1
-instance (Skeletal a, Skeletal b, Skeletal c) => Skeletal (a, b, c) where
-  {-# INLINEABLE skeletize #-}
-  skeletize (x, y, z) = (skeletize x, skeletize y, skeletize z)
+-- Helpers
 
--- Proposed API
---
+foldTrace :: forall (a :: Type). [PTx.BuiltinString] -> a -> a
+foldTrace = PTx.foldr go PTx.id
+  where
+    go :: PTx.BuiltinString -> (a -> a) -> (a -> a)
+    go bbs acc = PTx.trace bbs acc
 
--- * TH helper 'makeSkeletal' (this will structurally make a Skeletal instance
-
---    for you)
-
--- * 'showSkeleton :: (Skeletal a) => a -> [BuiltinByteString]' (list is needed
-
---    due to 64 byte limit)
-
--- * 'traceSkeleton :: (Skeletal a) => a -> b -> b'
-
--- * 'traceErrorSkeleton :: (Skeletal a) => a -> b'
-
--- * 'traceIfFalseSkeleton :: (Skeletal a) => a -> Bool -> Bool'
-
--- * 'traceIfTrueSkeleton :: (Skeletal a) => a -> Bool -> Bool'
+foldTraceError :: forall (a :: Type). [PTx.BuiltinString] -> a
+foldTraceError bs = PTx.error . foldTrace bs $ ()
