@@ -60,10 +60,11 @@ data TestData (p :: Purpose) where
     -- @since 3.0
     Value ->
     TestData 'ForSpending
-  -- | @since 3.0
   MintingTest ::
     (ToData redeemer, FromData redeemer, Show redeemer) =>
     redeemer ->
+    -- @since 4.1
+    Value ->
     TestData 'ForMinting
 
 {- | Describes whether a case, comprised of a script and a test data for the
@@ -139,14 +140,15 @@ data Generator (p :: Purpose) where
     Methodology redeemer ->
     Methodology Value ->
     Generator 'ForSpending
-  -- | @since 3.1
+  -- | @since 4.1
   GenForMinting ::
     ( ToData redeemer
     , FromData redeemer
     , Show redeemer
     ) =>
-    (redeemer -> Outcome) ->
+    (redeemer -> Value -> Outcome) ->
     Methodology redeemer ->
+    Methodology Value ->
     Generator 'ForMinting
 
 {- | Generate using 'Arbitrary' instances. A 'Methodology' for 'Value' has to be
@@ -172,7 +174,7 @@ fromArbitrarySpending f = GenForSpending f fromArbitrary fromArbitrary
 
 {- | Generate using 'Arbitrary' instances.
 
- @since 3.1
+ @since 4.1
 -}
 fromArbitraryMinting ::
   forall (redeemer :: Type).
@@ -181,6 +183,7 @@ fromArbitraryMinting ::
   , Show redeemer
   , Arbitrary redeemer
   ) =>
-  (redeemer -> Outcome) ->
+  (redeemer -> Value -> Outcome) ->
+  Methodology Value ->
   Generator 'ForMinting
 fromArbitraryMinting f = GenForMinting f fromArbitrary

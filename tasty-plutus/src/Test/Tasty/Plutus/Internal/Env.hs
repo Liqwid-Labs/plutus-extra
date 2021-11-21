@@ -96,7 +96,7 @@ getScriptContext ::
   ScriptContext
 getScriptContext getConf getCb getTd env = case getTd env of
   SpendingTest d _ v -> compileSpending conf cb d v
-  MintingTest _ -> compileMinting conf cb
+  MintingTest _ v -> compileMinting conf cb v
   where
     conf :: TransactionConfig
     conf = getConf env
@@ -123,7 +123,7 @@ getScriptResult getScript getTd getCtx env =
       let d' = Datum . toBuiltinData $ d
           r' = Redeemer . toBuiltinData $ r
        in testValidatorScript context val d' r'
-    (SomeMinter mp, MintingTest r) ->
+    (SomeMinter mp, MintingTest r _) ->
       let r' = Redeemer . toBuiltinData $ r
        in testMintingPolicyScript context mp r'
   where

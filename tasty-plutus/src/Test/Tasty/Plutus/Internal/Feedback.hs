@@ -158,8 +158,11 @@ dumpState getConf getCb getTd logs env =
           $+$ ppDoc r
           $+$ "Value"
           $+$ ppDoc v
-      MintingTest r ->
-        "Redeemer" $+$ ppDoc r
+      MintingTest r v ->
+        "Redeemer"
+          $+$ ppDoc r
+          $+$ "Value"
+          $+$ ppDoc v
 
 dumpState' ::
   forall (a :: Type) (p :: Purpose).

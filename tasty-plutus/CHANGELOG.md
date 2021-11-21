@@ -2,16 +2,23 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 5.0
+## Unreleased
 
 ### Changed
+
+* Rename `Example` to `Outcome` and its two constructors `Good` and `Bad` to
+  `Pass` and `Fail` respectively, unifying with the internal type used in unit
+  tests.
+
+## 4.1 -- 2021-11-18
+
+### Changed
+
+* Added `Value` parameter to minting policies. Added field to `MintingTest`, added parameter to `GenForMinting`, `fromArbitraryMinting`.
 
 * Rename `paysSelf` and `paysOther` into `paysToSelf` and `paysToOther` for
   consistency.
 * Rename `ValidatorTest` to `ScriptTest`.
-* Rename `Example` to `Outcome` and its two constructors `Good` and `Bad` to
-  `Pass` and `Fail` respectively, unifying with the internal type used in unit
-  tests.
 
 ### Removed
 
@@ -21,7 +28,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Changed
 
-* Plutus upgrade: `plutus` pinned to `3f089ccf0ca746b399c99afe51e063b0640af547`, 
+* Plutus upgrade: `plutus` pinned to `3f089ccf0ca746b399c99afe51e063b0640af547`,
   `plutus-apps` pinned to `404af7ac3e27ebcb218c05f79d9a70ca966407c9`
 
 ## 3.4 -- 2021-11-03

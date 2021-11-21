@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-numeric
-version:            2.0
+version:            2.3
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -58,6 +58,8 @@ library
     PlutusTx.Natural
     PlutusTx.Numeric.Extra
     PlutusTx.Numeric.Gen
+    PlutusTx.Ratio.Extra
+    PlutusTx.SchemaUtils
 
   other-modules:
     PlutusTx.NatRatio.Internal
@@ -73,7 +75,9 @@ library
     , plutus-tx
     , pretty-show        ^>=1.10
     , QuickCheck         ^>=2.14.2
+    , recursion-schemes  ^>=5.1.3
     , template-haskell   ^>=2.16.0.0
+    , text               ^>=1.2.4.1
 
   hs-source-dirs:  src
 
@@ -84,6 +88,7 @@ test-suite property
   other-modules:
     Compilation
     Helpers
+    Suites.Consistency
     Suites.NatRatio
     Suites.Natural
     Suites.Numeric
@@ -112,7 +117,7 @@ test-suite laws
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   build-depends:
-    , plutus-laws       ^>=2.0
+    , plutus-laws       ^>=2.1
     , tasty-quickcheck  ^>=0.10.1.2
 
   hs-source-dirs: test/laws

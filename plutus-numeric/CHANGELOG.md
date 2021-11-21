@@ -4,6 +4,19 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 2.2 -- 2021-11-17
+
+### Added
+
+* `CoArbitrary` and `Function` instances for `Natural` and `NatRatio`.
+
+## 2.1 -- 2021-11-15
+
+### Added
+
+- `natToInteger` and `natRatioToRational` as dedicated (and clearer) aliases for
+  `addExtend`.
+
 ## 2.0 -- 2021-11-11
 
 ### Changed
