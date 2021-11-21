@@ -114,9 +114,9 @@ import Test.Tasty.Plutus.Options (
   TimeRange,
  )
 import Test.Tasty.Plutus.TestData (
-  Example (Bad, Good),
   Generator (GenForMinting, GenForSpending),
   Methodology (Methodology),
+  Outcome (Fail, Pass),
   TestData (MintingTest, SpendingTest),
  )
 import Test.Tasty.Providers (
@@ -139,12 +139,12 @@ import Prelude
 {- | Given a way of generating 'TestData', and converting a generated 'TestData'
  into a 'ContextBuilder', check that:
 
- * For any 'TestData' classified as 'Good', the script succeeds; and
- * For any 'TestData' classified as 'Bad', the script fails.
+ * For any 'TestData' classified as 'Pass', the script succeeds; and
+ * For any 'TestData' classified as 'Fail', the script fails.
 
  This will also check /coverage/: specifically, the property will fail unless
- the provided generation method produces roughly equal numbers of 'Good' and
- 'Bad'-classified cases.
+ the provided generation method produces roughly equal numbers of 'Pass' and
+ 'Fail'-classified cases.
 
  @since 3.1
 -}
@@ -186,8 +186,8 @@ data PropertyTest (p :: Purpose) where
     , Show redeemer
     ) =>
     Validator ->
-    Gen (Example, datum, redeemer, Value) ->
-    ((Example, datum, redeemer, Value) -> [(Example, datum, redeemer, Value)]) ->
+    Gen (Outcome, datum, redeemer, Value) ->
+    ((Outcome, datum, redeemer, Value) -> [(Outcome, datum, redeemer, Value)]) ->
     (TestData 'ForSpending -> ContextBuilder 'ForSpending) ->
     PropertyTest 'ForSpending
   Minter ::
@@ -196,8 +196,8 @@ data PropertyTest (p :: Purpose) where
     , Show redeemer
     ) =>
     MintingPolicy ->
-    Gen (Example, redeemer, Value) ->
-    ((Example, redeemer, Value) -> [(Example, redeemer, Value)]) ->
+    Gen (Outcome, redeemer, Value) ->
+    ((Outcome, redeemer, Value) -> [(Outcome, redeemer, Value)]) ->
     (TestData 'ForMinting -> ContextBuilder 'ForMinting) ->
     PropertyTest 'ForMinting
 
@@ -205,7 +205,7 @@ data PropertyEnv (p :: Purpose) = PropertyEnv
   { envOpts :: OptionSet
   , envPropertyTest :: PropertyTest p
   , envTestData :: TestData p
-  , envExpected :: Example
+  , envExpected :: Outcome
   }
 
 getConf ::
@@ -285,7 +285,7 @@ spenderProperty ::
   ) =>
   OptionSet ->
   PropertyTest 'ForSpending ->
-  (Example, datum, redeemer, Value) ->
+  (Outcome, datum, redeemer, Value) ->
   Property
 spenderProperty opts vt (ex, d, r, v) =
   let td = SpendingTest d r v
@@ -297,7 +297,7 @@ spenderProperty opts vt (ex, d, r, v) =
           , envTestData = td
           }
    in checkCoverage
-        . cover 0.5 (ex == Good) "good"
+        . cover 0.5 (ex == Pass) "good"
         . (`runReader` env)
         . produceResult
         $ getScriptResult getScript envTestData (getContext getSC) env
@@ -305,7 +305,7 @@ spenderProperty opts vt (ex, d, r, v) =
 prettySpender ::
   forall (datum :: Type) (redeemer :: Type).
   (Show datum, Show redeemer) =>
-  (Example, datum, redeemer, Value) ->
+  (Outcome, datum, redeemer, Value) ->
   String
 prettySpender (ex, d, r, v) =
   renderStyle ourStyle $
@@ -327,7 +327,7 @@ minterProperty ::
   (FromData redeemer, ToData redeemer, Show redeemer) =>
   OptionSet ->
   PropertyTest 'ForMinting ->
-  (Example, redeemer, Value) ->
+  (Outcome, redeemer, Value) ->
   Property
 minterProperty opts vt (ex, r, v) =
   let td = MintingTest r v
@@ -339,7 +339,7 @@ minterProperty opts vt (ex, r, v) =
           , envTestData = td
           }
    in checkCoverage
-        . cover 0.5 (ex == Good) "good"
+        . cover 0.5 (ex == Pass) "good"
         . (`runReader` env)
         . produceResult
         $ getScriptResult getScript envTestData (getContext getSC) env
@@ -347,7 +347,7 @@ minterProperty opts vt (ex, r, v) =
 prettyMinter ::
   forall (redeemer :: Type).
   (Show redeemer) =>
-  (Example, redeemer, Value) ->
+  (Outcome, redeemer, Value) ->
   String
 prettyMinter (ex, r, v) =
   renderStyle ourStyle $
@@ -364,11 +364,11 @@ prettyMinter (ex, r, v) =
 
 spendingTupleGen ::
   forall (datum :: Type) (redeemer :: Type).
-  (datum -> redeemer -> Value -> Example) ->
+  (datum -> redeemer -> Value -> Outcome) ->
   Methodology datum ->
   Methodology redeemer ->
   Methodology Value ->
-  Gen (Example, datum, redeemer, Value)
+  Gen (Outcome, datum, redeemer, Value)
 spendingTupleGen f mDat mRed mVal = do
   let Methodology genD _ = mDat
   let Methodology genR _ = mRed
@@ -378,12 +378,12 @@ spendingTupleGen f mDat mRed mVal = do
 
 spendingTupleShrink ::
   forall (datum :: Type) (redeemer :: Type).
-  (datum -> redeemer -> Value -> Example) ->
+  (datum -> redeemer -> Value -> Outcome) ->
   Methodology datum ->
   Methodology redeemer ->
   Methodology Value ->
-  (Example, datum, redeemer, Value) ->
-  [(Example, datum, redeemer, Value)]
+  (Outcome, datum, redeemer, Value) ->
+  [(Outcome, datum, redeemer, Value)]
 spendingTupleShrink f mDat mRed mVal (ex, d, r, v) = do
   let Methodology _ shrinkD = mDat
   let Methodology _ shrinkR = mRed
@@ -394,10 +394,10 @@ spendingTupleShrink f mDat mRed mVal (ex, d, r, v) = do
 
 mintingTupleGen ::
   forall (redeemer :: Type).
-  (redeemer -> Value -> Example) ->
+  (redeemer -> Value -> Outcome) ->
   Methodology redeemer ->
   Methodology Value ->
-  Gen (Example, redeemer, Value)
+  Gen (Outcome, redeemer, Value)
 mintingTupleGen f mRed mVal = do
   let Methodology genR _ = mRed
   let Methodology genVal _ = mVal
@@ -406,11 +406,11 @@ mintingTupleGen f mRed mVal = do
 
 mintingTupleShrink ::
   forall (redeemer :: Type).
-  (redeemer -> Value -> Example) ->
+  (redeemer -> Value -> Outcome) ->
   Methodology redeemer ->
   Methodology Value ->
-  (Example, redeemer, Value) ->
-  [(Example, redeemer, Value)]
+  (Outcome, redeemer, Value) ->
+  [(Outcome, redeemer, Value)]
 mintingTupleShrink f mRed mVal (ex, r, v) = do
   let Methodology _ shrinkR = mRed
   let Methodology _ shrinkV = mVal
@@ -430,16 +430,16 @@ produceResult sr = do
     Left err -> case err of
       EvaluationError logs msg ->
         asks envExpected >>= \case
-          Good -> asks (counter . unexpectedFailure (getDumpedState logs) msg)
-          Bad -> pass
+          Pass -> asks (counter . unexpectedFailure (getDumpedState logs) msg)
+          Fail -> pass
       EvaluationException name msg -> pure . counter $ scriptException name msg
       MalformedScript msg -> pure . counter $ malformedScript msg
     Right (logs, res) -> case (ex, res) of
       (_, NoOutcome) -> asks (counter . noOutcome state)
-      (Bad, ScriptPassed) -> asks (counter . unexpectedSuccess state)
-      (Bad, ScriptFailed) -> pass
-      (Good, ScriptPassed) -> pass
-      (Good, ScriptFailed) -> asks (counter . unexpectedFailure state mempty)
+      (Fail, ScriptPassed) -> asks (counter . unexpectedSuccess state)
+      (Fail, ScriptFailed) -> pass
+      (Pass, ScriptPassed) -> pass
+      (Pass, ScriptFailed) -> asks (counter . unexpectedFailure state mempty)
       (_, InternalError t) -> asks (counter . internalError state t)
       (_, ParseFailed t) -> asks (counter . noParse state t)
       where
