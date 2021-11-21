@@ -2,13 +2,16 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## Unreleased
+## 5.0
 
 ### Changed
 
 * Rename `paysSelf` and `paysOther` into `paysToSelf` and `paysToOther` for
   consistency.
 * Rename `ValidatorTest` to `ScriptTest`.
+* Rename `Example` to `Outcome` and its two constructors `Good` and `Bad` to
+  `Pass` and `Fail` respectively, unifying with the internal type used in unit
+  tests.
 
 ### Removed
 
