@@ -24,7 +24,7 @@ showSkeleton ::
   forall (a :: Type).
   (Skeletal a) =>
   a ->
-  [PTx.BuiltinString]
+  PTx.BuiltinString
 showSkeleton = _
 
 -- | @since 2.1
@@ -35,7 +35,7 @@ traceSkeleton ::
   a ->
   b ->
   b
-traceSkeleton x = foldTrace (showSkeleton x)
+traceSkeleton x = PTx.trace (showSkeleton x)
 
 -- | @since 2.1
 {-# INLINEABLE traceErrorSkeleton #-}
@@ -44,7 +44,7 @@ traceErrorSkeleton ::
   (Skeletal a) =>
   a ->
   b
-traceErrorSkeleton x = foldTraceError (showSkeleton x)
+traceErrorSkeleton x = PTx.traceError (showSkeleton x)
 
 -- | @since 2.1
 {-# INLINEABLE traceIfFalseSkeleton #-}
@@ -54,8 +54,7 @@ traceIfFalseSkeleton ::
   a ->
   Bool ->
   Bool
-traceIfFalseSkeleton x b =
-  if b then True else foldTrace (showSkeleton x) False
+traceIfFalseSkeleton x = PTx.traceIfFalse (showSkeleton x)
 
 -- | @since 2.1
 {-# INLINEABLE traceIfTrueSkeleton #-}
@@ -65,16 +64,4 @@ traceIfTrueSkeleton ::
   a ->
   Bool ->
   Bool
-traceIfTrueSkeleton x b =
-  if b then foldTrace (showSkeleton x) True else False
-
--- Helpers
-
-foldTrace :: forall (a :: Type). [PTx.BuiltinString] -> a -> a
-foldTrace = PTx.foldr go PTx.id
-  where
-    go :: PTx.BuiltinString -> (a -> a) -> (a -> a)
-    go bbs acc = PTx.trace bbs acc
-
-foldTraceError :: forall (a :: Type). [PTx.BuiltinString] -> a
-foldTraceError bs = PTx.error . foldTrace bs $ ()
+traceIfTrueSkeleton x = PTx.traceIfTrue (showSkeleton x)
