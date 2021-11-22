@@ -32,6 +32,29 @@ import PlutusTx.Skeleton.Internal (
   Skeleton (ConS, RecS),
  )
 
+{- | Construct a law-abiding 'Skeletal' instance for the type provided by the
+ given name.
+
+ = Example of use
+
+ > {\-# LANGUAGE TemplateHaskell #-\}
+ > {\-# LANGUAGE NoImplicitPrelude #-\}
+ >
+ > import PlutusTx.Prelude
+ > import PlutusTx.Skeleton (makeSkeletal)
+ >
+ > data Foo = Bar {
+ >    baz :: Value,
+ >    quux :: Integer,
+ >    frob :: [BuiltinString]
+ > }
+ >
+ > instance Eq Foo where ...
+ >
+ > $(makeSkeletal ''Foo)
+
+ @since 2.1
+-}
 makeSkeletal :: Name -> Q [Dec]
 makeSkeletal name = do
   info <- reify name

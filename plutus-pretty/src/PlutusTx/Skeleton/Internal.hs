@@ -65,7 +65,11 @@ import PlutusTx.Prelude
 import PlutusTx.Skeleton.String (intToString)
 import Prelude qualified
 
--- | @since 2.1
+{- | An \'essentials\' representation of a value's structure, as well as
+ content.
+
+ @since 2.1
+-}
 data Skeleton
   = ByteStringS BuiltinByteString
   | BoolS Bool
@@ -106,10 +110,21 @@ instance Eq Skeleton where
     (ListS xs, ListS xs') -> xs == xs'
     _ -> False
 
-{- | @since 2.1
+{- | Indicates the ability of a type's values to be converted to an
+ \'essentials\' structural representation (a 'Skeleton').
 
- Instance must define a representable functor, that is, x == y iff skeletize
- x == skeletize y
+ You /cannot/ define instances of this type class directly: instead, use
+ 'PlutusTx.Skeleton.QQ.makeSkeletal' via TH to construct such instances
+ automatically.
+
+ = Laws
+
+ 'skeletize' must be a representable functor. Specifically, this means that
+ for any @x, y@, @x == y@ if and only if @skeletize x == skeletize y@. All
+ instances provided by us, as well as defined via
+ 'PlutusTx.Skeleton.QQ.makeSkeletal', follow this law.
+
+ @since 2.1
 -}
 class (Eq a) => Skeletal a where
   skeletize :: a -> Skeleton

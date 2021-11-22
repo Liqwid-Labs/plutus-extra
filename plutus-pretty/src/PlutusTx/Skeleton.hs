@@ -1,5 +1,16 @@
+{-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
+{- | Module: PlutusTx.Skeleton
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ A type class for constructing structural representations of types on-chain,
+ and some pretty-printing utilities.
+-}
 module PlutusTx.Skeleton (
   -- * Type and type class
   Skeleton,
@@ -9,11 +20,11 @@ module PlutusTx.Skeleton (
   makeSkeletal,
 
   -- * Functions
-  showSkeleton,
-  traceSkeleton,
-  traceErrorSkeleton,
-  traceIfFalseSkeleton,
-  traceIfTrueSkeleton,
+  showSkeletal,
+  traceSkeletal,
+  traceErrorSkeletal,
+  traceIfFalseSkeletal,
+  traceIfTrueSkeletal,
 ) where
 
 import Data.Kind (Type)
@@ -22,50 +33,66 @@ import PlutusTx.Skeleton.Builder (build, renderSkeleton)
 import PlutusTx.Skeleton.Internal (Skeletal (skeletize), Skeleton)
 import PlutusTx.Skeleton.QQ (makeSkeletal)
 
--- | @since 2.1
-{-# INLINEABLE showSkeleton #-}
-showSkeleton ::
+{- | Constructs a prettyprinted 'BuiltinString' representation of any type with
+ a 'Skeletal' instance.
+
+ @since 2.1
+-}
+{-# INLINEABLE showSkeletal #-}
+showSkeletal ::
   forall (a :: Type).
   (Skeletal a) =>
   a ->
   BuiltinString
-showSkeleton = build . renderSkeleton . skeletize
+showSkeletal = build . renderSkeleton . skeletize
 
--- | @since 2.1
-{-# INLINEABLE traceSkeleton #-}
-traceSkeleton ::
+{- | As 'trace', but for any 'Skeletal'.
+
+ @since 2.1
+-}
+{-# INLINEABLE traceSkeletal #-}
+traceSkeletal ::
   forall (b :: Type) (a :: Type).
   (Skeletal a) =>
   a ->
   b ->
   b
-traceSkeleton x = trace (showSkeleton x)
+traceSkeletal x = trace (showSkeletal x)
 
--- | @since 2.1
-{-# INLINEABLE traceErrorSkeleton #-}
-traceErrorSkeleton ::
+{- | As 'traceError', but for any 'Skeletal'.
+
+ @since 2.1
+-}
+{-# INLINEABLE traceErrorSkeletal #-}
+traceErrorSkeletal ::
   forall (b :: Type) (a :: Type).
   (Skeletal a) =>
   a ->
   b
-traceErrorSkeleton x = traceError (showSkeleton x)
+traceErrorSkeletal x = traceError (showSkeletal x)
 
--- | @since 2.1
-{-# INLINEABLE traceIfFalseSkeleton #-}
-traceIfFalseSkeleton ::
+{- | As 'traceIfFalse', but for any 'Skeletal'.
+
+ @since 2.1
+-}
+{-# INLINEABLE traceIfFalseSkeletal #-}
+traceIfFalseSkeletal ::
   forall (a :: Type).
   (Skeletal a) =>
   a ->
   Bool ->
   Bool
-traceIfFalseSkeleton x = traceIfFalse (showSkeleton x)
+traceIfFalseSkeletal x = traceIfFalse (showSkeletal x)
 
--- | @since 2.1
-{-# INLINEABLE traceIfTrueSkeleton #-}
-traceIfTrueSkeleton ::
+{- | As 'traceIfTrue', but for any 'Skeletal'.
+
+ @since 2.1
+-}
+{-# INLINEABLE traceIfTrueSkeletal #-}
+traceIfTrueSkeletal ::
   forall (a :: Type).
   (Skeletal a) =>
   a ->
   Bool ->
   Bool
-traceIfTrueSkeleton x = traceIfTrue (showSkeleton x)
+traceIfTrueSkeletal x = traceIfTrue (showSkeletal x)
