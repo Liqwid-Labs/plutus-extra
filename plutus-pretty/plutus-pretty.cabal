@@ -50,8 +50,10 @@ library
     Text.Show.Pretty.Extra
 
   other-modules:
+    PlutusTx.Skeleton.Builder
     PlutusTx.Skeleton.Internal
     PlutusTx.Skeleton.QQ
+    PlutusTx.Skeleton.String
 
   build-depends:
     , base               ^>=4.14

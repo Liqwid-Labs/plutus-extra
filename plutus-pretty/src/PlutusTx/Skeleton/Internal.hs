@@ -1,9 +1,10 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module PlutusTx.Skeleton.Internal (
   Skeleton (..),
   Skeletal (..),
 ) where
 
-import GHC.Exts (fromString)
 import Plutus.V1.Ledger.Address (Address (Address))
 import Plutus.V1.Ledger.Contexts (
   ScriptContext (ScriptContext),
@@ -60,47 +61,49 @@ import Plutus.V1.Ledger.Value (
  )
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (matchData)
-import PlutusTx.Prelude qualified as PTx
+import PlutusTx.Prelude
+import PlutusTx.Skeleton.String (intToString)
+import Prelude qualified
 
 -- | @since 2.1
 data Skeleton
-  = ByteStringS PTx.BuiltinByteString
+  = ByteStringS BuiltinByteString
   | BoolS Bool
   | IntegerS Integer
-  | StringS PTx.BuiltinString
-  | AssocMapS (AssocMap.Map Skeleton Skeleton)
-  | ConS PTx.BuiltinString [Skeleton]
+  | StringS BuiltinString
+  | AssocMapS [(Skeleton, Skeleton)]
+  | ConS BuiltinString [Skeleton]
   | RecS
-      PTx.BuiltinString
-      (PTx.BuiltinString, Skeleton)
-      [(PTx.BuiltinString, Skeleton)]
+      BuiltinString
+      (BuiltinString, Skeleton)
+      [(BuiltinString, Skeleton)]
   | TupleS Skeleton [Skeleton]
   | ListS [Skeleton]
   deriving stock
     ( -- | @since 2.1
-      Eq
+      Prelude.Eq
     , -- | @since 2.1
-      Show
+      Prelude.Show
     )
 
 -- | @since 2.1
-instance PTx.Eq Skeleton where
+instance Eq Skeleton where
   {-# INLINEABLE (==) #-}
   sk == sk' = case (sk, sk') of
-    (BoolS b, BoolS b') -> b PTx.== b'
-    (IntegerS i, IntegerS i') -> i PTx.== i'
-    (ByteStringS bs, ByteStringS bs') -> bs PTx.== bs'
-    (StringS s, StringS s') -> s PTx.== s'
-    (AssocMapS m, AssocMapS m') -> m PTx.== m'
+    (BoolS b, BoolS b') -> b == b'
+    (IntegerS i, IntegerS i') -> i == i'
+    (ByteStringS bs, ByteStringS bs') -> bs == bs'
+    (StringS s, StringS s') -> s == s'
+    (AssocMapS m, AssocMapS m') -> m == m'
     (ConS nam sks, ConS nam' sks') ->
-      nam PTx.== nam' PTx.&& sks PTx.== sks'
+      nam == nam' && sks == sks'
     (RecS nam keyVal keyVals, RecS nam' keyVal' keyVals') ->
-      keyVal PTx.== keyVal'
-        PTx.&& keyVals PTx.== keyVals'
-        PTx.&& nam PTx.== nam'
+      keyVal == keyVal'
+        && keyVals == keyVals'
+        && nam == nam'
     (TupleS x xs, TupleS x' xs') ->
-      x PTx.== x' PTx.&& xs PTx.== xs'
-    (ListS xs, ListS xs') -> xs PTx.== xs'
+      x == x' && xs == xs'
+    (ListS xs, ListS xs') -> xs == xs'
     _ -> False
 
 {- | @since 2.1
@@ -108,28 +111,28 @@ instance PTx.Eq Skeleton where
  Instance must define a representable functor, that is, x == y iff skeletize
  x == skeletize y
 -}
-class (PTx.Eq a) => Skeletal a where
+class (Eq a) => Skeletal a where
   skeletize :: a -> Skeleton
 
 -- | @since 2.1
-instance Skeletal PTx.BuiltinData where
+instance Skeletal BuiltinData where
   {-# INLINEABLE skeletize #-}
   skeletize dat = matchData dat mkConstr mkMap mkList mkI mkB
     where
-      mkConstr :: Integer -> [PTx.BuiltinData] -> Skeleton
+      mkConstr :: Integer -> [BuiltinData] -> Skeleton
       mkConstr ix =
-        ConS ("Constr " PTx.<> (fromString . show $ ix)) . PTx.fmap skeletize
-      mkMap :: [(PTx.BuiltinData, PTx.BuiltinData)] -> Skeleton
-      mkMap = ConS "Map" . (: []) . ListS . PTx.fmap skeletize
-      mkList :: [PTx.BuiltinData] -> Skeleton
-      mkList = ConS "List" . (: []) . ListS . PTx.fmap skeletize
+        ConS ("Constr " <> intToString ix) . fmap skeletize
+      mkMap :: [(BuiltinData, BuiltinData)] -> Skeleton
+      mkMap = ConS "Map" . (: []) . ListS . fmap skeletize
+      mkList :: [BuiltinData] -> Skeleton
+      mkList = ConS "List" . (: []) . ListS . fmap skeletize
       mkI :: Integer -> Skeleton
       mkI = ConS "I" . (: []) . skeletize
-      mkB :: PTx.BuiltinByteString -> Skeleton
+      mkB :: BuiltinByteString -> Skeleton
       mkB = ConS "B" . (: []) . skeletize
 
 -- | @since 2.1
-instance Skeletal PTx.BuiltinString where
+instance Skeletal BuiltinString where
   {-# INLINEABLE skeletize #-}
   skeletize = StringS
 
@@ -144,7 +147,7 @@ instance Skeletal Bool where
   skeletize = BoolS
 
 -- | @since 2.1
-instance Skeletal PTx.BuiltinByteString where
+instance Skeletal BuiltinByteString where
   {-# INLINEABLE skeletize #-}
   skeletize = ByteStringS
 
@@ -158,12 +161,12 @@ instance (Skeletal a) => Skeletal (Maybe a) where
 -- | @since 2.1
 instance (Skeletal a) => Skeletal [a] where
   {-# INLINEABLE skeletize #-}
-  skeletize = ListS . PTx.fmap skeletize
+  skeletize = ListS . fmap skeletize
 
 -- | @since 2.1
 instance (Skeletal k, Skeletal v) => Skeletal (AssocMap.Map k v) where
   {-# INLINEABLE skeletize #-}
-  skeletize = AssocMapS . AssocMap.fromList . PTx.fmap go . AssocMap.toList
+  skeletize = AssocMapS . fmap go . AssocMap.toList
     where
       go :: (k, v) -> (Skeleton, Skeleton)
       go (key, val) = (skeletize key, skeletize val)
@@ -320,7 +323,7 @@ instance Skeletal TxInfo where
   skeletize txi =
     RecS "TxInfo" ("txInfoInputs", skeletize . txInfoInputs $ txi) go
     where
-      go :: [(PTx.BuiltinString, Skeleton)]
+      go :: [(BuiltinString, Skeleton)]
       go =
         [ ("txInfoOutputs", skeletize . txInfoOutputs $ txi)
         , ("txInfoFee", skeletize . txInfoFee $ txi)

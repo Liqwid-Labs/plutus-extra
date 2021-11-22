@@ -1,3 +1,5 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module PlutusTx.Skeleton (
   -- * Type and type class
   Skeleton,
@@ -15,17 +17,19 @@ module PlutusTx.Skeleton (
 ) where
 
 import Data.Kind (Type)
-import PlutusTx.Prelude qualified as PTx
+import PlutusTx.Prelude
+import PlutusTx.Skeleton.Builder (build, renderSkeleton)
 import PlutusTx.Skeleton.Internal (Skeletal (skeletize), Skeleton)
 import PlutusTx.Skeleton.QQ (makeSkeletal)
 
 -- | @since 2.1
+{-# INLINEABLE showSkeleton #-}
 showSkeleton ::
   forall (a :: Type).
   (Skeletal a) =>
   a ->
-  PTx.BuiltinString
-showSkeleton = _
+  BuiltinString
+showSkeleton = build . renderSkeleton . skeletize
 
 -- | @since 2.1
 {-# INLINEABLE traceSkeleton #-}
@@ -35,7 +39,7 @@ traceSkeleton ::
   a ->
   b ->
   b
-traceSkeleton x = PTx.trace (showSkeleton x)
+traceSkeleton x = trace (showSkeleton x)
 
 -- | @since 2.1
 {-# INLINEABLE traceErrorSkeleton #-}
@@ -44,7 +48,7 @@ traceErrorSkeleton ::
   (Skeletal a) =>
   a ->
   b
-traceErrorSkeleton x = PTx.traceError (showSkeleton x)
+traceErrorSkeleton x = traceError (showSkeleton x)
 
 -- | @since 2.1
 {-# INLINEABLE traceIfFalseSkeleton #-}
@@ -54,7 +58,7 @@ traceIfFalseSkeleton ::
   a ->
   Bool ->
   Bool
-traceIfFalseSkeleton x = PTx.traceIfFalse (showSkeleton x)
+traceIfFalseSkeleton x = traceIfFalse (showSkeleton x)
 
 -- | @since 2.1
 {-# INLINEABLE traceIfTrueSkeleton #-}
@@ -64,4 +68,4 @@ traceIfTrueSkeleton ::
   a ->
   Bool ->
   Bool
-traceIfTrueSkeleton x = PTx.traceIfTrue (showSkeleton x)
+traceIfTrueSkeleton x = traceIfTrue (showSkeleton x)
