@@ -4,6 +4,12 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 1.2 -- 2021-11-23
+
+### Added
+
+* Instances of `Arbitrary`, `CoArbitrary` and `Function` for `AssetClass`.
+
 ## 1.1 -- 2021-11-16
 
 ### Added

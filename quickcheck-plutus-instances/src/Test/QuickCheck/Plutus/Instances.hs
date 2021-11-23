@@ -57,6 +57,7 @@ import Plutus.V1.Ledger.Tx (
  )
 import Plutus.V1.Ledger.TxId (TxId (TxId))
 import Plutus.V1.Ledger.Value (
+  AssetClass (AssetClass),
   CurrencySymbol (CurrencySymbol),
   TokenName (TokenName),
   Value (Value),
@@ -599,6 +600,19 @@ instance Function TxOut where
       into (TxOut addr val mDH) = (addr, val, mDH)
       outOf :: (Address, Value, Maybe DatumHash) -> TxOut
       outOf (addr, val, mDH) = TxOut addr val mDH
+
+-- | @since 1.2
+deriving via (CurrencySymbol, TokenName) instance Arbitrary AssetClass
+
+-- | @since 1.2
+deriving via (CurrencySymbol, TokenName) instance CoArbitrary AssetClass
+
+-- | @since 1.2
+instance Function AssetClass where
+  function = functionMap into AssetClass
+    where
+      into :: AssetClass -> (CurrencySymbol, TokenName)
+      into (AssetClass x) = x
 
 -- Helpers
 
