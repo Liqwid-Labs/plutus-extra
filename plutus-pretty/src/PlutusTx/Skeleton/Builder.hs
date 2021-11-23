@@ -1,4 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# OPTIONS_GHC -fno-specialize #-}
 
 module PlutusTx.Skeleton.Builder (build, renderSkeleton) where
 
@@ -71,6 +72,7 @@ renderRec indent = \case
     embed indent "List:"
       <> foldMap (renderRec (increase indent)) xs
 
+{-# INLINEABLE renderKeyVal #-}
 renderKeyVal :: Integer -> (Skeleton, Skeleton) -> Builder
 renderKeyVal indent (k, v) =
   embed indent "Key:"
@@ -78,14 +80,17 @@ renderKeyVal indent (k, v) =
     <> embed indent "Value:"
     <> renderRec (increase indent) v
 
+{-# INLINEABLE renderFieldVal #-}
 renderFieldVal :: Integer -> (BuiltinString, Skeleton) -> Builder
 renderFieldVal indent (field, val) =
   embed indent (field <> ":")
     <> renderRec (increase indent) val
 
+{-# INLINEABLE increase #-}
 increase :: Integer -> Integer
 increase = (+ 2)
 
+{-# INLINEABLE embed #-}
 embed :: Integer -> BuiltinString -> Builder
 embed indent s = Builder . (:) $ (indent, s)
 
@@ -95,6 +100,7 @@ render :: (Integer, BuiltinString) -> BuiltinString
 render (indent, s) = repeat indent s <> s
 
 -- Links together every element of the list with the given linking string.
+{-# INLINEABLE intersperse #-}
 intersperse :: BuiltinString -> [BuiltinString] -> BuiltinString
 intersperse sep = \case
   [] -> ""
@@ -102,6 +108,7 @@ intersperse sep = \case
   (s : ss) -> s <> sep <> intersperse sep ss
 
 -- Links together n copies of argument
+{-# INLINEABLE repeat #-}
 repeat :: Integer -> BuiltinString -> BuiltinString
 repeat i s
   | i <= zero = ""

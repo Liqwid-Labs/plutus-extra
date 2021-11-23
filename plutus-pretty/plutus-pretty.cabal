@@ -37,6 +37,7 @@ common lang
     TypeSynonymInstances
     UndecidableInstances
 
+  build-depends:      base ^>=4.14
   ghc-options:
     -Wall -Wcompat -Wincomplete-uni-patterns -Wredundant-constraints
     -Wmissing-export-lists -Werror -Wincomplete-record-updates
@@ -56,10 +57,26 @@ library
     PlutusTx.Skeleton.String
 
   build-depends:
-    , base               ^>=4.14
     , plutus-ledger-api
     , plutus-tx
     , pretty-show        ^>=1.10
     , template-haskell   ^>=2.16.0.0
 
   hs-source-dirs:  src
+
+test-suite script-size
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  other-modules:  Test
+  build-depends:
+    , bytestring         ^>=0.10.12.0
+    , cardano-api        ^>=1.30.0
+    , plutus-ledger-api
+    , plutus-pretty
+    , plutus-tx
+    , plutus-tx-plugin
+    , serialise          ^>=0.2.3.0
+    , tasty              ^>=1.4.1
+
+  hs-source-dirs: test/script-size

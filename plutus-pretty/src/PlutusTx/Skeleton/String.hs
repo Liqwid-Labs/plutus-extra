@@ -24,6 +24,7 @@ intToString i
             else intToString q <> digitToString r
 
 -- We render bytestrings as their individual code points, with backslashes.
+{-# INLINEABLE bsToString #-}
 bsToString :: BuiltinByteString -> BuiltinString
 bsToString bbs =
   let len = lengthOfByteString bbs
