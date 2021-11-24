@@ -1,0 +1,67 @@
+cabal-version:      3.0
+name:               plutus-size-check
+version:            1.0
+extra-source-files: CHANGELOG.md
+
+common lang
+  default-language:   Haskell2010
+  default-extensions:
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveFunctor
+    DeriveGeneric
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    DuplicateRecordFields
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    GeneralizedNewtypeDeriving
+    HexFloatLiterals
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NumericUnderscores
+    OverloadedStrings
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeApplications
+    TypeOperators
+    TypeSynonymInstances
+    UndecidableInstances
+
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns -Wredundant-constraints
+    -Wmissing-export-lists -Werror -Wincomplete-record-updates
+    -Wmissing-deriving-strategies
+
+library
+  import:          lang
+  exposed-modules: Test.Tasty.Plutus.Size
+  other-modules:
+    Test.Tasty.Plutus.Internal
+    Test.Tasty.Plutus.QQ
+
+  build-depends:
+    , base               ^>=4.14
+    , bytestring         ^>=0.10.12.0
+    , cardano-api        ^>=1.30.0
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-tx
+    , pretty             ^>=1.1.3.6
+    , pretty-show        ^>=1.10
+    , serialise          ^>=0.2.3.0
+    , tagged             ^>=0.8.6.1
+    , tasty              ^>=1.4.1
+    , template-haskell   ^>=2.16.0.0
+
+  hs-source-dirs:  src
