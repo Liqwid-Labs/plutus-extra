@@ -215,19 +215,6 @@ instance IsTest FitTest where
        in case compare serializedSize limit of
             GT -> testFailed . produceSize $ serializedSize
             _ -> testPassed . produceSize $ serializedSize
-    where
-      produceSize :: Int -> String
-      produceSize i =
-        renderStyle ourStyle $
-          "Size:" <+> case i `quotRem` 1024 of
-            (d, 0) -> dumpDoc d <> "KiB"
-            (d, r) ->
-              dumpDoc i <> "B (~"
-                <> ( if
-                        | r <= 256 -> dumpDoc d <> "KiB)"
-                        | r > 256 && r < 768 -> dumpDoc d <> ".5KiB)"
-                        | otherwise -> dumpDoc (d + 1) <> "KiB)"
-                   )
   testOptions = Tagged []
 
 serialisedScriptSize :: Script -> Int
@@ -241,3 +228,15 @@ serialisedScriptSize =
 
 ourStyle :: Style
 ourStyle = style {lineLength = 80}
+
+produceSize :: Int -> String
+produceSize i = renderStyle ourStyle $ 
+  "Size:" <+> case i `quotRem` 1024 of
+    (0, 0) -> "0B"
+    (d, 0) -> dumpDoc d <> "KiB"
+    (0, r) -> dumpDoc i <> "B" <> (if | r <= 256 -> ""
+                                      | r > 256 && r < 768 -> " (~0.5KiB)"
+                                      | otherwise -> " (~1KiB)")
+    (d, r) -> dumpDoc i <> "B (~" <> (if | r <= 256 -> dumpDoc d <> "KiB)"
+                                         | r > 256 && r < 768 -> dumpDoc d <> ".5KiB)"
+                                         | otherwise -> dumpDoc (d + 1) <> "KiB)")

@@ -11,11 +11,26 @@ import PlutusTx.IsData.Class (
  )
 import PlutusTx.NatRatio (NatRatio)
 import PlutusTx.Natural (Natural)
+import PlutusTx.Numeric.Extra (
+  abs,
+  addExtend,
+  divMod,
+  monus,
+  powInteger,
+  powNat,
+  projectAbs,
+  reciprocal,
+  restrictMay,
+  signum,
+  (/),
+ )
 import PlutusTx.Prelude (BuiltinData)
 import PlutusTx.Prelude qualified as PTx
+import PlutusTx.Ratio (Rational)
 import PlutusTx.TH (compile)
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.Plutus.Size (fitsOnChain)
+import Prelude hiding (Rational, abs, divMod, signum, (/))
 
 main :: IO ()
 main =
@@ -31,6 +46,9 @@ main =
         , fitsOnChain "fromBuiltinData" . fromCompiledCode $ naturalFromBuiltinData
         , fitsOnChain "toBuiltinData" . fromCompiledCode $ naturalToBuiltinData
         , fitsOnChain "unsafeFromBuiltinData" . fromCompiledCode $ naturalUnsafeFromBuiltinData
+        , fitsOnChain "powNat" . fromCompiledCode $ naturalPowNat
+        , fitsOnChain "monus" . fromCompiledCode $ naturalMonus
+        , fitsOnChain "divMod" . fromCompiledCode $ naturalDivMod
         ]
     , testGroup
         "NatRatio"
@@ -43,10 +61,37 @@ main =
         , fitsOnChain "fromBuiltinData" . fromCompiledCode $ natRatioFromBuiltinData
         , fitsOnChain "toBuiltinData" . fromCompiledCode $ natRatioToBuiltinData
         , fitsOnChain "unsafeFromBuiltinData" . fromCompiledCode $ natRatioUnsafeFromBuiltinData
+        , fitsOnChain "powNat" . fromCompiledCode $ natRatioPowNat
+        , fitsOnChain "monus" . fromCompiledCode $ natRatioMonus
+        , fitsOnChain "/" . fromCompiledCode $ natRatioDivide
+        , fitsOnChain "reciprocal" . fromCompiledCode $ natRatioReciprocal
+        , fitsOnChain "powInteger" . fromCompiledCode $ natRatioPowInteger
+        ]
+    , testGroup
+        "Integer"
+        [ fitsOnChain "divMod" . fromCompiledCode $ integerDivMod
+        , fitsOnChain "abs" . fromCompiledCode $ integerAbs
+        , fitsOnChain "projectAbs" . fromCompiledCode $ integerProjectAbs
+        , fitsOnChain "addExtend" . fromCompiledCode $ integerAddExtend
+        , fitsOnChain "restrictMay" . fromCompiledCode $ integerRestrictMay
+        , fitsOnChain "signum" . fromCompiledCode $ integerSignum
+        ]
+    , testGroup
+        "Rational"
+        [ fitsOnChain "/" . fromCompiledCode $ rationalDivide
+        , fitsOnChain "reciprocal" . fromCompiledCode $ rationalReciprocal
+        , fitsOnChain "powInteger" . fromCompiledCode $ rationalPowInteger
+        , fitsOnChain "abs" . fromCompiledCode $ rationalAbs
+        , fitsOnChain "projectAbs" . fromCompiledCode $ rationalProjectAbs
+        , fitsOnChain "addExtend" . fromCompiledCode $ rationalAddExtend
+        , fitsOnChain "restrictMay" . fromCompiledCode $ rationalRestrictMay
+        , fitsOnChain "signum" . fromCompiledCode $ rationalSignum
         ]
     ]
 
 -- Compiled definitions
+
+-- Natural
 
 naturalEq :: CompiledCode (Natural -> Natural -> Bool)
 naturalEq = $$(compile [||(PTx.==)||])
@@ -76,6 +121,17 @@ naturalUnsafeFromBuiltinData :: CompiledCode (BuiltinData -> Natural)
 naturalUnsafeFromBuiltinData =
   $$(compile [||unsafeFromBuiltinData||])
 
+naturalPowNat :: CompiledCode (Natural -> Natural -> Natural)
+naturalPowNat = $$(compile [||powNat||])
+
+naturalMonus :: CompiledCode (Natural -> Natural -> Natural)
+naturalMonus = $$(compile [||monus||])
+
+naturalDivMod :: CompiledCode (Natural -> Natural -> (Natural, Natural))
+naturalDivMod = $$(compile [||divMod||])
+
+-- NatRatio
+
 natRatioEq :: CompiledCode (NatRatio -> NatRatio -> Bool)
 natRatioEq = $$(compile [||(PTx.==)||])
 
@@ -103,3 +159,64 @@ natRatioToBuiltinData = $$(compile [||toBuiltinData||])
 natRatioUnsafeFromBuiltinData :: CompiledCode (BuiltinData -> NatRatio)
 natRatioUnsafeFromBuiltinData =
   $$(compile [||unsafeFromBuiltinData||])
+
+natRatioPowNat :: CompiledCode (NatRatio -> Natural -> NatRatio)
+natRatioPowNat = $$(compile [||powNat||])
+
+natRatioMonus :: CompiledCode (NatRatio -> NatRatio -> NatRatio)
+natRatioMonus = $$(compile [||monus||])
+
+natRatioDivide :: CompiledCode (NatRatio -> NatRatio -> NatRatio)
+natRatioDivide = $$(compile [||(/)||])
+
+natRatioReciprocal :: CompiledCode (NatRatio -> NatRatio)
+natRatioReciprocal = $$(compile [||reciprocal||])
+
+natRatioPowInteger :: CompiledCode (NatRatio -> Integer -> NatRatio)
+natRatioPowInteger = $$(compile [||powInteger||])
+
+-- Integer
+
+integerDivMod :: CompiledCode (Integer -> Integer -> (Integer, Integer))
+integerDivMod = $$(compile [||divMod||])
+
+integerAbs :: CompiledCode (Integer -> Integer)
+integerAbs = $$(compile [||abs||])
+
+integerProjectAbs :: CompiledCode (Integer -> Natural)
+integerProjectAbs = $$(compile [||projectAbs||])
+
+integerAddExtend :: CompiledCode (Natural -> Integer)
+integerAddExtend = $$(compile [||addExtend||])
+
+integerRestrictMay :: CompiledCode (Integer -> Maybe Natural)
+integerRestrictMay = $$(compile [||restrictMay||])
+
+integerSignum :: CompiledCode (Integer -> Integer)
+integerSignum = $$(compile [||signum||])
+
+-- Rational
+
+rationalDivide :: CompiledCode (Rational -> Rational -> Rational)
+rationalDivide = $$(compile [||(/)||])
+
+rationalReciprocal :: CompiledCode (Rational -> Rational)
+rationalReciprocal = $$(compile [||reciprocal||])
+
+rationalPowInteger :: CompiledCode (Rational -> Integer -> Rational)
+rationalPowInteger = $$(compile [||powInteger||])
+
+rationalAbs :: CompiledCode (Rational -> Rational)
+rationalAbs = $$(compile [||abs||])
+
+rationalProjectAbs :: CompiledCode (Rational -> NatRatio)
+rationalProjectAbs = $$(compile [||projectAbs||])
+
+rationalAddExtend :: CompiledCode (NatRatio -> Rational)
+rationalAddExtend = $$(compile [||addExtend||])
+
+rationalRestrictMay :: CompiledCode (Rational -> Maybe NatRatio)
+rationalRestrictMay = $$(compile [||restrictMay||])
+
+rationalSignum :: CompiledCode (Rational -> Rational)
+rationalSignum = $$(compile [||signum||])
