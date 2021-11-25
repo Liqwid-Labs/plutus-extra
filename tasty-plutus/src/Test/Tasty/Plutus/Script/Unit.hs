@@ -21,6 +21,10 @@
  >    shouldValidateTracing "Gotta get good messages" tracePred validData validContext
  >    shouldn'tValidateTracing "Oh damn" tracePred invalidData validContext
  >    ...
+ >    nextInputs <- shouldValidateProducing "Valid case" validData validContext
+ >    let nextContext = foldMap input nextInputs <> restOfContext
+ >    shouldValidate "Next valid case" validData nextContext
+ >    ...
 
  = Note
 
@@ -201,8 +205,18 @@ shouldValidateTracing name f td cb = case td of
     tell . Seq.singleton $ tt
 
 {- | Specify that, given this test data and context, the validation should
- succeed. All context outputs are converted to a list of inputs,
- that can be used to build a new context.
+ succeed. All context outputs are converted to a list of inputs:
+ these can be used to build new contexts.
+
+ = Example
+
+ @
+ myTests :: TestTree
+ myTests = withValidator "Testing my spending" myValidator $ do
+  nextInputs <- shouldValidateProducing "Valid case" validData validContext
+  let nextContext = foldMap input nextInputs <> restOfContext
+  shouldValidate "Next valid case" validData nextContext
+ @
 
  @since 4.2
 -}
@@ -260,8 +274,19 @@ shouldn'tValidateTracing name f td cb = case td of
     tell . Seq.singleton $ tt
 
 {- | Specify that, given this test data and context, the validation should fail.
- All context outputs are converted to a list of inputs, that can be used
- to build a new context.
+ All context outputs are converted to a list of inputs: these can be used
+ to build new contexts.
+
+ = Example
+
+ @
+ myTests :: TestTree
+ myTests = withValidator "Testing my spending" myValidator $ do
+  nextInputs <-
+    shouldn'tValidateProducing "Invalid case" invalidData validContext
+  let nextContext = foldMap input nextInputs <> restOfContext
+  shouldn'tValidate "Next invalid case" invalidData nextContext
+ @
 
  @since 4.2
 -}
