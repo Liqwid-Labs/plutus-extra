@@ -58,6 +58,9 @@ module Test.Tasty.Plutus.Context (
   -- ** Minting
   mintsWithSelf,
   mintsValue,
+
+  -- ** Combining Contexts
+  makeIncompleteContexts,
 ) where
 
 import Data.Kind (Type)
@@ -75,6 +78,7 @@ import Test.Tasty.Plutus.Internal.Context (
   Minting (OtherMint, OwnMint),
   Output (Output),
   Purpose (ForMinting, ForSpending),
+  makeIncompleteContexts,
  )
 import Wallet.Emulator.Types (Wallet, walletPubKeyHash)
 
