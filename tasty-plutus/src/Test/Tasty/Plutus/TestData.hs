@@ -20,6 +20,8 @@ module Test.Tasty.Plutus.TestData (
   Generator (..),
   fromArbitrarySpending,
   fromArbitraryMinting,
+  Tokens,
+  token,
 ) where
 
 import Data.Kind (Type)
@@ -30,6 +32,8 @@ import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Test.QuickCheck.Gen (Gen)
 import Test.Tasty.Plutus.Internal.Context (
   Purpose (ForMinting, ForSpending),
+  Tokens,
+  token,
  )
 import Prelude
 
@@ -62,9 +66,14 @@ data TestData (p :: Purpose) where
     TestData 'ForSpending
   MintingTest ::
     (ToData redeemer, FromData redeemer, Show redeemer) =>
+    -- | The input redeemer.
+    --
+    -- @since 3.0
     redeemer ->
+    -- | The tokens to be minted by the script.
+    --
     -- @since 4.1
-    Value ->
+    Tokens ->
     TestData 'ForMinting
 
 {- | Describes whether a case, comprised of a script and a test data for the
@@ -146,9 +155,9 @@ data Generator (p :: Purpose) where
     , FromData redeemer
     , Show redeemer
     ) =>
-    (redeemer -> Value -> Outcome) ->
+    (redeemer -> Tokens -> Outcome) ->
     Methodology redeemer ->
-    Methodology Value ->
+    Methodology Tokens ->
     Generator 'ForMinting
 
 {- | Generate using 'Arbitrary' instances. A 'Methodology' for 'Value' has to be
@@ -183,7 +192,7 @@ fromArbitraryMinting ::
   , Show redeemer
   , Arbitrary redeemer
   ) =>
-  (redeemer -> Value -> Outcome) ->
-  Methodology Value ->
+  (redeemer -> Tokens -> Outcome) ->
+  Methodology Tokens ->
   Generator 'ForMinting
 fromArbitraryMinting f = GenForMinting f fromArbitrary

@@ -118,6 +118,7 @@ import Test.Tasty.Plutus.TestData (
   Methodology (Methodology),
   Outcome (Fail, Pass),
   TestData (MintingTest, SpendingTest),
+  Tokens,
  )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
@@ -164,10 +165,10 @@ scriptProperty name gen mkCB = case gen of
       . singleTest name
       . Spender val generator shrinker
       $ mkCB
-  GenForMinting f mRed mVal -> WithMinting $ do
+  GenForMinting f mRed mToks -> WithMinting $ do
     mp <- ask
-    let generator = mintingTupleGen f mRed mVal
-    let shrinker = mintingTupleShrink f mRed mVal
+    let generator = mintingTupleGen f mRed mToks
+    let shrinker = mintingTupleShrink f mRed mToks
     tell
       . Seq.singleton
       . singleTest name
@@ -196,8 +197,10 @@ data PropertyTest (p :: Purpose) where
     , Show redeemer
     ) =>
     MintingPolicy ->
-    Gen (Outcome, redeemer, Value) ->
-    ((Outcome, redeemer, Value) -> [(Outcome, redeemer, Value)]) ->
+    Gen (Outcome, redeemer, Tokens) ->
+    ( (Outcome, redeemer, Tokens) ->
+      [(Outcome, redeemer, Tokens)]
+    ) ->
     (TestData 'ForMinting -> ContextBuilder 'ForMinting) ->
     PropertyTest 'ForMinting
 
@@ -327,10 +330,10 @@ minterProperty ::
   (FromData redeemer, ToData redeemer, Show redeemer) =>
   OptionSet ->
   PropertyTest 'ForMinting ->
-  (Outcome, redeemer, Value) ->
+  (Outcome, redeemer, Tokens) ->
   Property
-minterProperty opts vt (ex, r, v) =
-  let td = MintingTest r v
+minterProperty opts vt (ex, r, toks) =
+  let td = MintingTest r toks
       env =
         PropertyEnv
           { envOpts = opts
@@ -347,9 +350,9 @@ minterProperty opts vt (ex, r, v) =
 prettyMinter ::
   forall (redeemer :: Type).
   (Show redeemer) =>
-  (Outcome, redeemer, Value) ->
+  (Outcome, redeemer, Tokens) ->
   String
-prettyMinter (ex, r, v) =
+prettyMinter (ex, r, ts) =
   renderStyle ourStyle $
     ""
       $+$ hang "Case" 4 (text . show $ ex)
@@ -359,8 +362,8 @@ prettyMinter (ex, r, v) =
     dumpInputs =
       "Redeemer"
         $+$ ppDoc r
-        $+$ "Value"
-        $+$ ppDoc v
+        $+$ "Tokens"
+        $+$ ppDoc ts
 
 spendingTupleGen ::
   forall (datum :: Type) (redeemer :: Type).
@@ -394,29 +397,29 @@ spendingTupleShrink f mDat mRed mVal (ex, d, r, v) = do
 
 mintingTupleGen ::
   forall (redeemer :: Type).
-  (redeemer -> Value -> Outcome) ->
+  (redeemer -> Tokens -> Outcome) ->
   Methodology redeemer ->
-  Methodology Value ->
-  Gen (Outcome, redeemer, Value)
-mintingTupleGen f mRed mVal = do
+  Methodology Tokens ->
+  Gen (Outcome, redeemer, Tokens)
+mintingTupleGen f mRed mToks = do
   let Methodology genR _ = mRed
-  let Methodology genVal _ = mVal
-  (r, v) <- (,) <$> genR <*> genVal
-  pure (f r v, r, v)
+  let Methodology genToks _ = mToks
+  (r, ts) <- (,) <$> genR <*> genToks
+  pure (f r ts, r, ts)
 
 mintingTupleShrink ::
   forall (redeemer :: Type).
-  (redeemer -> Value -> Outcome) ->
+  (redeemer -> Tokens -> Outcome) ->
   Methodology redeemer ->
-  Methodology Value ->
-  (Outcome, redeemer, Value) ->
-  [(Outcome, redeemer, Value)]
-mintingTupleShrink f mRed mVal (ex, r, v) = do
+  Methodology Tokens ->
+  (Outcome, redeemer, Tokens) ->
+  [(Outcome, redeemer, Tokens)]
+mintingTupleShrink f mRed mToks (ex, r, ts) = do
   let Methodology _ shrinkR = mRed
-  let Methodology _ shrinkV = mVal
-  (r', v') <- (,) <$> shrinkR r <*> shrinkV v
-  guard (f r v == ex)
-  pure (ex, r', v')
+  let Methodology _ shrinkTs = mToks
+  (r', ts') <- (,) <$> shrinkR r <*> shrinkTs ts
+  guard (f r ts == ex)
+  pure (ex, r', ts')
 
 counter :: String -> Property
 counter s = counterexample s False

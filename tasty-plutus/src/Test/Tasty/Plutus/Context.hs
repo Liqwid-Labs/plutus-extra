@@ -56,7 +56,6 @@ module Test.Tasty.Plutus.Context (
   spendsFromOther,
 
   -- ** Minting
-  mintsWithSelf,
   mintsValue,
 ) where
 
@@ -65,14 +64,14 @@ import Data.Sequence qualified as Seq
 import Plutus.V1.Ledger.Ada (lovelaceValueOf)
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Scripts (ValidatorHash)
-import Plutus.V1.Ledger.Value (TokenName, Value)
+import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Test.Tasty.Plutus.Internal.Context (
   ContextBuilder (ContextBuilder),
   ExternalType (OwnType, PubKeyType, ScriptType),
   Input (Input),
-  Minting (OtherMint, OwnMint),
+  Minting (Mint),
   Output (Output),
   Purpose (ForMinting, ForSpending),
  )
@@ -278,17 +277,6 @@ spendsFromOther ::
 spendsFromOther hash v d =
   input . Input (ScriptType hash . toBuiltinData $ d) $ v
 
-{- | Indicate that an amount of a given token must be minted.
-
- @since 3.2
--}
-mintsWithSelf ::
-  forall (p :: Purpose).
-  TokenName ->
-  Integer ->
-  ContextBuilder p
-mintsWithSelf tn = minting . OwnMint tn
-
 {- | Indicate that someone must mint the given 'Value'.
 
  @since 3.2
@@ -297,4 +285,4 @@ mintsValue ::
   forall (p :: Purpose).
   Value ->
   ContextBuilder p
-mintsValue = minting . OtherMint
+mintsValue = minting . Mint
