@@ -8,7 +8,7 @@ module Test.Tasty.Plutus.Internal.Context (
   ContextBuilder (..),
   compileSpending,
   compileMinting,
-  Tokens,
+  Tokens (Tokens, unTokens),
   token,
 ) where
 
@@ -286,12 +286,12 @@ toTxOut valHash (Output typ v) = case typ of
 
 {- | Tokens to be minted by minting policy.
 
-  -- This type is 'Semigroup' but not 'Monoid', as a minting policy cannot be 
+  -- This type is 'Semigroup' but not 'Monoid', as a minting policy cannot be
   -- triggered if no tokens are minted.
 
   @since 4.1
 -}
-newtype Tokens = Tokens (Map TokenName Integer)
+newtype Tokens = Tokens {unTokens :: Map TokenName Integer}
   deriving stock
     ( -- | @since 4.1
       Eq
@@ -310,4 +310,4 @@ instance Semigroup Tokens where
   @since 4.1
 -}
 token :: TokenName -> Integer -> Tokens
-token name val = Tokens (Map.singleton name val)
+token name = Tokens . Map.singleton name

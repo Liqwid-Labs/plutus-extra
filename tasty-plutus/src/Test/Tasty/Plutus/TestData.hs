@@ -20,7 +20,7 @@ module Test.Tasty.Plutus.TestData (
   Generator (..),
   fromArbitrarySpending,
   fromArbitraryMinting,
-  Tokens,
+  Tokens (Tokens, unTokens),
   token,
 ) where
 
@@ -32,7 +32,7 @@ import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Test.QuickCheck.Gen (Gen)
 import Test.Tasty.Plutus.Internal.Context (
   Purpose (ForMinting, ForSpending),
-  Tokens,
+  Tokens (Tokens, unTokens),
   token,
  )
 import Prelude
