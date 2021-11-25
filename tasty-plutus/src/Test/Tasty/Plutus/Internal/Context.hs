@@ -77,7 +77,7 @@ data ExternalType
     PubKeyType PubKeyHash
   | -- | @since 3.0
     ScriptType ValidatorHash BuiltinData
-  | -- | @since 3.0mapMaybe
+  | -- | @since 3.0
     OwnType BuiltinData
   deriving stock
     ( -- | @since 3.0
