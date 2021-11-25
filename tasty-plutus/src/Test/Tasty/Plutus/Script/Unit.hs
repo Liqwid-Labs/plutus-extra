@@ -274,7 +274,7 @@ shouldn'tValidateProducing ::
   WithScript p [Input]
 shouldn'tValidateProducing name td cb@(ContextBuilder _ outs _ _ _) =
   outputsToInputs outs <$ shouldn'tValidate name td cb
-      
+
 -- Helpers
 
 data Outcome = Fail | Pass
