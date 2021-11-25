@@ -4,6 +4,11 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 4.2 -- 2021-11-26
+
+* Added `shouldValidateProducing`, `shouldn'tValidateProducing` to extend
+  the functionality of unit testing.
+
 ## 4.1 -- 2021-11-18
 
 * Added `makeIncompleteContexts` to ease building of contexts that are missing
