@@ -258,7 +258,7 @@ makeIncompleteContexts ctxs = map (first sconcat) ctxs2
  these can be used to build new contexts.
 
  = Example
- 
+
  @
   foldMap input (outputsToInputs initContext) <> restOfContext
  @
