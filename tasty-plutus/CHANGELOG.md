@@ -12,9 +12,21 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## 4.1 -- 2021-11-18
 
+### Added
+
+  * Created a `Tokens` type representing tokens being minted by the policy, with
+  a `token` function for creating a single token.
+
 ### Changed
 
-* Added `Value` parameter to minting policies. Added field to `MintingTest`, added parameter to `GenForMinting`, `fromArbitraryMinting`.
+* Changed API for testing minting policies.
+
+  * Replaced `OwnMint` and `OtherMint` constructors to `Minting` with single 
+    `Mint` constructor representing mints of currencies other than that of 
+    the policy being tested.
+
+  * Added a `Tokens` field to `MintingTest`, and a parameter to `GenForMinting` 
+    and `fromArbitraryMinting`.
 
 * Rename `paysSelf` and `paysOther` into `paysToSelf` and `paysToOther` for
   consistency.
@@ -23,6 +35,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ### Removed
 
 * Various re-exports from `Test.Tasty.Plutus.Script.Unit`.
+
+* `mintsWithSelf` - not part of the context in the new minting API.
 
 ## 4.0 -- 2021-11-11
 
