@@ -9,6 +9,7 @@ module Test.Tasty.Plutus.Internal.Context (
   compileSpending,
   compileMinting,
   makeIncompleteContexts,
+  outputsToInputs,
 ) where
 
 import Control.Arrow ((***))
@@ -252,6 +253,21 @@ makeIncompleteContexts ctxs = map (first sconcat) ctxs2
     ctxs2 = mapMaybe nonEmpty1st ctxs1
     nonEmpty1st :: ([a], b) -> Maybe (NonEmpty.NonEmpty a, b)
     nonEmpty1st (xs, y) = (,y) <$> NonEmpty.nonEmpty xs
+
+{- All context outputs are converted to a list of inputs:
+ these can be used to build new contexts.
+
+ = Example
+ 
+ @
+  foldMap input (outputsToInputs initContext) <> restOfContext
+ @
+
+ @since 4.1.1
+-}
+outputsToInputs :: ContextBuilder p -> [Input]
+outputsToInputs (ContextBuilder _ outs _ _ _) =
+  toList $ fmap (\(Output t v) -> Input t v) outs
 
 -- Helpers
 
