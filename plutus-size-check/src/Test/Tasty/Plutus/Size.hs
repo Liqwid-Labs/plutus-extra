@@ -8,7 +8,7 @@
  Portability: GHC only
  Stability: Experimental
 
- Provides a means of checking that a 'Plutus.V1.Ledger.Script' fits into a given
+ Provides a means of checking that a 'Script' fits into a given
  size, either based on a user-specified limit, or the inherent limit of
  on-chain size (as currently known).
 
@@ -84,7 +84,7 @@
 
  == Expected failures
 
- Sometimes, you may have 'Plutus.V1.Ledger.Script's whose size is too
+ Sometimes, you may have 'Script's whose size is too
  large to fit on-chain (or your specified limit), but you want to use this
  library anyway, either to future-proof your implementation or to determine
  what the size actually is.
@@ -141,12 +141,12 @@ import Text.PrettyPrint (Style, lineLength, renderStyle, style, (<+>))
 import Text.Show.Pretty (dumpDoc)
 import Prelude hiding (divMod)
 
-{- | Checks whether the given 'Plutus.V1.Ledger.Script' fits on-chain
+{- | Checks whether the given 'Script' fits on-chain
  given current limits.
 
  = Note
 
- If a 'Plutus.V1.Ledger.Script' represents a function that takes
+ If a 'Script' represents a function that takes
  arguments (such as a validator), this will only check the size of said
  function on-chain, /not/ said function's arguments.
 
@@ -161,12 +161,12 @@ fitsOnChain ::
 fitsOnChain scriptName =
   singleTest (scriptName <> " fits on-chain") . FitsOnChain
 
-{- | Checks whether the given 'Plutus.V1.Ledger.Script' is no bigger
+{- | Checks whether the given 'Script' is no bigger
  than the given size limit.
 
  = Note
 
- If a 'Plutus.V1.Ledger.Script' represents a function that takes
+ If a 'Script' represents a function that takes
  arguments (such as a validator), this will only check the size of said
  function on-chain, /not/ said function's arguments.
 
@@ -183,8 +183,7 @@ fitsInto scriptName maxSize =
   singleTest (scriptName <> " fits into " <> prettyByteSize maxSize)
     . FitsInto maxSize
 
-{- | A helper for converting a 'Ledger.Typed.Scripts.Validators.TypedValidator'
- into its underlying 'Plutus.V1.Ledger.Script'.
+{- | A helper for converting a 'TypedValidator' into its underlying 'Script'.
 
  @since 1.0
 -}
@@ -230,13 +229,22 @@ ourStyle :: Style
 ourStyle = style {lineLength = 80}
 
 produceSize :: Int -> String
-produceSize i = renderStyle ourStyle $ 
-  "Size:" <+> case i `quotRem` 1024 of
-    (0, 0) -> "0B"
-    (d, 0) -> dumpDoc d <> "KiB"
-    (0, r) -> dumpDoc i <> "B" <> (if | r <= 256 -> ""
-                                      | r > 256 && r < 768 -> " (~0.5KiB)"
-                                      | otherwise -> " (~1KiB)")
-    (d, r) -> dumpDoc i <> "B (~" <> (if | r <= 256 -> dumpDoc d <> "KiB)"
-                                         | r > 256 && r < 768 -> dumpDoc d <> ".5KiB)"
-                                         | otherwise -> dumpDoc (d + 1) <> "KiB)")
+produceSize i =
+  renderStyle ourStyle $
+    "Size:" <+> case i `quotRem` 1024 of
+      (0, 0) -> "0B"
+      (d, 0) -> dumpDoc d <> "KiB"
+      (0, r) ->
+        dumpDoc i <> "B"
+          <> ( if
+                  | r <= 256 -> ""
+                  | r > 256 && r < 768 -> " (~0.5KiB)"
+                  | otherwise -> " (~1KiB)"
+             )
+      (d, r) ->
+        dumpDoc i <> "B (~"
+          <> ( if
+                  | r <= 256 -> dumpDoc d <> "KiB)"
+                  | r > 256 && r < 768 -> dumpDoc d <> ".5KiB)"
+                  | otherwise -> dumpDoc (d + 1) <> "KiB)"
+             )
