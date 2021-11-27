@@ -33,7 +33,12 @@ represented by a binary relation.
 @since 1.0
 -}
 {-# INLINEABLE isSortedBy #-}
-isSortedBy :: Foldable f => (a -> a -> Bool) -> f a -> Bool
+isSortedBy ::
+  forall (f :: Type -> Type) (a :: Type).
+  Foldable f =>
+  (a -> a -> Bool) ->
+  f a ->
+  Bool
 isSortedBy f = snd . foldr go (Nothing, True)
   where
     go x (Nothing, _) = (Just x, True)
@@ -45,7 +50,12 @@ result of a key function.
 @since 1.0
 -}
 {-# INLINEABLE isSortedOn #-}
-isSortedOn :: (Foldable f, Ord b) => (a -> b) -> f a -> Bool
+isSortedOn ::
+  forall (f :: Type -> Type) (a :: Type) (b :: Type).
+  (Foldable f, Ord b) =>
+  (a -> b) ->
+  f a ->
+  Bool
 isSortedOn f = isSortedBy (\x y -> f x <= f y)
 
 {-# INLINEABLE isSorted #-}
@@ -55,7 +65,11 @@ elements' 'Ord' instance.
 
 @since 1.0
 -}
-isSorted :: (Foldable f, Ord a) => f a -> Bool
+isSorted ::
+  forall (f :: Type -> Type) (a :: Type).
+  (Foldable f, Ord a) =>
+  f a ->
+  Bool
 isSorted = isSortedBy (<=)
 
 {- | Checks if the 'Foldable' is sorted strictly in ascending order with respect
@@ -65,7 +79,12 @@ cannot be equal.
 @since 1.0
 -}
 {-# INLINEABLE isSortedAscendingOn #-}
-isSortedAscendingOn :: (Foldable f, Ord b) => (a -> b) -> f a -> Bool
+isSortedAscendingOn ::
+  forall (f :: Type -> Type) (a :: Type) (b :: Type).
+  (Foldable f, Ord b) =>
+  (a -> b) ->
+  f a ->
+  Bool
 isSortedAscendingOn f = isSortedBy (\x y -> f x < f y)
 
 {- | Checks if the 'Foldable' is sorted strictly in ascending order with respect
@@ -75,7 +94,11 @@ be equal.
 @since 1.0
 -}
 {-# INLINEABLE isSortedAscending #-}
-isSortedAscending :: (Foldable f, Ord a) => f a -> Bool
+isSortedAscending ::
+  forall (f :: Type -> Type) (a :: Type).
+  (Foldable f, Ord a) =>
+  f a ->
+  Bool
 isSortedAscending = isSortedBy (<)
 
 {- | The inlineable version of @sort@ in @base@.

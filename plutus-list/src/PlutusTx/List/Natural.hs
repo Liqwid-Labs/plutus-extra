@@ -18,6 +18,7 @@ module PlutusTx.List.Natural (
   splitAt,
 ) where
 
+import Data.Kind (Type)
 import Data.Monoid (Sum (Sum, getSum))
 import PlutusTx.Natural (Natural, nat)
 import PlutusTx.Prelude hiding (length, take)
@@ -28,7 +29,7 @@ import Prelude qualified ()
 @since 1.0
 -}
 {-# INLINEABLE length #-}
-length :: Foldable f => f a -> Natural
+length :: forall (f :: Type -> Type) (a :: Type). Foldable f => f a -> Natural
 length = getSum . foldMap (Sum . const [nat| 1 |])
 
 {- | @'replicate' n x@ is a list of length @n@ with @x@ the value of every
@@ -37,7 +38,7 @@ element.
 @since 1.0
 -}
 {-# INLINEABLE replicate #-}
-replicate :: Natural -> a -> [a]
+replicate :: forall (a :: Type). Natural -> a -> [a]
 replicate [nat| 0 |] _ = []
 replicate n x = x : replicate (pred n) x
 
@@ -47,7 +48,7 @@ replicate n x = x : replicate (pred n) x
 @since 1.0
 -}
 {-# INLINEABLE take #-}
-take :: Natural -> [a] -> [a]
+take :: forall (a :: Type). Natural -> [a] -> [a]
 take _ [] = []
 take [nat| 0 |] _ = []
 take n (x : xs) = x : take (pred n) xs
@@ -58,7 +59,7 @@ take n (x : xs) = x : take (pred n) xs
 @since 1.0
 -}
 {-# INLINEABLE drop #-}
-drop :: Natural -> [a] -> [a]
+drop :: forall (a :: Type). Natural -> [a] -> [a]
 drop _ [] = []
 drop [nat| 0 |] xs = xs
 drop n (_ : xs) = drop (pred n) xs
@@ -69,7 +70,7 @@ drop n (_ : xs) = drop (pred n) xs
 @since 1.0
 -}
 {-# INLINEABLE splitAt #-}
-splitAt :: Natural -> [a] -> ([a], [a])
+splitAt :: forall (a :: Type). Natural -> [a] -> ([a], [a])
 splitAt _ [] = ([], [])
 splitAt [nat| 0 |] xs = ([], xs)
 splitAt n (x : xs) =
