@@ -2,14 +2,17 @@
 
 import Data.Function (on)
 import Data.Kind (Type)
-import Data.List (nub, nubBy, sort, sortOn)
+import Data.List (nub, sort, sortOn)
 import PlutusTx.List.Natural qualified as Nat
 import PlutusTx.List.Ord (
   isSorted,
   isSortedAscending,
   isSortedAscendingOn,
   isSortedOn,
+  ordNub,
+  ordNubBy,
  )
+import PlutusTx.List.Ord qualified as List
 import PlutusTx.Natural (Natural)
 import PlutusTx.Prelude qualified as PTx
 import Test.Tasty (TestTree, defaultMain, localOption, testGroup)
@@ -41,10 +44,15 @@ tests =
         , testProperty "length (replicate n x) == n" propReplicateLength
         , testProperty "forall y in (replicate n x), x == y" propReplicateElem
         ]
+  , localOption go
+      . testGroup "Sort and ordNub"
+      $ [ testProperty "sort == Prelude.sort" propSort
+        , testProperty "ordNub == Prelude.nub . Prelude.sort" propOrdNub
+        ]
   , testGroup
       "List sortedness"
       [ testProperty "isSorted xs == (sort xs == xs)" propIsSorted
-      , testProperty "isSortedAscending xs == (nub (sort xs) == xs)" propIsSortedAscending
+      , testProperty "isSortedAscending xs == (ordNub xs == xs)" propIsSortedAscending
       , testProperty "isSortedOn f xs == isSorted (f <$> xs)" propIsSortedOn
       , testProperty "isSortedAscendingOn f xs == isSortedAscending (f <$> xs)" propIsSortedAscendingOn
       ]
@@ -106,7 +114,7 @@ arbitraryAscendingOn ::
 arbitraryAscendingOn f =
   oneof
     [ NotAscending <$> arbitrary
-    , IsAscending . nubBy ((==) `on` f) . sortOn f <$> arbitrary
+    , IsAscending . ordNubBy (compare `on` f) . sortOn f <$> arbitrary
     ]
 
 shrinkAscendingOn ::
@@ -117,7 +125,8 @@ shrinkAscendingOn ::
   [SomeAscending a]
 shrinkAscendingOn f = \case
   NotAscending xs -> NotAscending <$> shrink xs
-  IsAscending xs -> IsAscending . nubBy ((==) `on` f) . sortOn f <$> shrink xs
+  IsAscending xs ->
+    IsAscending . ordNubBy (compare `on` f) . sortOn f <$> shrink xs
 
 instance
   forall (a :: Type).
@@ -151,17 +160,24 @@ propReplicateElem :: Property
 propReplicateElem = property $ \(n :: Natural) (x :: Int) ->
   all (== x) $ Nat.replicate n x
 
+propSort :: Property
+propSort = property $ \(xs :: [PTx.Integer]) -> sort xs == List.sort xs
+
+propOrdNub :: Property
+propOrdNub = property $ \(xs :: [PTx.Integer]) ->
+  nub (sort xs) == ordNub xs
+
 propIsSorted :: Property
 propIsSorted = property $ \(unsort -> xs :: [PTx.Integer]) ->
   checkCoverage
     . cover 50.0 (isSorted xs) "precondition known satisfied"
-    $ isSorted xs == (sort xs == xs)
+    $ isSorted xs == (List.sort xs == xs)
 
 propIsSortedAscending :: Property
 propIsSortedAscending = property $ \(unasc -> xs :: [PTx.Integer]) ->
   checkCoverage
     . cover 50.0 (isSortedAscending xs) "precondition known satisfied"
-    $ isSortedAscending xs == (nub (sort xs) == xs)
+    $ isSortedAscending xs == (ordNub xs == xs)
 
 propIsSortedOn :: Property
 propIsSortedOn = property $ \(Fun _ f :: Fun PTx.Integer PTx.Integer) ->
@@ -170,7 +186,6 @@ propIsSortedOn = property $ \(Fun _ f :: Fun PTx.Integer PTx.Integer) ->
       . cover 50.0 (isSortedOn f xs) "precondition known satisfied"
       $ isSortedOn f xs == isSorted (f <$> xs)
 
--- [daylily] This is VERY slow for now. Revisit after 'ordNub'.
 propIsSortedAscendingOn :: Property
 propIsSortedAscendingOn = property $
   \(Fun _ f :: Fun PTx.Integer PTx.Integer) ->
