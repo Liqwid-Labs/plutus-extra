@@ -70,13 +70,11 @@ test-suite script-size
   main-is:        Main.hs
   other-modules:  Test
   build-depends:
-    , bytestring         ^>=0.10.12.0
-    , cardano-api        ^>=1.30.0
     , plutus-ledger-api
     , plutus-pretty
+    , plutus-size-check  ^>=1.0
     , plutus-tx
     , plutus-tx-plugin
-    , serialise          ^>=0.2.3.0
     , tasty              ^>=1.4.1
 
   hs-source-dirs: test/script-size

@@ -11,18 +11,7 @@ module Main (
   testTraceIfFalseSkeletal,
 ) where
 
-import Cardano.Api.Shelley (
-  PlutusScript (PlutusScriptSerialised),
-  PlutusScriptV1,
-  serialiseToCBOR,
- )
-import Codec.Serialise (serialise)
-import Data.ByteString qualified as BSS
-import Data.ByteString.Lazy qualified as BS
-import Data.ByteString.Short qualified as SBS
-import Data.Foldable (traverse_)
-import Data.Kind (Type)
-import Plutus.V1.Ledger.Scripts (Script, fromCompiledCode)
+import Plutus.V1.Ledger.Scripts (fromCompiledCode)
 import PlutusTx.Code (CompiledCode)
 import PlutusTx.Prelude (BuiltinString)
 import PlutusTx.Skeleton (
@@ -36,47 +25,21 @@ import PlutusTx.Skeleton (
  )
 import PlutusTx.TH (compile)
 import Test (Foo)
+import Test.Tasty (defaultMain, testGroup)
+import Test.Tasty.Plutus.Size (fitsOnChain)
 
 main :: IO ()
 main =
-  traverse_
-    putStrLn
-    [ sizeWithName "skeletize" testSkeletize
-    , sizeWithName "showSkeletal" testShowSkeletal
-    , sizeWithName "traceSkeletal" testTraceSkeletal
-    , sizeWithName "traceErrorSkeletal" testTraceErrorSkeletal
-    , sizeWithName "traceIfFalseSkeletal" testTraceIfFalseSkeletal
-    , sizeWithName "traceIfTrueSkeletal" testTraceIfTrueSkeletal
+  defaultMain . testGroup "On-chain size" $
+    [ fitsOnChain "skeletize" . fromCompiledCode $ testSkeletize
+    , fitsOnChain "showSkeletal" . fromCompiledCode $ testShowSkeletal
+    , fitsOnChain "traceSkeletal" . fromCompiledCode $ testTraceSkeletal
+    , fitsOnChain "traceErrorSkeletal" . fromCompiledCode $ testTraceErrorSkeletal
+    , fitsOnChain "traceIfFalseSkeletal" . fromCompiledCode $ testTraceIfFalseSkeletal
+    , fitsOnChain "traceIfTrueSkeletal" . fromCompiledCode $ testTraceIfTrueSkeletal
     ]
 
-sizeWithName ::
-  forall (a :: Type).
-  String ->
-  CompiledCode a ->
-  String
-sizeWithName name cc = name <> ": " <> sizeOfCode
-  where
-    sizeOfCode :: String
-    sizeOfCode = produceSize . scriptSize . fromCompiledCode $ cc
-    produceSize :: Int -> String
-    produceSize i = case i `quotRem` 1024 of
-      (d, 0) -> show d <> "KiB"
-      (d, r) ->
-        show i <> "B (~"
-          <> ( if
-                  | r <= 256 -> show d <> "KiB)"
-                  | r > 256 && r < 768 -> show d <> ".5KiB)"
-                  | otherwise -> show (d + 1) <> "KiB)"
-             )
-
-scriptSize :: Script -> Int
-scriptSize =
-  BSS.length
-    . serialiseToCBOR
-    . PlutusScriptSerialised @PlutusScriptV1
-    . SBS.toShort
-    . BS.toStrict
-    . serialise
+-- Helpers
 
 testSkeletize :: CompiledCode (Foo -> Skeleton)
 testSkeletize = $$(compile [||skeletize||])
