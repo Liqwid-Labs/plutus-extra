@@ -10,24 +10,30 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   `Pass` and `Fail` respectively, unifying with the internal type used in unit
   tests.
 
+## 4.2 -- 2021-11-26
+
+### Added
+
+* `shouldValidateProducing`, `shouldn'tValidateProducing` to extend
+  the functionality of unit testing.
+
 ## 4.1 -- 2021-11-18
 
 ### Added
 
-  * Created a `Tokens` type representing tokens being minted by the policy, with
+* `Tokens` type representing tokens being minted by the policy, with
   a `token` function for creating a single token.
+* `makeIncompleteContexts` to ease building of contexts that are missing
+  a single portion of the context.
 
 ### Changed
 
-* Changed API for testing minting policies.
-
+* Changed API for testing minting policies:
   * Replaced `OwnMint` and `OtherMint` constructors to `Minting` with single 
     `Mint` constructor representing mints of currencies other than that of 
     the policy being tested.
-
   * Added a `Tokens` field to `MintingTest`, and a parameter to `GenForMinting` 
     and `fromArbitraryMinting`.
-
 * Rename `paysSelf` and `paysOther` into `paysToSelf` and `paysToOther` for
   consistency.
 * Rename `ValidatorTest` to `ScriptTest`.

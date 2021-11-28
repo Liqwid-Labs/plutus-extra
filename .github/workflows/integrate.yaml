@@ -75,4 +75,4 @@ jobs:
             dist-newstyle
           key: ${{ runner.os }}-cabal
       - name: Build the full ci derivation
-        run: nix-build ./nix/ci.nix
+        run: nix build .#check.x86_64-linux --extra-experimental-features nix-command --extra-experimental-features flakes
