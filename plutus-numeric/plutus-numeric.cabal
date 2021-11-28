@@ -121,3 +121,15 @@ test-suite laws
     , tasty-quickcheck  ^>=0.10.1.2
 
   hs-source-dirs: test/laws
+
+test-suite size
+  import:         test-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-ledger-api
+    , plutus-size-check  ^>=1.0
+    , plutus-tx
+    , plutus-tx-plugin
+
+  hs-source-dirs: test/size
