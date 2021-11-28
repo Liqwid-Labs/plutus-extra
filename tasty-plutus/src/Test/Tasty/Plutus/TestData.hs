@@ -102,6 +102,14 @@ instance Semigroup Outcome where
   {-# INLINEABLE stimes #-}
   stimes = stimesIdempotent
 
+passIf :: Bool -> Outcome
+passIf True = Pass
+passIf False = Fail
+
+{- | \'Maximal badness\': gives 'Fail' when any argument is 'Fail'.
+
+ @since 4.0
+
 {- | A reification of 'Arbitrary'. Consists of a combination of generator and
  shrinker.
 
