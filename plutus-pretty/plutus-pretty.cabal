@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-pretty
-version:            2.0
+version:            2.1
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -37,6 +37,7 @@ common lang
     TypeSynonymInstances
     UndecidableInstances
 
+  build-depends:      base ^>=4.14
   ghc-options:
     -Wall -Wcompat -Wincomplete-uni-patterns -Wredundant-constraints
     -Wmissing-export-lists -Werror -Wincomplete-record-updates
@@ -46,12 +47,34 @@ library
   import:          lang
   exposed-modules:
     Plutus.V1.Pretty
+    PlutusTx.Skeleton
     Text.Show.Pretty.Extra
 
+  other-modules:
+    PlutusTx.Skeleton.Builder
+    PlutusTx.Skeleton.Internal
+    PlutusTx.Skeleton.QQ
+    PlutusTx.Skeleton.String
+
   build-depends:
-    , base               ^>=4.14
     , plutus-ledger-api
     , plutus-tx
     , pretty-show        ^>=1.10
+    , template-haskell   ^>=2.16.0.0
 
   hs-source-dirs:  src
+
+test-suite script-size
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  other-modules:  Test
+  build-depends:
+    , plutus-ledger-api
+    , plutus-pretty
+    , plutus-size-check  ^>=1.0
+    , plutus-tx
+    , plutus-tx-plugin
+    , tasty              ^>=1.4.1
+
+  hs-source-dirs: test/script-size
