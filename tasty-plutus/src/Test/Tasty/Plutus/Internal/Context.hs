@@ -10,10 +10,15 @@ module Test.Tasty.Plutus.Internal.Context (
   compileMinting,
   Tokens (Tokens, unTokens),
   token,
+  makeIncompleteContexts,
 ) where
 
+import Control.Arrow ((***))
+import Data.Bifunctor (first)
 import Data.Kind (Type)
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Maybe (mapMaybe)
+import Data.Semigroup (sconcat)
 import Data.Sequence (Seq)
 import GHC.Exts (toList)
 import Ledger.Scripts (datumHash)
@@ -53,7 +58,9 @@ import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.AssocMap (Map)
 import PlutusTx.AssocMap qualified as Map
+import PlutusTx.Prelude (length)
 import Test.Tasty.Plutus.Options (ScriptInputPosition (Head, Tail))
+import Prelude hiding (length)
 
 {- | Describes what kind of script this is meant to test. Directly
  corresponds to 'ScriptPurpose'.
@@ -81,7 +88,7 @@ data ExternalType
     PubKeyType PubKeyHash
   | -- | @since 3.0
     ScriptType ValidatorHash BuiltinData
-  | -- | @since 3.0mapMaybe
+  | -- | @since 3.0
     OwnType BuiltinData
   deriving stock
     ( -- | @since 3.0
@@ -216,6 +223,44 @@ compileMinting conf cb (Tokens toks) =
 
     sym = testCurrencySymbol conf
 
+{- | Combine a list of partial contexts that should,
+     when combined, validate, but fail when any one
+     partial context is missing. The input is a list
+     of pairs where the first element is the partial
+     context, and the second is the test message when
+     that particular context is missing. e.g.
+
+     > makeIncompleteContexts
+     >   [ (context1, "Missing context 1")
+     >   , (context2, "Missing context 2")
+     >   , (context3, "Missing context 3")
+     >   ]
+
+     is equivalent to
+
+     > [ (context2 <> context3, "Missing context 1")
+     > , (context1 <> context3, "Missing context 2")
+     > , (context1 <> context2, "Missing context 3")
+     > ]
+
+     This can then be run in a `withValidator` block
+     like so:
+
+     > mapM_ (\(ctx,str) -> shouldn'tValidate str input ctx) convertedContexts
+
+ @since 4.1
+-}
+makeIncompleteContexts ::
+  forall (p :: Purpose).
+  [(ContextBuilder p, String)] ->
+  [(ContextBuilder p, String)]
+makeIncompleteContexts ctxs = map (first sconcat) ctxs2
+  where
+    ctxs1 = removeContext ctxs
+    ctxs2 = mapMaybe nonEmpty1st ctxs1
+    nonEmpty1st :: ([a], b) -> Maybe (NonEmpty.NonEmpty a, b)
+    nonEmpty1st (xs, y) = (,y) <$> NonEmpty.nonEmpty xs
+
 -- Helpers
 
 baseTxInfo ::
@@ -311,3 +356,23 @@ instance Semigroup Tokens where
 -}
 token :: TokenName -> Integer -> Tokens
 token name = Tokens . Map.singleton name
+
+-- Helper for makeIncompleteContexts : Take a list
+-- of pairs, and create another list of pairs where
+-- the first element is the concatenation of every
+-- element but the n-th, and the second element is
+-- the second element of the pair that was removed.
+removeContext :: [(a, b)] -> [([a], b)]
+removeContext xs =
+  mapMaybe
+    (maybe2nd . (map fst *** fmap snd) . (`removeNth` xs))
+    [0 .. (length xs - 1)]
+  where
+    maybe2nd :: (a, Maybe b) -> Maybe (a, b)
+    maybe2nd (x, y) = (x,) <$> y
+
+-- Remove and return the n-th element of a list.
+removeNth :: Integer -> [a] -> ([a], Maybe a)
+removeNth _ [] = ([], Nothing)
+removeNth 0 (x : xs) = (xs, Just x)
+removeNth n (x : xs) = first (x :) $ removeNth (n - 1) xs
