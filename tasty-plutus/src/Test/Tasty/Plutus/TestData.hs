@@ -12,6 +12,7 @@ module Test.Tasty.Plutus.TestData (
   -- * Data type
   TestData (..),
   Outcome (..),
+  passIf,
 
   -- * QuickCheck support
   Methodology (..),
@@ -101,6 +102,14 @@ instance Semigroup Outcome where
   _ <> _ = Pass
   {-# INLINEABLE stimes #-}
   stimes = stimesIdempotent
+
+{- | Helper wrapper function
+
+ @since 4.1
+-}
+passIf :: Bool -> Outcome
+passIf True = Pass
+passIf False = Fail
 
 {- | A reification of 'Arbitrary'. Consists of a combination of generator and
  shrinker.
