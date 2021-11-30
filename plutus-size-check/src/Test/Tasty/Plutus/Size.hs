@@ -10,7 +10,8 @@
 
  Provides a means of checking that a 'Script' fits into a given
  size, either based on a user-specified limit, or the inherent limit of
- on-chain size (as currently known).
+ on-chain size (as currently known). Also allows comparing the on-chain size
+ of a target against a baseline.
 
  = Example usage
 
@@ -26,6 +27,7 @@
  >    fitsInto [kbytes | 3 |] myOtherScript,
  >    fitsOnChain . fromCompiledCode $ someRandomFunction
  >    fitsInto [bytes | 1023 |] . fromCompiledCode $ someRandomData
+ >    fitsUnder possiblyHugeThing smallerBaselineThing
  >    ...
 
  = Important notes
@@ -104,6 +106,7 @@ module Test.Tasty.Plutus.Size (
   -- * Test API
   fitsOnChain,
   fitsInto,
+  fitsUnder,
 
   -- * Byte size helper type
   Internal.ByteSize,
@@ -137,7 +140,14 @@ import Test.Tasty.Providers (
   testFailed,
   testPassed,
  )
-import Text.PrettyPrint (Style, lineLength, renderStyle, style, (<+>))
+import Text.PrettyPrint (
+  Doc,
+  Style,
+  lineLength,
+  renderStyle,
+  style,
+  (<+>),
+ )
 import Text.Show.Pretty (dumpDoc)
 import Prelude hiding (divMod)
 
@@ -183,6 +193,29 @@ fitsInto scriptName maxSize =
   singleTest (scriptName <> " fits into " <> prettyByteSize maxSize)
     . FitsInto maxSize
 
+{- | Checks whether the first 'Script' is not larger in its representation than
+ the second 'Script'. This can be used to ensure that comparative script size
+ is favourable for the same functionality.
+
+ = Note
+
+ If a 'Script' represents a function that takes arguments (such as a
+ validator), this will only check the size of said function on-chain, /not/
+ said function's arguments.
+
+ To assist with judging this, a successful test will also output the size of
+ each script, along with a percentage size of the first relative the second.
+
+ @since 1.1
+-}
+fitsUnder ::
+  String ->
+  Script ->
+  Script ->
+  TestTree
+fitsUnder testName s1 =
+  singleTest ("Size comparison: " <> testName) . FitsUnder s1
+
 {- | A helper for converting a 'TypedValidator' into its underlying 'Script'.
 
  @since 1.0
@@ -198,7 +231,10 @@ prettyByteSize (Internal.ByteSize n) = case n `quotRem` 1024 of
     renderStyle ourStyle $
       if r == 0 then dumpDoc d <> "KiB" else dumpDoc n <> "B"
 
-data FitTest = FitsOnChain Script | FitsInto Internal.ByteSize Script
+data FitTest
+  = FitsOnChain Script
+  | FitsInto Internal.ByteSize Script
+  | FitsUnder Script Script
 
 instance IsTest FitTest where
   run _ ft _ = pure $ case ft of
@@ -214,6 +250,12 @@ instance IsTest FitTest where
        in case compare serializedSize limit of
             GT -> testFailed . produceSize $ serializedSize
             _ -> testPassed . produceSize $ serializedSize
+    FitsUnder script1 script2 ->
+      let script1Size = serialisedScriptSize script1
+          script2Size = serialisedScriptSize script2
+       in case compare script1Size script2Size of
+            GT -> testFailed . produceRelativeSizes script1Size $ script2Size
+            _ -> testPassed . produceRelativeSizes script1Size $ script2Size
   testOptions = Tagged []
 
 serialisedScriptSize :: Script -> Int
@@ -228,23 +270,35 @@ serialisedScriptSize =
 ourStyle :: Style
 ourStyle = style {lineLength = 80}
 
-produceSize :: Int -> String
-produceSize i =
+produceRelativeSizes :: Int -> Int -> String
+produceRelativeSizes size1 size2 =
   renderStyle ourStyle $
-    "Size:" <+> case i `quotRem` 1024 of
-      (0, 0) -> "0B"
-      (d, 0) -> dumpDoc d <> "KiB"
-      (0, r) ->
-        dumpDoc i <> "B"
-          <> ( if
-                  | r <= 256 -> ""
-                  | r > 256 && r < 768 -> " (~0.5KiB)"
-                  | otherwise -> " (~1KiB)"
-             )
-      (d, r) ->
-        dumpDoc i <> "B (~"
-          <> ( if
-                  | r <= 256 -> dumpDoc d <> "KiB)"
-                  | r > 256 && r < 768 -> dumpDoc d <> ".5KiB)"
-                  | otherwise -> dumpDoc (d + 1) <> "KiB)"
-             )
+    renderSize size1 <+> "vs" <+> renderSize size2 <+> renderPercentDiff size1 size2
+
+produceSize :: Int -> String
+produceSize i = renderStyle ourStyle $ "Size:" <+> renderSize i
+
+renderSize :: Int -> Doc
+renderSize i = case i `quotRem` 1024 of
+  (0, 0) -> "0B"
+  (d, 0) -> dumpDoc d <> "KiB"
+  (0, r) ->
+    dumpDoc i <> "B"
+      <> ( if
+              | r <= 256 -> ""
+              | r > 256 && r < 768 -> " (~0.5KiB)"
+              | otherwise -> " (~1KiB)"
+         )
+  (d, r) ->
+    dumpDoc i <> "B (~"
+      <> ( if
+              | r <= 256 -> dumpDoc d <> "KiB)"
+              | r > 256 && r < 768 -> dumpDoc d <> ".5KiB)"
+              | otherwise -> dumpDoc (d + 1) <> "KiB)"
+         )
+
+renderPercentDiff :: Int -> Int -> Doc
+renderPercentDiff size1 size2 = "(" <> dumpDoc rat <> "%)"
+  where
+    rat :: Double
+    rat = (fromIntegral size1 / fromIntegral size2) * 100.0

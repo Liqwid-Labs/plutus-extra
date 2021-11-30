@@ -72,7 +72,7 @@ test-suite script-size
   build-depends:
     , plutus-ledger-api
     , plutus-pretty
-    , plutus-size-check  ^>=1.0
+    , plutus-size-check  ^>=1.1
     , plutus-tx
     , plutus-tx-plugin
     , tasty              ^>=1.4.1
