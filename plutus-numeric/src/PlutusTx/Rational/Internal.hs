@@ -3,7 +3,7 @@
 
 module PlutusTx.Rational.Internal (
   Rational (..),
-  mkRational,
+  (%),
   negate,
   fromInteger,
   numerator,
@@ -16,7 +16,13 @@ module PlutusTx.Rational.Internal (
 ) where
 
 import Control.Monad (guard)
-import PlutusTx.Prelude hiding (Rational, fromInteger, negate, round)
+import PlutusTx.Prelude hiding (
+  Rational,
+  fromInteger,
+  negate,
+  round,
+  (%),
+ )
 import PlutusTx.Prelude qualified as Plutus
 import Test.QuickCheck.Arbitrary (
   Arbitrary (arbitrary, shrink),
@@ -95,11 +101,11 @@ instance Arbitrary Rational where
   arbitrary = do
     num <- arbitrary
     Positive den <- arbitrary
-    Prelude.pure . mkRational num $ den
+    Prelude.pure $ num % den
   shrink r@(Rational num den) = do
     num' <- shrink num
     Positive den' <- shrink . Positive $ den
-    let res = mkRational num' den'
+    let res = num' % den'
     guard (res Prelude.< r)
     Prelude.pure res
 
@@ -114,14 +120,16 @@ instance Function Rational where
       outOf :: (Integer, Integer) -> Rational
       outOf (n, d) = Rational n d
 
-{-# INLINEABLE mkRational #-}
-mkRational :: Integer -> Integer -> Rational
-mkRational n d
+{-# INLINEABLE (%) #-}
+(%) :: Integer -> Integer -> Rational
+n % d
   | d == zero = error ()
-  | d < zero = mkRational (Plutus.negate n) (Plutus.negate d)
+  | d < zero = Plutus.negate n % Plutus.negate d
   | otherwise =
     let gcd = euclid n d
      in Rational (n `quotient` gcd) (d `quotient` gcd)
+
+infixl 7 %
 
 {-# INLINEABLE negate #-}
 negate :: Rational -> Rational

@@ -2,7 +2,7 @@
 
 module PlutusTx.Rational (
   Internal.Rational,
-  Internal.mkRational,
+  (Internal.%),
   Internal.negate,
   Internal.fromInteger,
   Internal.numerator,

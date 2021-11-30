@@ -9,75 +9,81 @@ import PlutusTx.Ratio as PlutusRatio
 import PlutusTx.Rational qualified as Our
 import PlutusTx.TH (compile)
 import Test.Tasty (defaultMain, testGroup)
-import Test.Tasty.Plutus.Size (fitsOnChain)
+import Test.Tasty.Plutus.Size (fitsUnder)
 
 main :: IO ()
 main =
-  defaultMain . testGroup "Size comparisons" $
+  defaultMain . testGroup "Rational (us versus Plutus)" $
     [ testGroup
         "Eq"
-        [ fitsOnChain "Plutus Rational ==" . fromCompiledCode $ pRatEq
-        , fitsOnChain "Our Rational ==" . fromCompiledCode $ ourRatEq
-        , fitsOnChain "Plutus Rational /=" . fromCompiledCode $ pRatNeq
-        , fitsOnChain "Our Rational /=" . fromCompiledCode $ ourRatNeq
+        [ fitsUnder "==" (fromCompiledCode ourRatEq) (fromCompiledCode pRatEq)
+        , fitsUnder "/=" (fromCompiledCode ourRatNeq) (fromCompiledCode pRatNeq)
         ]
     , testGroup
         "Ord"
-        [ fitsOnChain "Plutus Rational compare" . fromCompiledCode $ pRatCompare
-        , fitsOnChain "Our Rational compare" . fromCompiledCode $ ourRatCompare
-        , fitsOnChain "Plutus Rational <=" . fromCompiledCode $ pRatLeq
-        , fitsOnChain "Our Rational <=" . fromCompiledCode $ ourRatLeq
-        , fitsOnChain "Plutus Rational >=" . fromCompiledCode $ pRatGeq
-        , fitsOnChain "Our Rational >=" . fromCompiledCode $ ourRatGeq
-        , fitsOnChain "Plutus Rational <" . fromCompiledCode $ pRatLt
-        , fitsOnChain "Our Rational <" . fromCompiledCode $ ourRatLt
-        , fitsOnChain "Plutus Rational >" . fromCompiledCode $ pRatGt
-        , fitsOnChain "Our Rational >" . fromCompiledCode $ ourRatGt
-        , fitsOnChain "Plutus Rational min" . fromCompiledCode $ pRatMin
-        , fitsOnChain "Our Rational min" . fromCompiledCode $ ourRatMin
-        , fitsOnChain "Plutus Rational max" . fromCompiledCode $ pRatMax
-        , fitsOnChain "Our Rational max" . fromCompiledCode $ ourRatMax
+        [ fitsUnder "compare" (fromCompiledCode ourRatCompare) (fromCompiledCode pRatCompare)
+        , fitsUnder "<=" (fromCompiledCode ourRatLeq) (fromCompiledCode pRatLeq)
+        , fitsUnder ">=" (fromCompiledCode ourRatGeq) (fromCompiledCode pRatGeq)
+        , fitsUnder "<" (fromCompiledCode ourRatLt) (fromCompiledCode pRatLt)
+        , fitsUnder ">" (fromCompiledCode ourRatGt) (fromCompiledCode pRatGt)
+        , fitsUnder "min" (fromCompiledCode ourRatMin) (fromCompiledCode pRatMin)
+        , fitsUnder "max" (fromCompiledCode ourRatMax) (fromCompiledCode pRatMax)
         ]
     , testGroup
         "AdditiveGroup"
-        [ fitsOnChain "Plutus Rational +" . fromCompiledCode $ pRatPlus
-        , fitsOnChain "Our Rational +" . fromCompiledCode $ ourRatPlus
-        , fitsOnChain "Plutus Rational zero" . fromCompiledCode $ pRatZero
-        , fitsOnChain "Our Rational zero" . fromCompiledCode $ ourRatZero
-        , fitsOnChain "Plutus Rational -" . fromCompiledCode $ pRatMinus
-        , fitsOnChain "Our Rational -" . fromCompiledCode $ ourRatMinus
-        , fitsOnChain "Plutus Rational negate" . fromCompiledCode $ pRatNegate
-        , fitsOnChain "Our Rational negate" . fromCompiledCode $ ourRatNegate
-        , fitsOnChain "Our Rational negate (overloaded)" . fromCompiledCode $ ourRatNegateOverload
+        [ fitsUnder "+" (fromCompiledCode ourRatPlus) (fromCompiledCode pRatPlus)
+        , fitsUnder "zero" (fromCompiledCode ourRatZero) (fromCompiledCode pRatZero)
+        , fitsUnder "-" (fromCompiledCode ourRatMinus) (fromCompiledCode pRatMinus)
+        , fitsUnder "negate" (fromCompiledCode ourRatNegate) (fromCompiledCode pRatNegate)
+        , fitsUnder
+            "negate (overloaded)"
+            (fromCompiledCode ourRatNegateOverload)
+            (fromCompiledCode pRatNegate)
         ]
     , testGroup
         "MultiplicativeMonoid"
-        [ fitsOnChain "Plutus Rational *" . fromCompiledCode $ pRatTimes
-        , fitsOnChain "Our Rational *" . fromCompiledCode $ ourRatTimes
-        , fitsOnChain "Plutus Rational one" . fromCompiledCode $ pRatOne
-        , fitsOnChain "Our Rational one" . fromCompiledCode $ ourRatOne
+        [ fitsUnder "*" (fromCompiledCode ourRatTimes) (fromCompiledCode pRatTimes)
+        , fitsUnder "one" (fromCompiledCode ourRatOne) (fromCompiledCode pRatOne)
         ]
     , testGroup
         "Other"
-        [ fitsOnChain "Plutus Rational construction" . fromCompiledCode $ pRatMk
-        , fitsOnChain "Our Rational construction" . fromCompiledCode $ ourRatMk
-        , fitsOnChain "Plutus Rational fromInteger" . fromCompiledCode $ pRatFromInteger
-        , fitsOnChain "Our Rational fromInteger" . fromCompiledCode $ ourRatFromInteger
-        , fitsOnChain "Plutus Rational numerator" . fromCompiledCode $ pRatNumerator
-        , fitsOnChain "Our Rational numerator" . fromCompiledCode $ ourRatNumerator
-        , fitsOnChain "Plutus Rational denominator" . fromCompiledCode $ pRatDenominator
-        , fitsOnChain "Our Rational denominator" . fromCompiledCode $ ourRatDenominator
-        , fitsOnChain "Plutus Rational round" . fromCompiledCode $ pRatRound
-        , fitsOnChain "Our Rational round" . fromCompiledCode $ ourRatRound
-        , fitsOnChain "Plutus Rational truncate" . fromCompiledCode $ pRatTruncate
-        , fitsOnChain "Our Rational truncate" . fromCompiledCode $ ourRatTruncate
-        , fitsOnChain "Plutus Rational properFraction" . fromCompiledCode $ pRatProperFrac
-        , fitsOnChain "Our Rational properFraction" . fromCompiledCode $ ourRatProperFrac
-        , fitsOnChain "Plutus Rational recip" . fromCompiledCode $ pRatRecip
-        , fitsOnChain "Our Rational recip" . fromCompiledCode $ ourRatRecip
-        , fitsOnChain "Plutus Rational abs" . fromCompiledCode $ pRatAbs
-        , fitsOnChain "Our Rational abs" . fromCompiledCode $ ourRatAbs
-        , fitsOnChain "Our Rational abs (overloaded)" . fromCompiledCode $ ourRatAbsOverload
+        [ fitsUnder "%" (fromCompiledCode ourRatMk) (fromCompiledCode pRatMk)
+        , fitsUnder
+            "fromInteger"
+            (fromCompiledCode ourRatFromInteger)
+            (fromCompiledCode pRatFromInteger)
+        , fitsUnder
+            "numerator"
+            (fromCompiledCode ourRatNumerator)
+            (fromCompiledCode pRatNumerator)
+        , fitsUnder
+            "denominator"
+            (fromCompiledCode ourRatDenominator)
+            (fromCompiledCode pRatDenominator)
+        , fitsUnder
+            "round"
+            (fromCompiledCode ourRatRound)
+            (fromCompiledCode pRatRound)
+        , fitsUnder
+            "truncate"
+            (fromCompiledCode ourRatTruncate)
+            (fromCompiledCode pRatTruncate)
+        , fitsUnder
+            "properFraction"
+            (fromCompiledCode ourRatProperFrac)
+            (fromCompiledCode pRatProperFrac)
+        , fitsUnder
+            "recip"
+            (fromCompiledCode ourRatRecip)
+            (fromCompiledCode pRatRecip)
+        , fitsUnder
+            "abs"
+            (fromCompiledCode ourRatAbs)
+            (fromCompiledCode pRatAbs)
+        , fitsUnder
+            "abs (overloaded)"
+            (fromCompiledCode ourRatAbsOverload)
+            (fromCompiledCode pRatAbs)
         ]
     ]
 
@@ -180,7 +186,7 @@ pRatMk :: CompiledCode (Integer -> Integer -> Plutus.Rational)
 pRatMk = $$(compile [||(PlutusRatio.%)||])
 
 ourRatMk :: CompiledCode (Integer -> Integer -> Our.Rational)
-ourRatMk = $$(compile [||Our.mkRational||])
+ourRatMk = $$(compile [||(Our.%)||])
 
 pRatFromInteger :: CompiledCode (Integer -> Plutus.Rational)
 pRatFromInteger = $$(compile [||Plutus.fromInteger||])
