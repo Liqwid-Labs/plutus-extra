@@ -3,6 +3,7 @@
 
 module PlutusTx.Rational.Internal (
   Rational (..),
+  mkRational,
   negate,
   fromInteger,
   numerator,
@@ -15,12 +16,14 @@ module PlutusTx.Rational.Internal (
 ) where
 
 import Control.Monad (guard)
-import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink),
-  CoArbitrary (coarbitrary))
-import Test.QuickCheck.Function (Function (function), functionMap)
-import Test.QuickCheck.Modifiers (Positive (Positive))
 import PlutusTx.Prelude hiding (Rational, fromInteger, negate, round)
 import PlutusTx.Prelude qualified as Plutus
+import Test.QuickCheck.Arbitrary (
+  Arbitrary (arbitrary, shrink),
+  CoArbitrary (coarbitrary),
+ )
+import Test.QuickCheck.Function (Function (function), functionMap)
+import Test.QuickCheck.Modifiers (Positive (Positive))
 import Prelude qualified
 
 -- Numerator, denominator
@@ -30,12 +33,7 @@ data Rational = Rational Integer Integer
 
 instance Eq Rational where
   {-# INLINEABLE (==) #-}
-  Rational n d == Rational n' d' = (n * d') == (n' * d)
-{-
-  Rational n d == Rational n' d' -- = n == n' && d == d'
-    | n == zero = n' == zero
-    | otherwise = n == n' && d == d'
--}
+  Rational n d == Rational n' d' = n == n' && d == d'
 
 instance Ord Rational where
   {-# INLINEABLE compare #-}
@@ -50,15 +48,15 @@ instance Ord Rational where
   Rational n d > Rational n' d' = (n * d') > (n' * d)
 
 instance Prelude.Ord Rational where
-  compare (Rational n d) (Rational n' d') = 
+  compare (Rational n d) (Rational n' d') =
     Prelude.compare (n Prelude.* d') (n' Prelude.* d)
-  Rational n d <= Rational n' d' = 
+  Rational n d <= Rational n' d' =
     (n Prelude.* d') Prelude.<= (n' Prelude.* d)
-  Rational n d >= Rational n' d' = 
+  Rational n d >= Rational n' d' =
     (n Prelude.* d') Prelude.>= (n' Prelude.* d)
-  Rational n d < Rational n' d' = 
+  Rational n d < Rational n' d' =
     (n Prelude.* d') Prelude.< (n' Prelude.* d)
-  Rational n d > Rational n' d' = 
+  Rational n d > Rational n' d' =
     (n Prelude.* d') Prelude.> (n' Prelude.* d)
 
 instance AdditiveSemigroup Rational where
@@ -97,11 +95,11 @@ instance Arbitrary Rational where
   arbitrary = do
     num <- arbitrary
     Positive den <- arbitrary
-    Prelude.pure . Rational num $ den
+    Prelude.pure . mkRational num $ den
   shrink r@(Rational num den) = do
     num' <- shrink num
     Positive den' <- shrink . Positive $ den
-    let res = Rational num' den'
+    let res = mkRational num' den'
     guard (res Prelude.< r)
     Prelude.pure res
 
@@ -115,6 +113,15 @@ instance Function Rational where
       into (Rational n d) = (n, d)
       outOf :: (Integer, Integer) -> Rational
       outOf (n, d) = Rational n d
+
+{-# INLINEABLE mkRational #-}
+mkRational :: Integer -> Integer -> Rational
+mkRational n d
+  | d == zero = error ()
+  | d < zero = mkRational (Plutus.negate n) (Plutus.negate d)
+  | otherwise =
+    let gcd = euclid n d
+     in Rational (n `quotient` gcd) (d `quotient` gcd)
 
 {-# INLINEABLE negate #-}
 negate :: Rational -> Rational

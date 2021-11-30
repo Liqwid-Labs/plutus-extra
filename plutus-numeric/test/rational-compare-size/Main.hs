@@ -59,7 +59,9 @@ main =
         ]
     , testGroup
         "Other"
-        [ fitsOnChain "Plutus Rational fromInteger" . fromCompiledCode $ pRatFromInteger
+        [ fitsOnChain "Plutus Rational construction" . fromCompiledCode $ pRatMk
+        , fitsOnChain "Our Rational construction" . fromCompiledCode $ ourRatMk
+        , fitsOnChain "Plutus Rational fromInteger" . fromCompiledCode $ pRatFromInteger
         , fitsOnChain "Our Rational fromInteger" . fromCompiledCode $ ourRatFromInteger
         , fitsOnChain "Plutus Rational numerator" . fromCompiledCode $ pRatNumerator
         , fitsOnChain "Our Rational numerator" . fromCompiledCode $ ourRatNumerator
@@ -173,6 +175,12 @@ pRatOne = $$(compile [||Plutus.one||])
 
 ourRatOne :: CompiledCode Our.Rational
 ourRatOne = $$(compile [||Plutus.one||])
+
+pRatMk :: CompiledCode (Integer -> Integer -> Plutus.Rational)
+pRatMk = $$(compile [||(PlutusRatio.%)||])
+
+ourRatMk :: CompiledCode (Integer -> Integer -> Our.Rational)
+ourRatMk = $$(compile [||Our.mkRational||])
 
 pRatFromInteger :: CompiledCode (Integer -> Plutus.Rational)
 pRatFromInteger = $$(compile [||Plutus.fromInteger||])

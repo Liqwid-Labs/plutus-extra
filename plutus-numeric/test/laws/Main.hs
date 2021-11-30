@@ -24,6 +24,7 @@ main =
     , plutusEqLaws @Natural
     , plutusEqLawsSubstitution @Natural
     , plutusEqLaws @Rational
+    , plutusEqLawsSubstitution @Rational
     , plutusEqLaws @NatRatio
     , plutusEqLawsSubstitution @NatRatio
     , plutusOrdLaws @Natural
