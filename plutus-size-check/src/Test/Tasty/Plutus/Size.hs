@@ -214,7 +214,7 @@ fitsUnder ::
   Script ->
   TestTree
 fitsUnder testName s1 =
-  singleTest ("Size comparison: " <> testName) . FitsUnder s1
+  singleTest ("On-chain size comparison for " <> testName) . FitsUnder s1
 
 {- | A helper for converting a 'TypedValidator' into its underlying 'Script'.
 
@@ -298,7 +298,13 @@ renderSize i = case i `quotRem` 1024 of
          )
 
 renderPercentDiff :: Int -> Int -> Doc
-renderPercentDiff size1 size2 = "(" <> dumpDoc rat <> "%)"
+renderPercentDiff size1 size2 = "\n~" <> go
   where
-    rat :: Double
-    rat = (fromIntegral size1 / fromIntegral size2) * 100.0
+    go :: Doc
+    go =
+      let diff = size2 - size1
+          ratio :: Double = fromIntegral diff / fromIntegral size2
+          result :: Int = round (ratio * 100.0)
+       in case signum result of
+            (-1) -> dumpDoc (abs result) <> "% bigger"
+            _ -> dumpDoc result <> "% smaller"
