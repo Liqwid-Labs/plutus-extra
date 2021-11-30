@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module PlutusTx.Rational.Internal (
@@ -9,9 +10,11 @@ module PlutusTx.Rational.Internal (
   properFraction,
   recip,
   abs,
+  truncate,
+  round,
 ) where
 
-import PlutusTx.Prelude hiding (Rational, fromInteger, negate)
+import PlutusTx.Prelude hiding (Rational, fromInteger, negate, round)
 import PlutusTx.Prelude qualified as Plutus
 
 -- Numerator, denominator
@@ -82,7 +85,20 @@ numerator (Rational n _) = n
 denominator :: Rational -> Integer
 denominator (Rational _ d) = d
 
--- TODO: round, truncate
+{-# INLINEABLE round #-}
+round :: Rational -> Integer
+round x =
+  let (n, r) = properFraction x
+      m = if r < zero then n - one else n + one
+      flag = abs r - Rational one 2
+   in if
+          | flag < zero -> n
+          | flag == zero -> if even n then n else m
+          | otherwise -> m
+
+{-# INLINEABLE truncate #-}
+truncate :: Rational -> Integer
+truncate (Rational n d) = n `quotient` d
 
 {-# INLINEABLE properFraction #-}
 properFraction :: Rational -> (Integer, Rational)

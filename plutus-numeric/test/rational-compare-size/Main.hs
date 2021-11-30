@@ -65,6 +65,10 @@ main =
         , fitsOnChain "Our Rational numerator" . fromCompiledCode $ ourRatNumerator
         , fitsOnChain "Plutus Rational denominator" . fromCompiledCode $ pRatDenominator
         , fitsOnChain "Our Rational denominator" . fromCompiledCode $ ourRatDenominator
+        , fitsOnChain "Plutus Rational round" . fromCompiledCode $ pRatRound
+        , fitsOnChain "Our Rational round" . fromCompiledCode $ ourRatRound
+        , fitsOnChain "Plutus Rational truncate" . fromCompiledCode $ pRatTruncate
+        , fitsOnChain "Our Rational truncate" . fromCompiledCode $ ourRatTruncate
         , fitsOnChain "Plutus Rational properFraction" . fromCompiledCode $ pRatProperFrac
         , fitsOnChain "Our Rational properFraction" . fromCompiledCode $ ourRatProperFrac
         , fitsOnChain "Plutus Rational recip" . fromCompiledCode $ pRatRecip
@@ -185,8 +189,20 @@ ourRatNumerator = $$(compile [||Our.numerator||])
 pRatDenominator :: CompiledCode (Plutus.Rational -> Integer)
 pRatDenominator = $$(compile [||PlutusRatio.denominator||])
 
+pRatRound :: CompiledCode (Plutus.Rational -> Integer)
+pRatRound = $$(compile [||PlutusRatio.round||])
+
+ourRatRound :: CompiledCode (Our.Rational -> Integer)
+ourRatRound = $$(compile [||Our.round||])
+
 ourRatDenominator :: CompiledCode (Our.Rational -> Integer)
 ourRatDenominator = $$(compile [||Our.denominator||])
+
+pRatTruncate :: CompiledCode (Plutus.Rational -> Integer)
+pRatTruncate = $$(compile [||PlutusRatio.truncate||])
+
+ourRatTruncate :: CompiledCode (Our.Rational -> Integer)
+ourRatTruncate = $$(compile [||Our.truncate||])
 
 pRatProperFrac :: CompiledCode (Plutus.Rational -> (Integer, Plutus.Rational))
 pRatProperFrac = $$(compile [||PlutusRatio.properFraction||])
