@@ -9,3 +9,12 @@ packages:
   ./plutus-laws/plutus-laws.cabal
   ./plutus-size-check/plutus-size-check.cabal
   ./quickcheck-plutus-instances/quickcheck-plutus-instances.cabal
+
+-- Always build tests and benchmarks.
+tests: true
+benchmarks: true
+
+-- The only sensible test display option
+test-show-details: direct
+
+
