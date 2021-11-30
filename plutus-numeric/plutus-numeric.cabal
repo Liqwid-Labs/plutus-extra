@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-numeric
-version:            2.3
+version:            2.4
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -59,6 +59,7 @@ library
     PlutusTx.Numeric.Extra
     PlutusTx.Numeric.Gen
     PlutusTx.Ratio.Extra
+    PlutusTx.Rational
     PlutusTx.SchemaUtils
 
   other-modules:
@@ -66,6 +67,7 @@ library
     PlutusTx.NatRatio.QQ
     PlutusTx.Natural.Internal
     PlutusTx.Natural.QQ
+    PlutusTx.Rational.Internal
 
   build-depends:
     , aeson              ^>=1.5.6.0
@@ -133,3 +135,15 @@ test-suite size
     , plutus-tx-plugin
 
   hs-source-dirs: test/size
+
+test-suite rational-compare-size
+  import:         test-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-ledger-api
+    , plutus-size-check  ^>=1.0
+    , plutus-tx
+    , plutus-tx-plugin
+
+  hs-source-dirs: test/rational-compare-size
