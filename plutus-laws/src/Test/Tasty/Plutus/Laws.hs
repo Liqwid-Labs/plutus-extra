@@ -52,11 +52,23 @@ module Test.Tasty.Plutus.Laws (
   plutusOrdLawsDirect,
   plutusOrdLawsDirectWith,
 
-  -- *** Others
+  -- *** Semigroup and Monoid
   plutusSemigroupLaws,
   plutusSemigroupLawsWith,
   plutusMonoidLaws,
   plutusMonoidLawsWith,
+
+  -- *** Numeric
+  additiveSemigroupLaws,
+  additiveSemigroupLawsWith,
+  additiveMonoidLaws,
+  additiveMonoidLawsWith,
+  additiveGroupLaws,
+  additiveGroupLawsWith,
+  multiplicativeSemigroupLaws,
+  multiplicativeMonoidLaws,
+  semiringConsistencyLaws,
+  semiringConsistencyLawsWith,
 ) where
 
 import Data.Aeson (FromJSON, ToJSON (toJSON), decode, encode)
@@ -706,6 +718,256 @@ plutusMonoidLawsWith gen shr =
     leftId x = x PlutusTx.<> PlutusTx.mempty === x
     rightId :: a -> Property
     rightId x = PlutusTx.mempty PlutusTx.<> x === x
+
+{- | Checks that the 'PlutusTx.AdditiveSemigroup' instance for @a@ is
+ associative and commutative.
+
+ @since 2.2
+-}
+additiveSemigroupLaws ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.AdditiveSemigroup a, Arbitrary a, Show a) =>
+  TestTree
+additiveSemigroupLaws = additiveSemigroupLawsWith @a arbitrary shrink
+
+{- | As 'additiveSemigroupLaws', but with explicit generator and shrinker.
+
+ @since 2.2
+-}
+additiveSemigroupLawsWith ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.AdditiveSemigroup a, Show a) =>
+  Gen a ->
+  (a -> [a]) ->
+  TestTree
+additiveSemigroupLawsWith gen shr =
+  testProperties
+    ("Plutus AdditiveSemigroup laws for " <> typeName @a)
+    [
+      ( "x + y = y + x"
+      , forAllShrinkShow
+          (liftArbitrary gen)
+          (liftShrink shr)
+          ppShow
+          commLaw
+      )
+    ,
+      ( "x + (y + z) = (x + y) + z"
+      , forAllShrinkShow
+          (liftArbitrary gen)
+          (liftShrink shr)
+          ppShow
+          assocLaw
+      )
+    ]
+  where
+    commLaw :: Pair a -> Property
+    commLaw (Pair x y) = x PlutusTx.+ y === y PlutusTx.+ x
+    assocLaw :: Triple a -> Property
+    assocLaw (Triple x y z) =
+      (x PlutusTx.+ (y PlutusTx.+ z)) === ((x PlutusTx.+ y) PlutusTx.+ z)
+
+{- | Checks that 'PlutusTx.zero' for @a@ is a left and right identity for
+ 'PlutusTx.+'.
+
+ @since 2.2
+-}
+additiveMonoidLaws ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.AdditiveMonoid a, Arbitrary a, Show a) =>
+  TestTree
+additiveMonoidLaws = additiveMonoidLawsWith @a arbitrary shrink
+
+{- | As 'additiveMonoidLaws' but with explicit generator and shrinker.
+
+ @since 2.2
+-}
+additiveMonoidLawsWith ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.AdditiveMonoid a, Show a) =>
+  Gen a ->
+  (a -> [a]) ->
+  TestTree
+additiveMonoidLawsWith gen shr =
+  testProperties
+    ("Plutus AdditiveMonoid laws for " <> typeName @a)
+    [ ("x + 0 = x", forAllShrinkShow gen shr ppShow rightId)
+    , ("0 + x = x", forAllShrinkShow gen shr ppShow leftId)
+    ]
+  where
+    leftId :: a -> Property
+    leftId x = x PlutusTx.+ PlutusTx.zero === x
+    rightId :: a -> Property
+    rightId x = PlutusTx.zero PlutusTx.+ x === x
+
+{- | Checks that 'PlutusTx.-' is an inverse operation to 'PlutusTx.+'.
+
+ @since 2.2
+-}
+additiveGroupLaws ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.AdditiveGroup a, Arbitrary a, Show a) =>
+  TestTree
+additiveGroupLaws = additiveGroupLawsWith @a arbitrary shrink
+
+{- | As 'additiveGroupLaws', but with explicit generator and shrinker.
+
+ @since 2.2
+-}
+additiveGroupLawsWith ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.AdditiveGroup a, Show a) =>
+  Gen a ->
+  (a -> [a]) ->
+  TestTree
+additiveGroupLawsWith gen shr =
+  testProperties
+    ("Plutus AdditiveGroup laws for " <> typeName @a)
+    [
+      ( "x + y - y = x"
+      , forAllShrinkShow
+          (liftArbitrary gen)
+          (liftShrink shr)
+          ppShow
+          invLaw
+      )
+    ]
+  where
+    invLaw :: Pair a -> Property
+    invLaw (Pair x y) = x PlutusTx.+ y PlutusTx.- y === x
+
+{- | Checks that 'PlutusTx.*' is associative. Since multiplication does not have
+ to be commutative, we don't check this law.
+
+ @since 2.2
+-}
+multiplicativeSemigroupLaws ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.MultiplicativeSemigroup a, Arbitrary a, Show a) =>
+  TestTree
+multiplicativeSemigroupLaws = multiplicativeSemigroupLawsWith @a arbitrary shrink
+
+{- | As 'multiplicativeSemigroupLaws', but with explicit generator and shrinker.
+
+ @since 2.2
+-}
+multiplicativeSemigroupLawsWith ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.MultiplicativeSemigroup a, Show a) =>
+  Gen a ->
+  (a -> [a]) ->
+  TestTree
+multiplicativeSemigroupLawsWith gen shr =
+  testProperties
+    ("Plutus MultiplicativeSemigroup laws for " <> typeName @a)
+    [
+      ( "x * (y * z) = (x * y) * z"
+      , forAllShrinkShow
+          (liftArbitrary gen)
+          (liftShrink shr)
+          ppShow
+          assocLaw
+      )
+    ]
+  where
+    assocLaw :: Triple a -> Property
+    assocLaw (Triple x y z) =
+      (x PlutusTx.* (y PlutusTx.* z)) === ((x PlutusTx.* y) PlutusTx.* z)
+
+{- | Checks that 'PlutusTx.one' for @a@ is a left and right identity for
+ 'PlutusTx.*'.
+
+ @since 2.2
+-}
+multiplicativeMonoidLaws ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.MultiplicativeMonoid a, Arbitrary a, Show a) =>
+  TestTree
+multiplicativeMonoidLaws = multiplicativeMonoidLawsWith @a arbitrary shrink
+
+{- | As 'multiplicativeMonoidLaws' but with explicit generator and shrinker.
+
+ @since 2.2
+-}
+multiplicativeMonoidLawsWith ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.MultiplicativeMonoid a, Show a) =>
+  Gen a ->
+  (a -> [a]) ->
+  TestTree
+multiplicativeMonoidLawsWith gen shr =
+  testProperties
+    ("Plutus MultiplicativeMonoid laws for " <> typeName @a)
+    [ ("x * 1 = x", forAllShrinkShow gen shr ppShow rightId)
+    , ("1 * x = x", forAllShrinkShow gen shr ppShow leftId)
+    ]
+  where
+    leftId :: a -> Property
+    leftId x = x PlutusTx.* PlutusTx.one === x
+    rightId :: a -> Property
+    rightId x = PlutusTx.one PlutusTx.* x === x
+
+{- | Checks that 'PlutusTx.zero' is an annihilating element for 'PlutusTx.*',
+ and that 'PlutusTx.*' distributes left and right over 'PlutusTx.+'.
+
+ = Note
+
+ This does not check the requirements for 'PlutusTx.+' and 'PlutusTx.*'
+ individually as operations of a semiring: use the other law checks to do
+ this. The name of this function reflects this, as the goal is to check that
+ the two inter-operate correctly.
+
+ @since 2.2
+-}
+semiringConsistencyLaws ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.Semiring a, Arbitrary a, Show a) =>
+  TestTree
+semiringConsistencyLaws = semiringConsistencyLawsWith @a arbitrary shrink
+
+{- | As 'semiringConsistencyLaws', but with explicit generator and shrinker.
+
+ @since 2.2
+-}
+semiringConsistencyLawsWith ::
+  forall (a :: Type).
+  (Typeable a, Eq a, PlutusTx.Semiring a, Show a) =>
+  Gen a ->
+  (a -> [a]) ->
+  TestTree
+semiringConsistencyLawsWith gen shr =
+  testProperties
+    ("Plutus Semiring laws for " <> typeName @a)
+    [ ("0 * x = 0", forAllShrinkShow gen shr ppShow leftAnnihilation)
+    , ("x * 0 = 0", forAllShrinkShow gen shr ppShow rightAnnihilation)
+    ,
+      ( "x * (y + z) = (x * y) + (x * z)"
+      , forAllShrinkShow
+          (liftArbitrary gen)
+          (liftShrink shr)
+          ppShow
+          leftDistr
+      )
+    ,
+      ( "(x + y) * z = (x * z) + (y * z)"
+      , forAllShrinkShow
+          (liftArbitrary gen)
+          (liftShrink shr)
+          ppShow
+          rightDistr
+      )
+    ]
+  where
+    leftAnnihilation :: a -> Property
+    leftAnnihilation x = PlutusTx.zero PlutusTx.* x === x
+    rightAnnihilation :: a -> Property
+    rightAnnihilation x = x PlutusTx.* PlutusTx.zero === x
+    leftDistr :: Triple a -> Property
+    leftDistr (Triple x y z) =
+      x PlutusTx.* (y PlutusTx.+ z) === (x PlutusTx.* y) PlutusTx.+ (x PlutusTx.* z)
+    rightDistr :: Triple a -> Property
+    rightDistr (Triple x y z) =
+      (x PlutusTx.+ y) PlutusTx.* z === (x PlutusTx.* z) PlutusTx.+ (y PlutusTx.* z)
 
 -- Helpers
 
