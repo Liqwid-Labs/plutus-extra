@@ -2,6 +2,7 @@ module Main (main) where
 
 import PlutusTx.NatRatio (NatRatio)
 import PlutusTx.Natural (Natural)
+import PlutusTx.Rational (Rational)
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.Plutus.Laws (
   dataLaws,
@@ -11,6 +12,7 @@ import Test.Tasty.Plutus.Laws (
   plutusOrdLaws,
  )
 import Test.Tasty.QuickCheck (QuickCheckTests)
+import Prelude hiding (Rational)
 
 main :: IO ()
 main =
@@ -21,9 +23,11 @@ main =
     , dataLaws @NatRatio
     , plutusEqLaws @Natural
     , plutusEqLawsSubstitution @Natural
+    , plutusEqLaws @Rational
     , plutusEqLaws @NatRatio
     , plutusEqLawsSubstitution @NatRatio
     , plutusOrdLaws @Natural
+    , plutusOrdLaws @Rational
     , plutusOrdLaws @NatRatio
     ]
   where
