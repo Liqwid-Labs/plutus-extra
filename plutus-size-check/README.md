@@ -9,8 +9,10 @@ compiler can compile.
 
 We provide a convenient interface for testing whether a given entity (whether a
 data type value, function or script) can fit on-chain at all (given current
-limits), or into a specific size (in bytes or kibibytes). This is wrapped for
-use with the `tasty` test framework.
+limits), or into a specific size (in bytes or kibibytes). We also provide a way
+of 'benchmarking' a given entity's size against another.
+
+All of this is wrapped for use with the `tasty` test framework.
 
 ## What are the goals of this project?
 
