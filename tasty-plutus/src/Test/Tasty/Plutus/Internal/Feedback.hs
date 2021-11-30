@@ -133,10 +133,10 @@ didn'tLog getDumpedState env =
       $+$ getDumpedState env
 
 dumpState ::
-  forall (a :: Type) (p :: Purpose).
+  forall (a :: Type) (s :: Type) (p :: Purpose).
   (a -> TransactionConfig) ->
   (a -> ContextBuilder p) ->
-  (a -> TestData p) ->
+  (a -> TestData s p) ->
   [Text] ->
   a ->
   Doc
@@ -165,10 +165,10 @@ dumpState getConf getCb getTd logs env =
           $+$ ppDoc v
 
 dumpState' ::
-  forall (a :: Type) (p :: Purpose).
+  forall (a :: Type) (s :: Type) (p :: Purpose).
   (a -> TransactionConfig) ->
   (a -> ContextBuilder p) ->
-  (a -> TestData p) ->
+  (a -> TestData s p) ->
   [Text] ->
   a ->
   Doc

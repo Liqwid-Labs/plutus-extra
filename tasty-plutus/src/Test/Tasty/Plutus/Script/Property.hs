@@ -40,6 +40,7 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
+import Ledger.Typed.Scripts (DatumType, RedeemerType)
 import Plutus.V1.Ledger.Contexts (ScriptContext)
 import Plutus.V1.Ledger.Scripts (
   MintingPolicy,
@@ -150,10 +151,11 @@ import Prelude
  @since 3.1
 -}
 scriptProperty ::
-  forall (p :: Purpose).
+  forall (s :: Type) (p :: Purpose).
+  (Typeable s) =>
   String ->
-  Generator p ->
-  (TestData p -> ContextBuilder p) ->
+  Generator s p ->
+  (TestData s p -> ContextBuilder p) ->
   WithScript p ()
 scriptProperty name gen mkCB = case gen of
   GenForSpending f mDat mRed mVal -> WithSpending $ do
@@ -177,57 +179,57 @@ scriptProperty name gen mkCB = case gen of
 
 -- Helpers
 
-data PropertyTest (p :: Purpose) where
+data PropertyTest (s :: Type)( p :: Purpose) where
   Spender ::
-    ( ToData datum
-    , ToData redeemer
-    , FromData datum
-    , FromData redeemer
-    , Show datum
-    , Show redeemer
+    ( ToData (DatumType s)
+    , ToData (RedeemerType s)
+    , FromData (DatumType s)
+    , FromData (RedeemerType s)
+    , Show (DatumType s)
+    , Show (RedeemerType s)
     ) =>
     Validator ->
-    Gen (Outcome, datum, redeemer, Value) ->
-    ((Outcome, datum, redeemer, Value) -> [(Outcome, datum, redeemer, Value)]) ->
-    (TestData 'ForSpending -> ContextBuilder 'ForSpending) ->
-    PropertyTest 'ForSpending
+    Gen (Outcome, DatumType s, RedeemerType s, Value) ->
+    ((Outcome, DatumType s, RedeemerType s, Value) -> [(Outcome, DatumType s, RedeemerType s, Value)]) ->
+    (TestData s 'ForSpending -> ContextBuilder 'ForSpending) ->
+    PropertyTest s 'ForSpending
   Minter ::
-    ( ToData redeemer
-    , FromData redeemer
-    , Show redeemer
+    ( ToData (RedeemerType s)
+    , FromData (RedeemerType s)
+    , Show (RedeemerType s)
     ) =>
     MintingPolicy ->
-    Gen (Outcome, redeemer, Tokens) ->
-    ( (Outcome, redeemer, Tokens) ->
-      [(Outcome, redeemer, Tokens)]
+    Gen (Outcome, RedeemerType s, Tokens) ->
+    ( (Outcome, RedeemerType s, Tokens) ->
+      [(Outcome, RedeemerType s, Tokens)]
     ) ->
-    (TestData 'ForMinting -> ContextBuilder 'ForMinting) ->
-    PropertyTest 'ForMinting
+    (TestData s 'ForMinting -> ContextBuilder 'ForMinting) ->
+    PropertyTest s 'ForMinting
 
-data PropertyEnv (p :: Purpose) = PropertyEnv
+data PropertyEnv (s :: Type) (p :: Purpose) = PropertyEnv
   { envOpts :: OptionSet
-  , envPropertyTest :: PropertyTest p
-  , envTestData :: TestData p
+  , envPropertyTest :: PropertyTest s p
+  , envTestData :: TestData s p
   , envExpected :: Outcome
   }
 
 getConf ::
-  forall (p :: Purpose).
-  PropertyEnv p ->
+  forall (s :: Type) (p :: Purpose).
+  PropertyEnv s p ->
   TransactionConfig
 getConf = prepareConf envOpts
 
 getCB ::
-  forall (p :: Purpose).
-  PropertyEnv p ->
+  forall (s :: Type) (p :: Purpose).
+  PropertyEnv s p ->
   ContextBuilder p
 getCB env = case envPropertyTest env of
   Spender _ _ _ mkCB -> mkCB $ envTestData env
   Minter _ _ _ mkCB -> mkCB $ envTestData env
 
 getScript ::
-  forall (p :: Purpose).
-  PropertyEnv p ->
+  forall (s :: Type) (p :: Purpose).
+  PropertyEnv s p ->
   SomeScript p
 getScript =
   envPropertyTest >>> \case
@@ -235,19 +237,19 @@ getScript =
     Minter mp _ _ _ -> SomeMinter mp
 
 getSC ::
-  forall (p :: Purpose).
-  PropertyEnv p ->
+  forall (s :: Type) (p :: Purpose).
+  PropertyEnv s p ->
   ScriptContext
 getSC = getScriptContext getConf getCB envTestData
 
 getDumpedState ::
-  forall (p :: Purpose).
+  forall (s :: Type) (p :: Purpose).
   [Text] ->
-  PropertyEnv p ->
+  PropertyEnv s p ->
   Doc
 getDumpedState = dumpState' getConf getCB envTestData
 
-instance (Typeable p) => IsTest (PropertyTest p) where
+instance (Typeable s, Typeable p) => IsTest (PropertyTest s p) where
   run opts vt _ = do
     let PropertyTestCount testCount' = lookupOption opts
     let PropertyMaxSize maxSize' = lookupOption opts
@@ -278,17 +280,17 @@ instance (Typeable p) => IsTest (PropertyTest p) where
       ]
 
 spenderProperty ::
-  forall (datum :: Type) (redeemer :: Type).
-  ( ToData datum
-  , ToData redeemer
-  , FromData datum
-  , FromData redeemer
-  , Show datum
-  , Show redeemer
+  forall (s :: Type).
+  ( ToData (DatumType s)
+  , ToData (RedeemerType s)
+  , FromData (DatumType s)
+  , FromData (RedeemerType s)
+  , Show (DatumType s)
+  , Show (RedeemerType s)
   ) =>
   OptionSet ->
-  PropertyTest 'ForSpending ->
-  (Outcome, datum, redeemer, Value) ->
+  PropertyTest s 'ForSpending ->
+  (Outcome, DatumType s, RedeemerType s, Value) ->
   Property
 spenderProperty opts vt (ex, d, r, v) =
   let td = SpendingTest d r v
@@ -326,11 +328,11 @@ prettySpender (ex, d, r, v) =
         $+$ ppDoc v
 
 minterProperty ::
-  forall (redeemer :: Type).
-  (FromData redeemer, ToData redeemer, Show redeemer) =>
+  forall (s :: Type).
+  (FromData (RedeemerType s), ToData (RedeemerType s), Show (RedeemerType s)) =>
   OptionSet ->
-  PropertyTest 'ForMinting ->
-  (Outcome, redeemer, Tokens) ->
+  PropertyTest s 'ForMinting ->
+  (Outcome, (RedeemerType s), Tokens) ->
   Property
 minterProperty opts vt (ex, r, toks) =
   let td = MintingTest r toks
@@ -425,8 +427,9 @@ counter :: String -> Property
 counter s = counterexample s False
 
 produceResult ::
+  forall (s :: Type) (p :: Purpose).
   Either ScriptError ([Text], ScriptResult) ->
-  Reader (PropertyEnv p) Property
+  Reader (PropertyEnv s p) Property
 produceResult sr = do
   ex <- asks envExpected
   case sr of
@@ -446,8 +449,8 @@ produceResult sr = do
       (_, InternalError t) -> asks (counter . internalError state t)
       (_, ParseFailed t) -> asks (counter . noParse state t)
       where
-        state :: PropertyEnv p -> Doc
+        state :: PropertyEnv s p -> Doc
         state = getDumpedState logs
   where
-    pass :: Reader (PropertyEnv p) Property
+    pass :: Reader (PropertyEnv s p) Property
     pass = pure $ property True

@@ -88,10 +88,10 @@ prepareConf getOpts env =
     scriptInputPosition' = lookupOption opts
 
 getScriptContext ::
-  forall (a :: Type) (p :: Purpose).
+  forall (a :: Type) (s :: Type) (p :: Purpose).
   (a -> TransactionConfig) ->
   (a -> ContextBuilder p) ->
-  (a -> TestData p) ->
+  (a -> TestData s p) ->
   a ->
   ScriptContext
 getScriptContext getConf getCb getTd env = case getTd env of
@@ -111,9 +111,9 @@ getContext ::
 getContext getSc = Context . toBuiltinData . getSc
 
 getScriptResult ::
-  forall (a :: Type) (p :: Purpose).
+  forall (a :: Type) (s :: Type) (p :: Purpose).
   (a -> SomeScript p) ->
-  (a -> TestData p) ->
+  (a -> TestData s p) ->
   (a -> Context) ->
   a ->
   Either ScriptError ([Text], ScriptResult)

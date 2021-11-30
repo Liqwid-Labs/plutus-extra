@@ -27,6 +27,7 @@ module Test.Tasty.Plutus.TestData (
 
 import Data.Kind (Type)
 import Data.Semigroup (stimes, stimesIdempotent)
+import Ledger.Typed.Scripts (DatumType, RedeemerType)
 import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.IsData.Class (FromData, ToData)
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
@@ -42,40 +43,43 @@ import Prelude
 
  @since 3.0
 -}
-data TestData (p :: Purpose) where
+data TestData (s :: Type) (p :: Purpose) where
   -- | @since 3.0
   SpendingTest ::
-    ( ToData datum
-    , ToData redeemer
-    , FromData datum
-    , FromData redeemer
-    , Show datum
-    , Show redeemer
+    ( ToData (DatumType s)
+    , ToData (RedeemerType s)
+    , FromData (DatumType s)
+    , FromData (RedeemerType s)
+    , Show (DatumType s)
+    , Show (RedeemerType s)
     ) =>
     -- | The input datum.
     --
     -- @since 3.0
-    datum ->
+    DatumType s ->
     -- | The input redeemer.
     --
     -- @since 3.0
-    redeemer ->
+    RedeemerType s ->
     -- | The value to be spent from the script.
     --
     -- @since 3.0
     Value ->
-    TestData 'ForSpending
+    TestData s 'ForSpending
   MintingTest ::
-    (ToData redeemer, FromData redeemer, Show redeemer) =>
+    ( ToData (RedeemerType s)
+    , FromData (RedeemerType s)
+    , Show (RedeemerType s)
+    ) =>
     -- | The input redeemer.
     --
     -- @since 3.0
-    redeemer ->
+    RedeemerType s ->
     -- | The tokens to be minted by the script.
     --
     -- @since 4.1
     Tokens ->
-    TestData 'ForMinting
+    TestData s 'ForMinting
 
 {- | Describes whether a case, comprised of a script and a test data for the
  script, should pass or fail. Used to classify generated outputs for
@@ -143,31 +147,31 @@ static x = Methodology (pure x) (const [])
 
  @since 3.1
 -}
-data Generator (p :: Purpose) where
+data Generator (s :: Type) (p :: Purpose) where
   -- | @since 3.1
   GenForSpending ::
-    ( ToData datum
-    , ToData redeemer
-    , FromData datum
-    , FromData redeemer
-    , Show datum
-    , Show redeemer
+    ( ToData (DatumType s)
+    , ToData (RedeemerType s)
+    , FromData (DatumType s)
+    , FromData (RedeemerType s)
+    , Show (DatumType s)
+    , Show (RedeemerType s)
     ) =>
-    (datum -> redeemer -> Value -> Outcome) ->
-    Methodology datum ->
-    Methodology redeemer ->
+    (DatumType s -> RedeemerType s -> Value -> Outcome) ->
+    Methodology (DatumType s) ->
+    Methodology (RedeemerType s) ->
     Methodology Value ->
-    Generator 'ForSpending
+    Generator s 'ForSpending
   -- | @since 4.1
   GenForMinting ::
-    ( ToData redeemer
-    , FromData redeemer
-    , Show redeemer
+    ( ToData (RedeemerType s)
+    , FromData (RedeemerType s)
+    , Show (RedeemerType s)
     ) =>
-    (redeemer -> Tokens -> Outcome) ->
-    Methodology redeemer ->
+    (RedeemerType s -> Tokens -> Outcome) ->
+    Methodology (RedeemerType s) ->
     Methodology Tokens ->
-    Generator 'ForMinting
+    Generator s 'ForMinting
 
 {- | Generate using 'Arbitrary' instances. A 'Methodology' for 'Value' has to be
  passed manually, as it's (currently) missing an instance.
@@ -175,19 +179,19 @@ data Generator (p :: Purpose) where
  @since 3.1
 -}
 fromArbitrarySpending ::
-  forall (datum :: Type) (redeemer :: Type).
-  ( ToData datum
-  , FromData datum
-  , Arbitrary datum
-  , Show datum
-  , ToData redeemer
-  , FromData redeemer
-  , Show redeemer
-  , Arbitrary redeemer
+  forall (s :: Type).
+  ( ToData (DatumType s)
+  , FromData (DatumType s)
+  , Arbitrary (DatumType s)
+  , Show (DatumType s)
+  , ToData (RedeemerType s)
+  , FromData (RedeemerType s)
+  , Show (RedeemerType s)
+  , Arbitrary (RedeemerType s)
   ) =>
-  (datum -> redeemer -> Value -> Outcome) ->
+  (DatumType s -> RedeemerType s -> Value -> Outcome) ->
   Methodology Value ->
-  Generator 'ForSpending
+  Generator s 'ForSpending
 fromArbitrarySpending f = GenForSpending f fromArbitrary fromArbitrary
 
 {- | Generate using 'Arbitrary' instances.
@@ -195,13 +199,13 @@ fromArbitrarySpending f = GenForSpending f fromArbitrary fromArbitrary
  @since 4.1
 -}
 fromArbitraryMinting ::
-  forall (redeemer :: Type).
-  ( ToData redeemer
-  , FromData redeemer
-  , Show redeemer
-  , Arbitrary redeemer
+  forall (s :: Type).
+  ( ToData (RedeemerType s)
+  , FromData (RedeemerType s)
+  , Show (RedeemerType s)
+  , Arbitrary (RedeemerType s)
   ) =>
-  (redeemer -> Tokens -> Outcome) ->
+  (RedeemerType s -> Tokens -> Outcome) ->
   Methodology Tokens ->
-  Generator 'ForMinting
+  Generator s 'ForMinting
 fromArbitraryMinting f = GenForMinting f fromArbitrary
