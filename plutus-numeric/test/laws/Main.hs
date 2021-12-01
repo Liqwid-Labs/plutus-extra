@@ -10,6 +10,12 @@ import Test.Tasty.Plutus.Laws (
   plutusEqLaws,
   plutusEqLawsSubstitution,
   plutusOrdLaws,
+  additiveSemigroupLaws,
+  additiveMonoidLaws,
+  additiveGroupLaws,
+  multiplicativeSemigroupLaws,
+  multiplicativeMonoidLaws,
+  semiringConsistencyLaws
  )
 import Test.Tasty.QuickCheck (QuickCheckTests)
 import Prelude hiding (Rational)
@@ -30,6 +36,22 @@ main =
     , plutusOrdLaws @Natural
     , plutusOrdLaws @Rational
     , plutusOrdLaws @NatRatio
+    , additiveSemigroupLaws @Natural
+    , additiveSemigroupLaws @Rational
+    , additiveSemigroupLaws @NatRatio
+    , additiveMonoidLaws @Natural
+    , additiveMonoidLaws @Rational
+    , additiveMonoidLaws @NatRatio
+    , additiveGroupLaws @Rational
+    , multiplicativeSemigroupLaws @Natural
+    , multiplicativeSemigroupLaws @Rational
+    , multiplicativeSemigroupLaws @NatRatio
+    , multiplicativeMonoidLaws @Natural
+    , multiplicativeMonoidLaws @Rational
+    , multiplicativeMonoidLaws @NatRatio
+    , semiringConsistencyLaws @Natural
+    , semiringConsistencyLaws @Rational
+    , semiringConsistencyLaws @NatRatio
     ]
   where
     testMinimum :: QuickCheckTests
