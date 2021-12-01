@@ -4,10 +4,9 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
-## 4.2 -- 2021-11-26
+## 4.2 -- 2021-12-01
 
-* Added `shouldValidateProducing`, `shouldn'tValidateProducing` to extend
-  the functionality of unit testing.
+* Added `outputsToInputs` to perform transformations on the context.
 
 ## 4.1 -- 2021-11-18
 

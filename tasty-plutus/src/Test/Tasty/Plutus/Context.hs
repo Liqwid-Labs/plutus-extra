@@ -31,6 +31,7 @@ module Test.Tasty.Plutus.Context (
   ContextBuilder,
 
   -- * Functions
+  outputsToInputs,
 
   -- ** Basic construction
   input,
@@ -79,6 +80,7 @@ import Test.Tasty.Plutus.Internal.Context (
   Output (Output),
   Purpose (ForMinting, ForSpending),
   makeIncompleteContexts,
+  outputsToInputs,
  )
 import Wallet.Emulator.Types (Wallet, walletPubKeyHash)
 
