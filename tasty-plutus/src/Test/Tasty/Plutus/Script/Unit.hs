@@ -21,10 +21,6 @@
  >    shouldValidateTracing "Gotta get good messages" tracePred validData validContext
  >    shouldn'tValidateTracing "Oh damn" tracePred invalidData validContext
  >    ...
- >    nextInputs <- shouldValidateProducing "Valid case" validData validContext
- >    let nextContext = foldMap input nextInputs <> restOfContext
- >    shouldValidate "Next valid case" validData nextContext
- >    ...
 -}
 module Test.Tasty.Plutus.Script.Unit (
   -- * Testing API
@@ -32,16 +28,12 @@ module Test.Tasty.Plutus.Script.Unit (
   shouldn'tValidate,
   shouldValidateTracing,
   shouldn'tValidateTracing,
-  shouldValidateProducing,
-  shouldn'tValidateProducing,
 ) where
 
 import Control.Arrow ((>>>))
 import Control.Monad.Reader (Reader, asks, runReader)
 import Control.Monad.Writer (tell)
-import Data.Foldable (toList)
 import Data.Proxy (Proxy (Proxy))
-import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
@@ -63,9 +55,7 @@ import Test.Tasty.Options (
   lookupOption,
  )
 import Test.Tasty.Plutus.Internal.Context (
-  ContextBuilder (ContextBuilder),
-  Input (Input),
-  Output (Output),
+  ContextBuilder,
   Purpose (ForMinting, ForSpending),
   TransactionConfig,
  )
@@ -167,32 +157,6 @@ shouldValidateTracing name f td cb = case td of
     tt <- asks (singleTest name . Minter Pass (Just f) td cb)
     tell . Seq.singleton $ tt
 
-{- | Specify that, given this test data and context, the validation should
- succeed. All context outputs are converted to a list of inputs:
- these can be used to build new contexts.
-
- = Example
-
- @
- myTests :: TestTree
- myTests = withValidator "Testing my spending" myValidator $ do
-  nextInputs <- shouldValidateProducing "Valid case" validData validContext
-  let nextContext = foldMap input nextInputs <> restOfContext
-  shouldValidate "Next valid case" validData nextContext
- @
-
- @since 4.2
--}
-shouldValidateProducing ::
-  forall (p :: Purpose).
-  (Typeable p) =>
-  String ->
-  TestData p ->
-  ContextBuilder p ->
-  WithScript p [Input]
-shouldValidateProducing name td cb@(ContextBuilder _ outs _ _ _) =
-  outputsToInputs outs <$ shouldValidate name td cb
-
 {- | Specify that, given this test data and context, the validation should fail.
 
  @since 3.0
@@ -235,33 +199,6 @@ shouldn'tValidateTracing name f td cb = case td of
   MintingTest {} -> WithMinting $ do
     tt <- asks (singleTest name . Minter Fail (Just f) td cb)
     tell . Seq.singleton $ tt
-
-{- | Specify that, given this test data and context, the validation should fail.
- All context outputs are converted to a list of inputs: these can be used
- to build new contexts.
-
- = Example
-
- @
- myTests :: TestTree
- myTests = withValidator "Testing my spending" myValidator $ do
-  nextInputs <-
-    shouldn'tValidateProducing "Invalid case" invalidData validContext
-  let nextContext = foldMap input nextInputs <> restOfContext
-  shouldn'tValidate "Next invalid case" invalidData nextContext
- @
-
- @since 4.2
--}
-shouldn'tValidateProducing ::
-  forall (p :: Purpose).
-  (Typeable p) =>
-  String ->
-  TestData p ->
-  ContextBuilder p ->
-  WithScript p [Input]
-shouldn'tValidateProducing name td cb@(ContextBuilder _ outs _ _ _) =
-  outputsToInputs outs <$ shouldn'tValidate name td cb
 
 -- Helpers
 
@@ -419,6 +356,3 @@ tryPass mPred logs = case mPred of
      in if f logs'
           then asks (testPassed . doPass getShouldChat logs)
           else asks (testFailed . didn'tLog (getDumpedState logs))
-
-outputsToInputs :: Seq Output -> [Input]
-outputsToInputs = toList . fmap (\(Output t v) -> Input t v)
