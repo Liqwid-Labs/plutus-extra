@@ -959,9 +959,9 @@ semiringConsistencyLawsWith gen shr =
     ]
   where
     leftAnnihilation :: a -> Property
-    leftAnnihilation x = PlutusTx.zero PlutusTx.* x === x
+    leftAnnihilation x = PlutusTx.zero PlutusTx.* x === PlutusTx.zero
     rightAnnihilation :: a -> Property
-    rightAnnihilation x = x PlutusTx.* PlutusTx.zero === x
+    rightAnnihilation x = x PlutusTx.* PlutusTx.zero === PlutusTx.zero
     leftDistr :: Triple a -> Property
     leftDistr (Triple x y z) =
       x PlutusTx.* (y PlutusTx.+ z) === (x PlutusTx.* y) PlutusTx.+ (x PlutusTx.* z)
