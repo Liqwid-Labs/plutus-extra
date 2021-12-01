@@ -5,17 +5,17 @@ import PlutusTx.Natural (Natural)
 import PlutusTx.Rational (Rational)
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.Plutus.Laws (
+  additiveGroupLaws,
+  additiveMonoidLaws,
+  additiveSemigroupLaws,
   dataLaws,
   jsonLaws,
+  multiplicativeMonoidLaws,
+  multiplicativeSemigroupLaws,
   plutusEqLaws,
   plutusEqLawsSubstitution,
   plutusOrdLaws,
-  additiveSemigroupLaws,
-  additiveMonoidLaws,
-  additiveGroupLaws,
-  multiplicativeSemigroupLaws,
-  multiplicativeMonoidLaws,
-  semiringConsistencyLaws
+  semiringConsistencyLaws,
  )
 import Test.Tasty.QuickCheck (QuickCheckTests)
 import Prelude hiding (Rational)

@@ -94,10 +94,12 @@ test-suite property
     Suites.NatRatio
     Suites.Natural
     Suites.Numeric
+    Suites.Rational
 
   build-depends:
     , plutus-tx
     , plutus-tx-plugin
+    , pretty-show
     , QuickCheck        ^>=2.14.2
     , tasty-hunit       ^>=0.10.0.3
     , tasty-quickcheck  ^>=0.10.1.2
