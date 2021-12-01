@@ -1,0 +1,68 @@
+cabal-version:      3.0
+name:               plutus-deriving
+version:            1.0
+extra-source-files: CHANGELOG.md
+
+common lang
+  default-language:   Haskell2010
+  default-extensions:
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveFunctor
+    DeriveGeneric
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    DuplicateRecordFields
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    GeneralizedNewtypeDeriving
+    HexFloatLiterals
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NumericUnderscores
+    OverloadedStrings
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeApplications
+    TypeOperators
+    TypeSynonymInstances
+    UndecidableInstances
+
+  build-depends:      base ^>=4.14
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns -Wredundant-constraints
+    -Wmissing-export-lists -Werror -Wincomplete-record-updates
+    -Wmissing-deriving-strategies
+
+library
+  import:          lang
+  exposed-modules: PlutusTx.Deriving
+  build-depends:
+    , plutus-tx
+    , template-haskell  ^>=2.16.0.0
+
+  hs-source-dirs:  src
+
+test-suite size
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  other-modules:  Test
+  build-depends:
+    , plutus-deriving
+    , plutus-ledger-api
+    , plutus-size-check  ^>=1.1
+    , plutus-tx
+    , plutus-tx-plugin
+    , tasty              ^>=1.4.1
+
+  hs-source-dirs: test/size test
