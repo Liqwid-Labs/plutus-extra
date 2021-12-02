@@ -91,6 +91,7 @@ import Test.QuickCheck (
   cover,
   elements,
   forAllShrinkShow,
+  property,
   (.||.),
   (===),
   (==>),
