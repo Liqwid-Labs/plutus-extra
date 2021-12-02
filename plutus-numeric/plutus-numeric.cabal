@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-numeric
-version:            1.1
+version:            2.3
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -58,6 +58,8 @@ library
     PlutusTx.Natural
     PlutusTx.Numeric.Extra
     PlutusTx.Numeric.Gen
+    PlutusTx.Ratio.Extra
+    PlutusTx.SchemaUtils
 
   other-modules:
     PlutusTx.NatRatio.Internal
@@ -67,13 +69,15 @@ library
 
   build-depends:
     , aeson              ^>=1.5.6.0
-    , hedgehog           ^>=1.0.1
+    , hedgehog           ^>=1.0.5
     , openapi3           ^>=3.1.0
     , playground-common
     , plutus-tx
     , pretty-show        ^>=1.10
     , QuickCheck         ^>=2.14.2
+    , recursion-schemes  ^>=5.1.3
     , template-haskell   ^>=2.16.0.0
+    , text               ^>=1.2.4.1
 
   hs-source-dirs:  src
 
@@ -84,6 +88,7 @@ test-suite property
   other-modules:
     Compilation
     Helpers
+    Suites.Consistency
     Suites.NatRatio
     Suites.Natural
     Suites.Numeric
@@ -102,7 +107,7 @@ test-suite golden
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   build-depends:
-    , plutus-golden  ^>=1.0
+    , plutus-golden  ^>=2.0
     , plutus-tx
 
   hs-source-dirs: test/golden
@@ -112,7 +117,19 @@ test-suite laws
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   build-depends:
-    , plutus-laws       ^>=1.0
+    , plutus-laws       ^>=2.2
     , tasty-quickcheck  ^>=0.10.1.2
 
   hs-source-dirs: test/laws
+
+test-suite size
+  import:         test-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-ledger-api
+    , plutus-size-check  ^>=1.1
+    , plutus-tx
+    , plutus-tx-plugin
+
+  hs-source-dirs: test/size

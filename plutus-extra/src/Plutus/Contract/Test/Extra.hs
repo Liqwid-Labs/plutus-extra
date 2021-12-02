@@ -32,8 +32,8 @@ import Data.List (foldl')
 import Data.Map qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Row (Row)
-import Data.Text.Prettyprint.Doc (Doc, Pretty, colon, indent, line, pretty, viaShow, vsep, (<+>))
 import Data.Void (Void)
+import Prettyprinter (Doc, Pretty, colon, indent, line, pretty, viaShow, vsep, (<+>))
 import Prelude
 
 --------------------------------------------------------------------------------

@@ -1,13 +1,11 @@
 {
-    "minItems": 2,
-    "items": [
-        {
+    "properties": {
+        "numerator": {
             "type": "integer"
         },
-        {
+        "denominator": {
             "type": "integer"
         }
-    ],
-    "type": "array",
-    "maxItems": 2
+    },
+    "type": "object"
 }

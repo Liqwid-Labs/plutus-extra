@@ -22,7 +22,11 @@ import PlutusTx.IsData (
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude hiding (even)
 import Schema (ToArgument, ToSchema)
-import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
+import Test.QuickCheck.Arbitrary (
+  Arbitrary (arbitrary, shrink),
+  CoArbitrary,
+ )
+import Test.QuickCheck.Function (Function (function), functionMap)
 import Text.Show.Pretty (PrettyVal (prettyVal), Value (Con))
 import Prelude qualified
 
@@ -54,8 +58,12 @@ newtype Natural = Natural Integer
       ToArgument
     , -- | @since 1.0
       Prelude.Eq
+    , -- | @since 1.1
+      Prelude.Ord
     , -- | @since 1.0
       OpenApi.ToSchema
+    , -- | @since 2.2
+      CoArbitrary
     )
     via Integer
   deriving stock
@@ -126,6 +134,13 @@ instance Enum Natural where
 instance Arbitrary Natural where
   arbitrary = Natural . Prelude.abs Prelude.<$> arbitrary
   shrink (Natural i) = Natural Prelude.<$> (Prelude.filter (> 0) . shrink $ i)
+
+-- | @since 2.2
+instance Function Natural where
+  function = functionMap into Natural
+    where
+      into :: Natural -> Integer
+      into (Natural i) = i
 
 {- | A demonstration of the parity of a number.
 
