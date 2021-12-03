@@ -31,7 +31,6 @@ module Test.Tasty.Plutus.Script.Property (
   scriptProperty,
 ) where
 
-import Control.Monad (guard)
 import Control.Monad.RWS.Strict (tell)
 import Control.Monad.Reader (ask)
 import Data.Kind (Type)
@@ -118,7 +117,6 @@ import Test.Tasty.Plutus.TestData (
   Example (Bad, Good),
   Generator (GenForMinting, GenForSpending),
   Methodology (Methodology),
-  TestData (MintingTest, SpendingTest),
  )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
@@ -141,47 +139,43 @@ import Text.Show.Pretty (ppDoc)
 import Type.Reflection (Typeable)
 import Prelude
 
-{- | Given a way of generating 'TestData', and converting a generated 'TestData'
- into a 'ContextBuilder', check that:
+-- {- | Given a way of generating 'TestData', and converting a generated 'TestData'
+--  into a 'ContextBuilder', check that:
 
- * For any 'TestData' classified as 'Good', the script succeeds; and
- * For any 'TestData' classified as 'Bad', the script fails.
+--  * For any 'TestData' classified as 'Good', the script succeeds; and
+--  * For any 'TestData' classified as 'Bad', the script fails.
 
- This will also check /coverage/: specifically, the property will fail unless
- the provided generation method produces roughly equal numbers of 'Good' and
- 'Bad'-classified cases.
+--  This will also check /coverage/: specifically, the property will fail unless
+--  the provided generation method produces roughly equal numbers of 'Good' and
+--  'Bad'-classified cases.
 
- @since 3.1
--}
+--  @since 3.1
+-- -}
 scriptProperty ::
-  forall (p :: Purpose).
+  forall (a :: Type) (p :: Purpose).
+  (Typeable a) =>
   String ->
-  Generator p ->
-  (TestData p -> ContextBuilder p) ->
+  Generator a p ->
   WithScript p ()
-scriptProperty name gen mkCB = case gen of
-  GenForSpending f mDat mRed mVal -> WithSpending $ do
-    val <- ask
-    let generator = spendingTupleGen f mDat mRed mVal
-    let shrinker = spendingTupleShrink f mDat mRed mVal
-    tell
-      . Seq.singleton
-      . singleTest name
-      . Spender val generator shrinker
-      $ mkCB
-  GenForMinting f mRed -> WithMinting $ do
-    mp <- ask
-    let generator = mintingTupleGen f mRed
-    let shrinker = mintingTupleShrink f mRed
-    tell
-      . Seq.singleton
-      . singleTest name
-      . Minter mp generator shrinker
-      $ mkCB
+scriptProperty name generator = case generator of
+  GenForSpending (Methodology gen shrinker) f ->
+    WithSpending $ do
+      val <- ask
+      tell
+        . Seq.singleton
+        . singleTest name
+        $ Spender val gen shrinker f
+  GenForMinting (Methodology gen shrinker) f ->
+    WithMinting $ do
+      mp <- ask
+      tell
+        . Seq.singleton
+        . singleTest name
+        $ Minter mp gen shrinker f
 
 -- Helpers
 
-data PropertyTest (p :: Purpose) where
+data PropertyTest (a :: Type) (p :: Purpose) where
   Spender ::
     ( ToData datum
     , ToData redeemer
@@ -191,22 +185,22 @@ data PropertyTest (p :: Purpose) where
     , Show redeemer
     ) =>
     Validator ->
-    Gen (Example, datum, redeemer, Value) ->
-    ((Example, datum, redeemer, Value) -> [(Example, datum, redeemer, Value)]) ->
-    (TestData 'ForSpending -> ContextBuilder 'ForSpending) ->
-    PropertyTest 'ForSpending
+    Gen a ->
+    (a -> [a]) ->
+    (a -> (datum, redeemer, Value, ContextBuilder 'ForSpending, Example)) ->
+    PropertyTest a 'ForSpending
   Minter ::
     ( ToData redeemer
     , FromData redeemer
     , Show redeemer
     ) =>
     MintingPolicy ->
-    Gen (Example, redeemer) ->
-    ((Example, redeemer) -> [(Example, redeemer)]) ->
-    (TestData 'ForMinting -> ContextBuilder 'ForMinting) ->
-    PropertyTest 'ForMinting
+    Gen a ->
+    (a -> [a]) ->
+    (a -> (redeemer, ContextBuilder 'ForMinting, Example)) ->
+    PropertyTest a 'ForMinting
 
-instance (Typeable p) => IsTest (PropertyTest p) where
+instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
   run opts vt _ = do
     let conf =
           TransactionConfig
@@ -229,10 +223,10 @@ instance (Typeable p) => IsTest (PropertyTest p) where
     where
       go :: TransactionConfig -> Property
       go tc = case vt of
-        Spender val gen shrinker mkCB ->
-          forAllShrinkShow gen shrinker prettySpender . spenderProperty val tc $ mkCB
-        Minter mp gen shrinker mkCB ->
-          forAllShrinkShow gen shrinker prettyMinter . minterProperty mp tc $ mkCB
+        Spender val gen shrinker f ->
+          forAllShrinkShow gen shrinker (prettySpender f) $ spenderProperty val tc f
+        Minter mp gen shrinker f ->
+          forAllShrinkShow gen shrinker (prettyMinter f) $ minterProperty mp tc f
       testFee' :: Value
       Fee testFee' = lookupOption opts
       testTimeRange' :: Interval POSIXTime
@@ -256,135 +250,91 @@ instance (Typeable p) => IsTest (PropertyTest p) where
       ]
 
 spenderProperty ::
-  forall (datum :: Type) (redeemer :: Type).
+  forall (a :: Type) (datum :: Type) (redeemer :: Type).
   ( ToData datum
   , ToData redeemer
-  , FromData datum
-  , FromData redeemer
-  , Show datum
-  , Show redeemer
   ) =>
   Validator ->
   TransactionConfig ->
-  (TestData 'ForSpending -> ContextBuilder 'ForSpending) ->
-  (Example, datum, redeemer, Value) ->
+  (a -> (datum, redeemer, Value, ContextBuilder 'ForSpending, Example)) ->
+  a ->
   Property
-spenderProperty val tc mkCB (ex, d, r, v) =
-  let td = SpendingTest d r v
-      context = compileSpending tc (mkCB td) d v
+spenderProperty val tc f seed =
+  let (d, r, v, cb, ex) = f seed
+      context = compileSpending tc cb d v
       context' = Context . toBuiltinData $ context
       d' = Datum . toBuiltinData $ d
       r' = Redeemer . toBuiltinData $ r
    in checkCoverage
-        . cover 0.5 (ex == Good) "good"
+        . cover 50.0 (ex == Good) "good"
         . produceResult ex tc context
         . testValidatorScript context' val d'
         $ r'
 
 prettySpender ::
-  forall (datum :: Type) (redeemer :: Type).
-  (Show datum, Show redeemer) =>
-  (Example, datum, redeemer, Value) ->
+  forall (a :: Type) (datum :: Type) (redeemer :: Type).
+  (Show a, Show datum, Show redeemer) =>
+  (a -> (datum, redeemer, Value, ContextBuilder 'ForSpending, Example)) ->
+  a ->
   String
-prettySpender (ex, d, r, v) =
-  renderStyle ourStyle $
-    ""
-      $+$ hang "Case" 4 (text . show $ ex)
-      $+$ hang "Inputs" 4 dumpInputs
-  where
-    dumpInputs :: Doc
-    dumpInputs =
-      "Datum"
-        $+$ ppDoc d
-        $+$ "Redeemer"
-        $+$ ppDoc r
-        $+$ "Value"
-        $+$ ppDoc v
+prettySpender f seed  =
+  let (d, r, v, cb, ex) = f seed
+      dumpInputs :: Doc
+      dumpInputs =
+        "Seed"
+          $+$ ppDoc seed
+          $+$ "Datum"
+          $+$ ppDoc d
+          $+$ "Redeemer"
+          $+$ ppDoc r
+          $+$ "Value"
+          $+$ ppDoc v
+          $+$ "ContextBuilder"
+          $+$ ppDoc cb
+   in renderStyle ourStyle $
+        ""
+          $+$ hang "Case" 4 (text . show $ ex)
+          $+$ hang "Inputs" 4 dumpInputs
 
 minterProperty ::
-  forall (redeemer :: Type).
-  (FromData redeemer, ToData redeemer, Show redeemer) =>
+  forall (a :: Type) (redeemer :: Type).
+  (ToData redeemer) =>
   MintingPolicy ->
   TransactionConfig ->
-  (TestData 'ForMinting -> ContextBuilder 'ForMinting) ->
-  (Example, redeemer) ->
+  (a -> (redeemer, ContextBuilder 'ForMinting, Example)) ->
+  a ->
   Property
-minterProperty mp tc mkCB (ex, r) =
-  let td = MintingTest r
-      context = compileMinting tc . mkCB $ td
+minterProperty mp tc f seed =
+  let (r, cb, ex) = f seed
+      context = compileMinting tc cb
       context' = Context . toBuiltinData $ context
       r' = Redeemer . toBuiltinData $ r
    in checkCoverage
-        . cover 0.5 (ex == Good) "good"
+        . cover 50.0 (ex == Good) "good"
         . produceResult ex tc context
         . testMintingPolicyScript context' mp
         $ r'
 
 prettyMinter ::
-  forall (redeemer :: Type).
-  (Show redeemer) =>
-  (Example, redeemer) ->
+  forall (a :: Type) (redeemer :: Type).
+  (Show a, Show redeemer) =>
+  (a -> (redeemer, ContextBuilder 'ForMinting, Example)) ->
+  a ->
   String
-prettyMinter (ex, r) =
-  renderStyle ourStyle $
-    ""
-      $+$ hang "Case" 4 (text . show $ ex)
-      $+$ hang "Inputs" 4 dumpRedeemer
-  where
-    dumpRedeemer :: Doc
-    dumpRedeemer = "Redeemer" $+$ ppDoc r
-
-spendingTupleGen ::
-  forall (datum :: Type) (redeemer :: Type).
-  (datum -> redeemer -> Value -> Example) ->
-  Methodology datum ->
-  Methodology redeemer ->
-  Methodology Value ->
-  Gen (Example, datum, redeemer, Value)
-spendingTupleGen f mDat mRed mVal = do
-  let Methodology genD _ = mDat
-  let Methodology genR _ = mRed
-  let Methodology genVal _ = mVal
-  (d, r, v) <- (,,) <$> genD <*> genR <*> genVal
-  pure (f d r v, d, r, v)
-
-spendingTupleShrink ::
-  forall (datum :: Type) (redeemer :: Type).
-  (datum -> redeemer -> Value -> Example) ->
-  Methodology datum ->
-  Methodology redeemer ->
-  Methodology Value ->
-  (Example, datum, redeemer, Value) ->
-  [(Example, datum, redeemer, Value)]
-spendingTupleShrink f mDat mRed mVal (ex, d, r, v) = do
-  let Methodology _ shrinkD = mDat
-  let Methodology _ shrinkR = mRed
-  let Methodology _ shrinkV = mVal
-  (d', r', v') <- (,,) <$> shrinkD d <*> shrinkR r <*> shrinkV v
-  guard (f d' r' v' == ex)
-  pure (ex, d', r', v')
-
-mintingTupleGen ::
-  forall (redeemer :: Type).
-  (redeemer -> Example) ->
-  Methodology redeemer ->
-  Gen (Example, redeemer)
-mintingTupleGen f mRed = do
-  let Methodology genR _ = mRed
-  r <- genR
-  pure (f r, r)
-
-mintingTupleShrink ::
-  forall (redeemer :: Type).
-  (redeemer -> Example) ->
-  Methodology redeemer ->
-  (Example, redeemer) ->
-  [(Example, redeemer)]
-mintingTupleShrink f mRed (ex, r) = do
-  let Methodology _ shrinkR = mRed
-  r' <- shrinkR r
-  guard (f r == ex)
-  pure (ex, r')
+prettyMinter f seed =
+  let (r, cb, ex) = f seed
+      dumpInputs :: Doc
+      dumpInputs =
+        "Seed"
+          $+$ ppDoc seed
+          $+$ "Redeemer"
+          $+$ ppDoc r
+          $+$ "ContextBuilder"
+          $+$ ppDoc cb
+   in renderStyle ourStyle $
+        ""
+          $+$ hang "Case" 4 (text . show $ ex)
+          $+$ hang "Inputs" 4 dumpInputs
 
 produceResult ::
   Example ->

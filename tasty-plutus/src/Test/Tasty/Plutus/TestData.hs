@@ -18,8 +18,6 @@ module Test.Tasty.Plutus.TestData (
   fromArbitrary,
   static,
   Generator (..),
-  fromArbitrarySpending,
-  fromArbitraryMinting,
 ) where
 
 import Data.Kind (Type)
@@ -28,6 +26,7 @@ import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.IsData.Class (FromData, ToData)
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Test.QuickCheck.Gen (Gen)
+import Test.Tasty.Plutus.Context (ContextBuilder)
 import Test.Tasty.Plutus.Internal.Context (
   Purpose (ForMinting, ForSpending),
  )
@@ -118,13 +117,14 @@ static ::
   Methodology a
 static x = Methodology (pure x) (const [])
 
-{- | Contains a means of generating a 'TestData', as well as a way to determine
- a \'good\' or \'bad\' generated case.
+{- | Contains a means of generating a seed and a function
+ for creating from seed 'TestData', 'ContextBuilder'
+ as well as a way to determine a \'good\' or \'bad\' generated case.
 
- @since 3.1
+ @since 5.0
 -}
-data Generator (p :: Purpose) where
-  -- | @since 3.1
+data Generator (a :: Type) (p :: Purpose) where
+  -- | @since 5.0
   GenForSpending ::
     ( ToData datum
     , ToData redeemer
@@ -132,54 +132,18 @@ data Generator (p :: Purpose) where
     , FromData redeemer
     , Show datum
     , Show redeemer
+    , Show a
     ) =>
-    (datum -> redeemer -> Value -> Example) ->
-    Methodology datum ->
-    Methodology redeemer ->
-    Methodology Value ->
-    Generator 'ForSpending
-  -- | @since 3.1
+    Methodology a ->
+    (a -> (datum, redeemer, Value, ContextBuilder 'ForSpending, Example)) ->
+    Generator a 'ForSpending
+  -- | @since 5.0
   GenForMinting ::
     ( ToData redeemer
     , FromData redeemer
     , Show redeemer
+    , Show a
     ) =>
-    (redeemer -> Example) ->
-    Methodology redeemer ->
-    Generator 'ForMinting
-
-{- | Generate using 'Arbitrary' instances. A 'Methodology' for 'Value' has to be
- passed manually, as it's (currently) missing an instance.
-
- @since 3.1
--}
-fromArbitrarySpending ::
-  forall (datum :: Type) (redeemer :: Type).
-  ( ToData datum
-  , FromData datum
-  , Arbitrary datum
-  , Show datum
-  , ToData redeemer
-  , FromData redeemer
-  , Show redeemer
-  , Arbitrary redeemer
-  ) =>
-  (datum -> redeemer -> Value -> Example) ->
-  Methodology Value ->
-  Generator 'ForSpending
-fromArbitrarySpending f = GenForSpending f fromArbitrary fromArbitrary
-
-{- | Generate using 'Arbitrary' instances.
-
- @since 3.1
--}
-fromArbitraryMinting ::
-  forall (redeemer :: Type).
-  ( ToData redeemer
-  , FromData redeemer
-  , Show redeemer
-  , Arbitrary redeemer
-  ) =>
-  (redeemer -> Example) ->
-  Generator 'ForMinting
-fromArbitraryMinting f = GenForMinting f fromArbitrary
+    Methodology a ->
+    (a -> (redeemer, ContextBuilder 'ForMinting, Example)) ->
+    Generator a 'ForMinting
