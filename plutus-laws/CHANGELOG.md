@@ -4,6 +4,14 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 2.2 -- 2021-12-01
+
+### Added
+
+* Laws for ``AdditiveSemigroup``, ``AdditiveMonoid``,
+  ``MultiplicativeSemigroup``, ``MultiplicativeMonoid`` and ``AdditiveGroup``.
+* Laws for checking consistency across the component constraints of `Semiring`.
+
 ## 2.1 -- 2021-11-16
 
 ### Added

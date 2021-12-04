@@ -18,11 +18,17 @@
         let
           deferPluginErrors = true;
           pkgs = nixpkgsFor system;
+
+          fakeSrc = pkgs.runCommand "real-source" {} ''
+            cp -rT ${self} $out
+            chmod u+w $out/cabal.project
+            cat $out/cabal-haskell.nix.project >> $out/cabal.project
+          '';
         in
-        (nixpkgsFor system).haskell-nix.project' {
-          src = ./.;
+        (nixpkgsFor system).haskell-nix.cabalProject' {
+          src = fakeSrc.outPath;
           compiler-nix-name = "ghc8107";
-          projectFileName = "cabal.project";
+          cabalProjectFileName = "cabal.project";
           modules = [{
             packages = {
               marlowe.flags.defer-plugin-errors = deferPluginErrors;
@@ -38,9 +44,49 @@
           shell = {
             withHoogle = true;
 
+            exactDeps = true;
+
             # We use the ones from Nixpkgs, since they are cached reliably.
             # Eventually we will probably want to build these with haskell.nix.
             nativeBuildInputs = [ pkgs.cabal-install pkgs.hlint pkgs.haskellPackages.fourmolu ];
+
+            additional = ps: [
+              ps.base-deriving-via
+              ps.cardano-addresses
+              ps.cardano-addresses-cli
+              ps.cardano-binary
+              ps.cardano-crypto
+              ps.cardano-crypto-class
+              ps.cardano-crypto-praos
+              ps.cardano-crypto-wrapper
+              ps.cardano-ledger-alonzo
+              ps.cardano-ledger-byron
+              ps.cardano-ledger-core
+              ps.cardano-ledger-pretty
+              ps.cardano-ledger-shelley
+              ps.cardano-ledger-shelley-ma
+              ps.cardano-prelude
+              ps.cardano-slotting
+              ps.flat
+              ps.freer-extras
+              ps.goblins
+              ps.measures
+              ps.orphans-deriving-via
+              ps.playground-common
+              ps.plutus-contract
+              ps.plutus-core
+              ps.plutus-ledger
+              ps.plutus-ledger-api
+              ps.plutus-pab
+              ps.plutus-playground-server
+              ps.plutus-tx
+              ps.plutus-tx-plugin
+              ps.plutus-use-cases
+              ps.prettyprinter-configurable
+              ps.quickcheck-dynamic
+              ps.Win32-network
+              ps.word-array
+            ];
           };
           sha256map = {
             "https://github.com/input-output-hk/plutus.git"."3f089ccf0ca746b399c99afe51e063b0640af547"
