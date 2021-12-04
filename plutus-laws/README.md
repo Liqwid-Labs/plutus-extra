@@ -19,6 +19,10 @@ Currently, we can check type class laws for the following:
 * Plutus `Ord`
 * Plutus `Semigroup`
 * Plutus `Monoid`
+* Plutus `AdditiveSemigroup`, `AdditiveMonoid`, `AdditiveGroup`.
+* Plutus `MultiplicativeSemigroup`, `MultiplicativeMonoid`
+* Plutus `Semiring` (or rather, the consistency across its individual
+  components)
 
 We also ensure that some of these (specifically `Eq` and `Ord`) are checked in a
 way that either ensures coverage issues don't arise, or at least warns when they
