@@ -69,4 +69,21 @@ test-suite plutus-list-properties
     , tasty              ^>=1.4.1
     , tasty-quickcheck   ^>=0.10.1.2
 
-  hs-source-dirs: test
+  hs-source-dirs: test/property
+
+test-suite plutus-list-size
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+
+  build-depends:
+    , plutus-ledger-api
+    , plutus-list
+    , plutus-numeric     ^>=2.3
+    , plutus-size-check  ^>=1.1
+    , plutus-tx
+    , plutus-tx-plugin
+    , tasty              ^>=1.4.1
+    , tasty-quickcheck   ^>=0.10.1.2
+
+  hs-source-dirs: test/size

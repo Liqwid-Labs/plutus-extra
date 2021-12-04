@@ -39,8 +39,9 @@ element.
 -}
 {-# INLINEABLE replicate #-}
 replicate :: forall (a :: Type). Natural -> a -> [a]
-replicate [nat| 0 |] _ = []
-replicate n x = x : replicate (pred n) x
+replicate n x
+  | n == zero = []
+  | otherwise = x : replicate (pred n) x
 
 {- | @'take' n xs@ returns the prefix of @xs@ of length @n@, or @xs@ itself if
 @n '>=' 'length' xs@.
@@ -50,8 +51,9 @@ replicate n x = x : replicate (pred n) x
 {-# INLINEABLE take #-}
 take :: forall (a :: Type). Natural -> [a] -> [a]
 take _ [] = []
-take [nat| 0 |] _ = []
-take n (x : xs) = x : take (pred n) xs
+take n (x : xs)
+  | n == zero = []
+  | otherwise = x : take (pred n) xs
 
 {- | @'drop' n xs@ returns the suffix of @xs@ after the first @n@ elements, or
 @[]@ if @n '>=' 'length' xs@.
@@ -61,8 +63,9 @@ take n (x : xs) = x : take (pred n) xs
 {-# INLINEABLE drop #-}
 drop :: forall (a :: Type). Natural -> [a] -> [a]
 drop _ [] = []
-drop [nat| 0 |] xs = xs
-drop n (_ : xs) = drop (pred n) xs
+drop n as@(_ : xs)
+  | n == zero = as
+  | otherwise = drop (pred n) xs
 
 {- | @'splitAt' n xs@ returns a tuple, where the first element is the prefix of
 @xs@ of length @n@, and the second element is the remainder of the list.
@@ -72,6 +75,6 @@ drop n (_ : xs) = drop (pred n) xs
 {-# INLINEABLE splitAt #-}
 splitAt :: forall (a :: Type). Natural -> [a] -> ([a], [a])
 splitAt _ [] = ([], [])
-splitAt [nat| 0 |] xs = ([], xs)
-splitAt n (x : xs) =
-  let (xs', xs'') = splitAt (pred n) xs in (x : xs', xs'')
+splitAt n as@(x : xs)
+  | n == zero = ([], as)
+  | otherwise = let (xs', xs'') = splitAt (pred n) xs in (x : xs', xs'')
