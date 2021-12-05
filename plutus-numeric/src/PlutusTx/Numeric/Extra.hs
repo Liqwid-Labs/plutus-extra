@@ -33,7 +33,6 @@ module PlutusTx.Numeric.Extra (
   rem,
   (^),
   powNat,
-  (^+),
 ) where
 
 import Data.Kind (Type)
@@ -71,21 +70,6 @@ powNat x (Natural n) =
     else expBySquaring x n
 
 infixr 8 `powNat`
-
-{- | 'powNat' as an infix operator.
-
- @since 1.0
--}
-{-# INLINEABLE (^+) #-}
-(^+) ::
-  forall (m :: Type).
-  (MultiplicativeMonoid m) =>
-  m ->
-  Natural ->
-  m
-(^+) = powNat
-
-infixr 8 ^+
 
 {- | An 'AdditiveMonoid' with a notion of monus. Provides one operation @'^-'@,
  also called \'monus\'.
