@@ -8,7 +8,7 @@ import PlutusTx.Natural (
   nat,
   parity,
  )
-import PlutusTx.Numeric.Extra (divMod, rem, (^+), (^-))
+import PlutusTx.Numeric.Extra (divMod, powNat, rem, (^-))
 import PlutusTx.Prelude qualified as Plutus
 import Test.QuickCheck (
   Property,
@@ -38,9 +38,9 @@ tests =
       ]
   , localOption go . testProperty "Parity" $ parityProp
   , localOption go . testGroup "Exponentiation" $
-      [ testProperty "x ^+ 0 = mempty" expProp1
-      , testProperty "x ^+ 1 = x" expProp2
-      , testProperty "x ^+ n = fold . repeat n $ x" expProp3
+      [ testProperty "x `powNat` 0 = mempty" expProp1
+      , testProperty "x `powNat` 1 = x" expProp2
+      , testProperty "x `powNat` n = fold . repeat n $ x" expProp3
       ]
   ]
   where
@@ -51,19 +51,19 @@ expProp1 :: Property
 expProp1 = forAllShrink arbitrary shrink go
   where
     go :: Natural -> Property
-    go x = x ^+ Plutus.zero === Plutus.one
+    go x = x `powNat` Plutus.zero === Plutus.one
 
 expProp2 :: Property
 expProp2 = forAllShrink arbitrary shrink go
   where
     go :: Natural -> Property
-    go x = x ^+ Plutus.one === x
+    go x = x `powNat` Plutus.one === x
 
 expProp3 :: Property
 expProp3 = forAllShrink arbitrary shrink go
   where
     go :: (Natural, Natural) -> Property
-    go (x, n) = x ^+ n === (product . clone n $ x)
+    go (x, n) = x `powNat` n === (product . clone n $ x)
     clone :: Natural -> Natural -> [Natural]
     clone n x =
       if n == Plutus.zero

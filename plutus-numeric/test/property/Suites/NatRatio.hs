@@ -4,7 +4,7 @@ import Helpers (NonZero (NonZero))
 import PlutusTx.NatRatio (NatRatio)
 import PlutusTx.NatRatio qualified as NR
 import PlutusTx.Natural (Natural)
-import PlutusTx.Numeric.Extra (reciprocal, (/), (^), (^+), (^-))
+import PlutusTx.Numeric.Extra (powNat, reciprocal, (/), (^), (^-))
 import PlutusTx.Prelude qualified as Plutus
 import Test.QuickCheck (Property, forAllShrink, (===))
 import Test.QuickCheck.Arbitrary (arbitrary, shrink)
@@ -34,9 +34,9 @@ tests =
           $ mgProp6
       ]
   , localOption goSmall . testGroup "Exponentiation" $
-      [ testProperty "x ^+ 0 = 1" expProp1
-      , testProperty "x ^+ 1 = x" expProp2
-      , testProperty "If i > 1, then x ^+ i = x * x ^+ (i - 1)" expProp3
+      [ testProperty "x `powNat` 0 = 1" expProp1
+      , testProperty "x `powNat` 1 = x" expProp2
+      , testProperty "If i > 1, then x `powNat` i = x * x `powNat` (i - 1)" expProp3
       ]
   , localOption goSmall . testGroup "Ceiling" $
       [ testProperty "ceiling n >= n" ceilingProp1
@@ -53,20 +53,20 @@ expProp1 :: Property
 expProp1 = forAllShrink arbitrary shrink go
   where
     go :: NatRatio -> Property
-    go x = x ^+ Plutus.zero === Plutus.one
+    go x = x `powNat` Plutus.zero === Plutus.one
 
 expProp2 :: Property
 expProp2 = forAllShrink arbitrary shrink go
   where
     go :: NatRatio -> Property
-    go x = x ^+ Plutus.one === x
+    go x = x `powNat` Plutus.one === x
 
 expProp3 :: Property
 expProp3 = forAllShrink arbitrary shrink go
   where
     go :: (NatRatio, NonZero Natural) -> Property
     go (x, NonZero i) =
-      x ^+ i === x Plutus.* (x ^+ (i ^- Plutus.one))
+      x `powNat` i === x Plutus.* (x `powNat` (i ^- Plutus.one))
 
 mgProp1 :: Property
 mgProp1 = forAllShrink arbitrary shrink go
