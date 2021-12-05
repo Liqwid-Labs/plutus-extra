@@ -13,9 +13,13 @@ module PlutusTx.Rational.Internal (
   abs,
   truncate,
   round,
+  half,
+  fromGHC,
+  toGHC,
 ) where
 
 import Control.Monad (guard)
+import Data.Ratio qualified as GHC
 import PlutusTx.Prelude hiding (
   Rational,
   fromInteger,
@@ -173,7 +177,15 @@ recip (Rational n d)
   | n < zero = Rational (Plutus.negate d) (Plutus.negate n)
   | otherwise = Rational d n
 
--- TODO: half, fromGHC, toGHC
+{-# INLINEABLE half #-}
+half :: Rational
+half = Rational 1 2
+
+fromGHC :: GHC.Rational -> Rational
+fromGHC r = GHC.numerator r % GHC.denominator r
+
+toGHC :: Rational -> GHC.Rational
+toGHC (Rational n d) = n GHC.% d
 
 {-# INLINEABLE abs #-}
 abs :: Rational -> Rational

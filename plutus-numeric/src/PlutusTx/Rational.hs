@@ -12,6 +12,9 @@ module PlutusTx.Rational (
   Internal.abs,
   Internal.truncate,
   Internal.round,
+  Internal.half,
+  Internal.fromGHC,
+  Internal.toGHC,
 ) where
 
 import PlutusTx.Rational.Internal qualified as Internal

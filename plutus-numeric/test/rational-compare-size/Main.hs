@@ -84,6 +84,10 @@ main =
             "abs (overloaded)"
             (fromCompiledCode ourRatAbsOverload)
             (fromCompiledCode pRatAbs)
+        , fitsUnder
+            "half"
+            (fromCompiledCode ourRatHalf)
+            (fromCompiledCode pRatHalf)
         ]
     ]
 
@@ -238,3 +242,9 @@ ourRatAbs = $$(compile [||PlutusRatio.abs||])
 
 ourRatAbsOverload :: CompiledCode (Our.Rational -> Our.Rational)
 ourRatAbsOverload = $$(compile [||Our.abs||])
+
+pRatHalf :: CompiledCode Plutus.Rational
+pRatHalf = $$(compile [||PlutusRatio.half||])
+
+ourRatHalf :: CompiledCode Our.Rational
+ourRatHalf = $$(compile [||Our.half||])
