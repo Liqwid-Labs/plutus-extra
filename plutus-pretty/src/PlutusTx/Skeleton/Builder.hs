@@ -25,7 +25,7 @@ newtype Builder = Builder ([(Integer, BuiltinString)] -> [(Integer, BuiltinStrin
 
 instance Semigroup Builder where
   {-# INLINEABLE (<>) #-}
-  Builder f <> Builder g = Builder (f . g)
+  Builder f <> Builder g = Builder (g . f)
 
 instance Monoid Builder where
   {-# INLINEABLE mempty #-}
