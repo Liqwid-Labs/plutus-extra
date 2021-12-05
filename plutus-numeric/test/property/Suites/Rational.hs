@@ -41,13 +41,115 @@ tests =
               <> "determine value of rational"
           )
           absValProp
+      , testProperty "0 % x normalizes" zeroNormalProp
+      , testProperty "x % x normalizes" oneNormalProp
+      , testProperty "x % y = (x * z) % (y * z)" scaleNormalizationProp
+      ]
+  , localOption go . testGroup "fromInteger" $
+      [ testProperty "fromInteger x = x % 1" fromIntegerProp
+      ]
+  , localOption go . testGroup "numerator and denominator" $
+      [ testProperty
+          "numerator r = numerator (r * (fromInteger . denominator $ r))"
+          numDenRelationProp
+      , testProperty "denominator r > 0" positiveDenominatorProp
+      ]
+  , localOption go . testGroup "recip" $
+      [ testProperty "recip (x % y) = y % x" recipInversionProp
+      , testProperty "recip r * r = 1" recipMultiplicationProp
+      ]
+  , localOption go . testGroup "abs" $
+      [ testProperty "abs r >= 0" absNonNegativeProp
+      , testProperty "abs n % abs d = abs (n % d)" absBuildProp
+      , testProperty "abs r * abs r' = abs (r * r')" absMultProp
       ]
   ]
   where
     go :: QuickCheckTests
     go = 1_000_000
 
+-- TODO: round, truncate, properFraction
+
 -- Helpers
+
+absNonNegativeProp :: Property
+absNonNegativeProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: Rational.Rational -> Property
+    go r = property (Rational.abs r PTx.>= PTx.zero)
+
+absBuildProp :: Property
+absBuildProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: (Integer, NonZero Integer) -> Property
+    go (n, NonZero d) =
+      abs n Rational.% abs d === Rational.abs (n Rational.% d)
+
+absMultProp :: Property
+absMultProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: (Rational.Rational, Rational.Rational) -> Property
+    go (r, r') =
+      Rational.abs r PTx.* Rational.abs r' === Rational.abs (r PTx.* r')
+
+recipMultiplicationProp :: Property
+recipMultiplicationProp = forAllShrinkShow gen shr ppShow go
+  where
+    gen :: Gen Rational.Rational
+    gen = suchThat arbitrary (PTx./= PTx.zero)
+    shr :: Rational.Rational -> [Rational.Rational]
+    shr r = do
+      r' <- shrink r
+      guard (r' PTx./= PTx.zero)
+      pure r'
+    go :: Rational.Rational -> Property
+    go r = Rational.recip r PTx.* r === PTx.one
+
+recipInversionProp :: Property
+recipInversionProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: (NonZero Integer, NonZero Integer) -> Property
+    go (NonZero n, NonZero d) =
+      Rational.recip (n Rational.% d) === d Rational.% n
+
+numDenRelationProp :: Property
+numDenRelationProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: Rational.Rational -> Property
+    go r =
+      Rational.numerator r
+        === (Rational.numerator . (r PTx.*) . Rational.fromInteger . Rational.denominator $ r)
+
+positiveDenominatorProp :: Property
+positiveDenominatorProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: Rational.Rational -> Property
+    go r = property (Rational.denominator r PTx.> PTx.zero)
+
+fromIntegerProp :: Property
+fromIntegerProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: Integer -> Property
+    go i = Rational.fromInteger i === i Rational.% PTx.one
+
+zeroNormalProp :: Property
+zeroNormalProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: NonZero Integer -> Property
+    go (NonZero i) = PTx.zero Rational.% i === PTx.zero
+
+oneNormalProp :: Property
+oneNormalProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: NonZero Integer -> Property
+    go (NonZero i) = i Rational.% i === PTx.one
+
+scaleNormalizationProp :: Property
+scaleNormalizationProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: (Integer, NonZero Integer, NonZero Integer) -> Property
+    go (x, NonZero y, NonZero z) =
+      x Rational.% y === (x PTx.* z) Rational.% (y PTx.* z)
 
 absValProp :: Property
 absValProp = forAllShrinkShow gen shr ppShow go
