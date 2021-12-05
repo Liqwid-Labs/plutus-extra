@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Main (main) where
@@ -8,13 +9,13 @@ import PlutusTx.Prelude qualified as PTx
 import PlutusTx.TH (compile)
 import Test (Foo)
 import Test.Tasty (defaultMain, testGroup)
-import Test.Tasty.Plutus.Size (fitsOnChain)
+import Test.Tasty.Plutus.Size (bytes, fitsInto)
 
 main :: IO ()
 main =
   defaultMain . testGroup "Size" $
-    [ fitsOnChain "==" . fromCompiledCode $ fooEq
-    , fitsOnChain "/=" . fromCompiledCode $ fooNeq
+    [ fitsInto "==" [bytes| 241 |] . fromCompiledCode $ fooEq
+    , fitsInto "/=" [bytes| 254 |] . fromCompiledCode $ fooNeq
     ]
 
 -- Helpers

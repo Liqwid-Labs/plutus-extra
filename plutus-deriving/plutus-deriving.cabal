@@ -60,6 +60,7 @@ library
 
 library testlib
   import:          lang
+  visibility:      private
   exposed-modules: Test
   build-depends:
     , plutus-deriving

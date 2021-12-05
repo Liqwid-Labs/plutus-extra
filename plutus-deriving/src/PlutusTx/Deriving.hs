@@ -1,5 +1,38 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+{- |
+ Module: PlutusTx.Deriving
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ TH helper for constructing lawful and substitutable instances of 'PTx.Eq'.
+
+ Can be used as follows:
+
+ > {\-# LANGUAGE TemplateHaskell #-\}
+ > {\-# LANGUAGE KindSignatures #-\}
+ > {\-# LANGUAGE NoImplicitPrelude #-\}
+ >
+ > module Foo where
+ >
+ > import PlutusTx.Prelude
+ > import PlutusTx.Deriving (deriveEq)
+ > import Data.Kind (Type)
+ >
+ > data Foo (a :: Type) =
+ >  Mono BuiltinByteString |
+ >  Poly a |
+ >  Recursive BuiltinByteString (Foo a)
+ >
+ > $(deriveEq ''Foo)
+
+ If something unexpected happens, you can inspect the output using @{\-#
+ OPTIONS_GHC -ddump-splices #-\}@ in the module where the instances are being
+ generated. This will dump the output of the TH so you can inspect it.
+-}
 module PlutusTx.Deriving (deriveEq) where
 
 import Control.Monad (replicateM)
@@ -38,16 +71,13 @@ import Language.Haskell.TH (
  )
 import PlutusTx.Prelude qualified as PTx
 
-{- | Quick how to use:
+{- | Generates a lawful 'PTx.Eq' instance for the type named by the input. This
+ instance will obey the following laws:
 
- > {\-# LANGUAGE TemplateHaskell #-\}
- >
- > data Foo = ...
- >
- > $(deriveEq ''Foo)
-
- If something weird happens, you can inspect the output using @{\-# OPTIONS_GHC
- -ddump-splices #-\}@ in the source file. This will dump what TH made.
+ * Reflexivity (for any @x@, @x == x = True@)
+ * Symmetry (for any @x, y@, @x == y = y PTx.== x@)
+ * Transitivity (for any @x, y, z@, if @x == y@ and @y == z@, then @x == z@)
+ * Substitution (for any @x, y@ and pure @f@, @x == y@ implies @f x == f y@)
 
  @since 1.0
 -}
