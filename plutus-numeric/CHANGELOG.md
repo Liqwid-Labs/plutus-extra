@@ -2,7 +2,11 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## Unreleased
+## 3.0 -- 2021-12-04
+
+### Removed
+
+* The operator `(^+)` is removed to avoid confusion. Use `powNat` instead.
 
 ## 2.2 -- 2021-11-17
 
@@ -21,7 +25,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Changed
 
-- Plutus upgrade: `plutus` pinned to `3f089ccf0ca746b399c99afe51e063b0640af547`, 
+- Plutus upgrade: `plutus` pinned to `3f089ccf0ca746b399c99afe51e063b0640af547`,
   `plutus-apps` pinned to `404af7ac3e27ebcb218c05f79d9a70ca966407c9`
 
 ## 1.1 -- 2021-10-28

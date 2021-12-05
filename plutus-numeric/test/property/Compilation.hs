@@ -140,42 +140,22 @@ testIntegerRem =
 {-# INLINEABLE testNatPowNat #-}
 testNatPowNat :: CompiledCode [Natural]
 testNatPowNat =
-  $$( compile
-        [||
-        fmap (natNumber `powNat`) natLst
-          ++ fmap (natNumber ^+) natLst
-        ||]
-    )
+  $$(compile [||fmap (natNumber `powNat`) natLst||])
 
 {-# INLINEABLE testNatRatioPowNat #-}
 testNatRatioPowNat :: CompiledCode [NatRatio]
 testNatRatioPowNat =
-  $$( compile
-        [||
-        fmap (natRatioNumber `powNat`) natLst
-          ++ fmap (natRatioNumber ^+) natLst
-        ||]
-    )
+  $$(compile [||fmap (natRatioNumber `powNat`) natLst||])
 
 {-# INLINEABLE testIntegerPowNat #-}
 testIntegerPowNat :: CompiledCode [Integer]
 testIntegerPowNat =
-  $$( compile
-        [||
-        fmap (integerNumber `powNat`) natLst
-          ++ fmap (integerNumber ^+) natLst
-        ||]
-    )
+  $$(compile [||fmap (integerNumber `powNat`) natLst||])
 
 {-# INLINEABLE testRationalPowNat #-}
 testRationalPowNat :: CompiledCode [Rational]
 testRationalPowNat =
-  $$( compile
-        [||
-        fmap (ratioNumber `powNat`) natLst
-          ++ fmap (ratioNumber ^+) natLst
-        ||]
-    )
+  $$(compile [||fmap (ratioNumber `powNat`) natLst||])
 
 {-# INLINEABLE testNatRatioPowInteger #-}
 testNatRatioPowInteger :: CompiledCode [NatRatio]
