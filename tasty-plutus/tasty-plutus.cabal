@@ -85,3 +85,26 @@ library
     , vector             ^>=0.12.3.0
 
   hs-source-dirs:  src
+
+test-suite properties
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  other-modules:
+    Properties.SimpleValidator
+
+  hs-source-dirs: test
+  build-depends:
+    , base                        ^>=4.14
+    , plutus-contract
+    , plutus-extra                ^>=3.0
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-tx
+    , plutus-tx-plugin
+    , quickcheck-plutus-instances ^>=1.2
+    , tasty-plutus                ^>=4.2
+    , tasty                       ^>=1.4.1
+    , tasty-quickcheck            ^>=0.10.1.2
+
+  ghc-options:    -threaded -rtsopts -with-rtsopts=-N -O1
