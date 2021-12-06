@@ -17,6 +17,8 @@ module PlutusTx.Rational (
 
   -- * Construction
   Internal.ratio,
+  QQ.frac,
+  QQ.dec,
 
   -- * Constants
   half,
@@ -42,6 +44,7 @@ import PlutusTx.Prelude hiding (Rational, fromInteger, negate, round)
 import PlutusTx.Prelude qualified as Plutus
 import PlutusTx.Rational.Internal (Rational (Rational))
 import PlutusTx.Rational.Internal qualified as Internal
+import PlutusTx.Rational.QQ qualified as QQ
 
 {- | 0.5. Provided for compatibility.
 
