@@ -27,7 +27,6 @@ import Test.QuickCheck.Gen (
  )
 import Test.QuickCheck.Modifiers (
   Negative (Negative),
-  NonNegative (NonNegative),
   NonZero (NonZero),
   Positive (Positive),
  )
@@ -79,7 +78,20 @@ tests =
   , localOption go . testGroup "truncate" $
       [ testProperty "truncate r = n where (n, _) = properFraction r" truncateProp
       ]
-  , localOption go . testProperty "round" $ roundProp
+  , localOption go . testGroup "round" $
+      [ testProperty "abs (round r) >= abs n, where (n, _) = properFraction r" roundPFProp
+      , testProperty "halves round as expected" roundHalfProp
+      , testProperty
+          ( "if abs f < 1 % 2, then round r = truncate r, "
+              <> "where (_, f) = properFraction r"
+          )
+          roundBelowHalfProp
+      , testProperty
+          ( "if abs f > 1 % 2, then abs (round r) = abs (truncate r) + 1, "
+              <> "where (_, f) = properFraction r"
+          )
+          roundAboveHalfProp
+      ]
   ]
   where
     go :: QuickCheckTests
@@ -87,89 +99,83 @@ tests =
 
 -- Helpers
 
-roundProp :: Property
-roundProp = forAllShrinkShow gen shr ppShow go
+roundAboveHalfProp :: Property
+roundAboveHalfProp = forAllShrinkShow gen shr ppShow go
   where
     gen :: Gen (Integer, Rational.Rational)
-    gen = oneof [minusOne, matching, plusOne]
-    minusOne :: Gen (Integer, Rational.Rational)
-    minusOne = oneof [eqNegOdd, gtNeg]
-    eqNegOdd :: Gen (Integer, Rational.Rational)
-    eqNegOdd = do
-      Odd n <- arbitrary
-      pure (negate . abs $ n, Rational.negate Rational.half)
-    gtNeg :: Gen (Integer, Rational.Rational)
-    gtNeg = do
-      Negative n <- arbitrary
-      Positive den <- arbitrary
-      let split = den `quot` 2
-      num <- chooseInteger (split + 1, den - 1)
-      pure (negate n, negate num Rational.% den)
-    matching :: Gen (Integer, Rational.Rational)
-    matching = oneof [ltAny, eqEven]
-    ltAny :: Gen (Integer, Rational.Rational)
-    ltAny = do
+    gen = do
       n <- arbitrary
-      Positive den <- arbitrary
-      num <- chooseInteger (0, den - 1)
-      let f = case signum n of
-            (-1) -> negate num Rational.% den
-            _ -> num Rational.% den
-      pure (n, f)
-    eqEven :: Gen (Integer, Rational.Rational)
-    eqEven = do
-      Even n <- arbitrary
-      f <- case signum n of
-        0 -> elements [Rational.half, Rational.negate Rational.half]
-        (-1) -> pure . Rational.negate $ Rational.half
-        _ -> pure Rational.half
-      pure (n, f)
-    plusOne :: Gen (Integer, Rational.Rational)
-    plusOne = oneof [eqPosOdd, gtNonNeg]
-    eqPosOdd :: Gen (Integer, Rational.Rational)
-    eqPosOdd = do
-      Odd n <- arbitrary
-      pure (abs n, Rational.half)
-    gtNonNeg :: Gen (Integer, Rational.Rational)
-    gtNonNeg = do
-      NonNegative n <- arbitrary
-      Positive den <- arbitrary
-      let split = den `quot` 2
-      num <- chooseInteger (split + 1, den - 1)
-      pure (n, num Rational.% den)
+      AboveHalf f <- arbitrary
+      case signum n of
+        (-1) -> pure (n, Rational.negate f)
+        0 -> (n,) <$> elements [f, Rational.negate f]
+        _ -> pure (n, f)
     shr :: (Integer, Rational.Rational) -> [(Integer, Rational.Rational)]
-    shr = const [] -- not even going to _try_ shrinking this
+    shr (n, f) = do
+      n' <- shrink n
+      AboveHalf f' <- shrink . AboveHalf . Rational.abs $ f
+      case signum n' of
+        (-1) -> pure (n', Rational.negate f')
+        _ -> pure (n', f')
     go :: (Integer, Rational.Rational) -> Property
     go (n, f) =
       let r = Rational.fromInteger n PTx.+ f
+       in (abs . Rational.round $ r) === (abs . Rational.truncate $ r) + 1
+
+roundBelowHalfProp :: Property
+roundBelowHalfProp = forAllShrinkShow gen shr ppShow go
+  where
+    gen :: Gen (Integer, Rational.Rational)
+    gen = do
+      n <- arbitrary
+      BelowHalf f <- arbitrary
+      case signum n of
+        (-1) -> pure (n, Rational.negate f)
+        0 -> (n,) <$> elements [f, Rational.negate f]
+        _ -> pure (n, f)
+    shr :: (Integer, Rational.Rational) -> [(Integer, Rational.Rational)]
+    shr (n, f) = do
+      n' <- shrink n
+      BelowHalf f' <- shrink . BelowHalf . Rational.abs $ f
+      case signum n' of
+        (-1) -> pure (n', Rational.negate f')
+        _ -> pure (n', f')
+    go :: (Integer, Rational.Rational) -> Property
+    go (n, f) =
+      let r = Rational.fromInteger n PTx.+ f
+       in Rational.round r === Rational.truncate r
+
+roundHalfProp :: Property
+roundHalfProp = forAllShrinkShow gen shr ppShow go
+  where
+    gen :: Gen (Integer, Rational.Rational)
+    gen = do
+      i <- arbitrary
+      r <- case signum i of
+        0 -> elements [Rational.half, Rational.negate Rational.half]
+        (-1) -> pure . Rational.negate $ Rational.half
+        _ -> pure Rational.half
+      pure (i, r)
+    shr :: (Integer, Rational.Rational) -> [(Integer, Rational.Rational)]
+    shr (i, r) = (,r) <$> shrink i
+    go :: (Integer, Rational.Rational) -> Property
+    go (i, f) =
+      let r = Rational.fromInteger i PTx.+ f
           rounded = Rational.round r
-          f' = Rational.abs f
-       in checkCoverage
-            . coverTable "Cases" caseTable
-            . tabulate "Cases" [nameCase n f']
-            $ if
-                | f' PTx.< Rational.half -> rounded === (n - 1)
-                | f' PTx.> Rational.half && signum n == (-1) -> rounded === (n - 1)
-                | f' PTx.> Rational.half -> rounded === (n + 1)
-                | f' PTx.== Rational.half && odd n -> case signum n of
-                  (-1) -> rounded === (n - 1)
-                  _ -> rounded === (n + 1)
-                | otherwise -> rounded === n
-    caseTable :: [(String, Double)]
-    caseTable =
-      [ ("n - 1", 33.3)
-      , ("n", 33.3)
-      , ("n + 1", 33.3)
-      ]
-    nameCase :: Integer -> Rational.Rational -> String
-    nameCase n f
-      | f PTx.< Rational.half = "n - 1"
-      | f PTx.> Rational.half && signum n == (-1) = "n - 1"
-      | f PTx.> Rational.half = "n + 1"
-      | f PTx.== Rational.half && odd n = case signum n of
-        (-1) -> "n - 1"
-        _ -> "n + 1"
-      | otherwise = "n"
+       in case (signum i, even i) of
+            (-1, False) -> rounded === i - 1
+            (-1, True) -> rounded === i
+            (0, _) -> rounded === 0
+            (1, False) -> rounded === i + 1
+            _ -> rounded === i
+
+roundPFProp :: Property
+roundPFProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: Rational.Rational -> Property
+    go r =
+      let (n, _) = Rational.properFraction r
+       in property ((abs . Rational.round $ r) >= abs n)
 
 truncateProp :: Property
 truncateProp = forAllShrinkShow arbitrary shrink ppShow go
@@ -414,22 +420,32 @@ signProp = forAllShrinkShow gen shr ppShow go
       , ("different signs", 33.3)
       ]
 
-newtype Odd = Odd Integer
-  deriving stock (Eq, Show)
+-- Generates values in (0, 0.5)
+newtype BelowHalf = BelowHalf Rational.Rational
+  deriving newtype (Eq)
+  deriving stock (Show)
 
-instance Arbitrary Odd where
-  arbitrary = Odd . (+ 1) . (* 2) <$> arbitrary
-  shrink (Odd n) = do
-    n' <- shrink n
-    guard (odd n')
-    pure . Odd $ n'
+instance Arbitrary BelowHalf where
+  arbitrary = do
+    num <- chooseInteger (1, 135)
+    pure . BelowHalf $ num Rational.% 271 -- prime, so no change of reductions
+  shrink (BelowHalf r) = do
+    let num = Rational.numerator r
+    num' <- shrink num
+    guard (num' > 0)
+    pure . BelowHalf $ num' Rational.% 271
 
-newtype Even = Even Integer
-  deriving stock (Eq, Show)
+-- Generates values in (0.5, 1)
+newtype AboveHalf = AboveHalf Rational.Rational
+  deriving newtype (Eq)
+  deriving stock (Show)
 
-instance Arbitrary Even where
-  arbitrary = Even . (* 2) <$> arbitrary
-  shrink (Even n) = do
-    n' <- shrink n
-    guard (even n')
-    pure . Even $ n'
+instance Arbitrary AboveHalf where
+  arbitrary = do
+    num <- chooseInteger (136, 270)
+    pure . AboveHalf $ num Rational.% 271
+  shrink (AboveHalf r) = do
+    let num = Rational.numerator r
+    num' <- shrink num
+    guard (num' > 135)
+    pure . AboveHalf $ num' Rational.% 271
