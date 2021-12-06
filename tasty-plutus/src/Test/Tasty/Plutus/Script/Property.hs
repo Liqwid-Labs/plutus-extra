@@ -56,7 +56,7 @@ import Plutus.V1.Ledger.Scripts (
 import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.TxId (TxId)
 import Plutus.V1.Ledger.Value (CurrencySymbol, Value)
-import PlutusTx.IsData.Class (FromData, ToData (toBuiltinData))
+import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Test.QuickCheck (
   Args (maxSize, maxSuccess),
   Gen,
@@ -73,7 +73,6 @@ import Test.QuickCheck (
 import Test.Tasty.Options (OptionDescription (Option), lookupOption)
 import Test.Tasty.Plutus.Internal (ourStyle)
 import Test.Tasty.Plutus.Internal.Context (
-  ContextBuilder,
   Purpose (ForMinting, ForSpending),
   TransactionConfig (
     TransactionConfig,
@@ -117,6 +116,18 @@ import Test.Tasty.Plutus.TestData (
   Example (Bad, Good),
   Generator (GenForMinting, GenForSpending),
   Methodology (Methodology),
+  TestItems (
+    ItemsForMinting,
+    ItemsForSpending,
+    mintCB,
+    mintExample,
+    mintRedeemer,
+    spendCB,
+    spendDatum,
+    spendExample,
+    spendRedeemer,
+    spendValue
+  ),
  )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
@@ -177,27 +188,16 @@ scriptProperty name generator = case generator of
 
 data PropertyTest (a :: Type) (p :: Purpose) where
   Spender ::
-    ( ToData datum
-    , ToData redeemer
-    , FromData datum
-    , FromData redeemer
-    , Show datum
-    , Show redeemer
-    ) =>
     Validator ->
     Gen a ->
     (a -> [a]) ->
-    (a -> (datum, redeemer, Value, ContextBuilder 'ForSpending, Example)) ->
+    (a -> TestItems 'ForSpending) ->
     PropertyTest a 'ForSpending
   Minter ::
-    ( ToData redeemer
-    , FromData redeemer
-    , Show redeemer
-    ) =>
     MintingPolicy ->
     Gen a ->
     (a -> [a]) ->
-    (a -> (redeemer, ContextBuilder 'ForMinting, Example)) ->
+    (a -> TestItems 'ForMinting) ->
     PropertyTest a 'ForMinting
 
 instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
@@ -250,91 +250,107 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
       ]
 
 spenderProperty ::
-  forall (a :: Type) (datum :: Type) (redeemer :: Type).
-  ( ToData datum
-  , ToData redeemer
-  ) =>
+  forall (a :: Type).
   Validator ->
   TransactionConfig ->
-  (a -> (datum, redeemer, Value, ContextBuilder 'ForSpending, Example)) ->
+  (a -> TestItems 'ForSpending) ->
   a ->
   Property
-spenderProperty val tc f seed =
-  let (d, r, v, cb, ex) = f seed
-      context = compileSpending tc cb d v
-      context' = Context . toBuiltinData $ context
-      d' = Datum . toBuiltinData $ d
-      r' = Redeemer . toBuiltinData $ r
-   in checkCoverage
-        . cover 50.0 (ex == Good) "good"
-        . produceResult ex tc context
-        . testValidatorScript context' val d'
-        $ r'
+spenderProperty val tc f seed = case f seed of
+  ItemsForSpending
+    { spendDatum = d :: datum
+    , spendRedeemer = r :: redeemer
+    , spendValue = v
+    , spendCB = cb
+    , spendExample = ex
+    } ->
+      let context = compileSpending tc cb d v
+          context' = Context . toBuiltinData $ context
+          d' = Datum . toBuiltinData $ d
+          r' = Redeemer . toBuiltinData $ r
+       in checkCoverage
+            . cover 50.0 (ex == Good) "good"
+            . produceResult ex tc context
+            . testValidatorScript context' val d'
+            $ r'
 
 prettySpender ::
-  forall (a :: Type) (datum :: Type) (redeemer :: Type).
-  (Show a, Show datum, Show redeemer) =>
-  (a -> (datum, redeemer, Value, ContextBuilder 'ForSpending, Example)) ->
+  forall (a :: Type).
+  (Show a) =>
+  (a -> TestItems 'ForSpending) ->
   a ->
   String
-prettySpender f seed  =
-  let (d, r, v, cb, ex) = f seed
-      dumpInputs :: Doc
-      dumpInputs =
-        "Seed"
-          $+$ ppDoc seed
-          $+$ "Datum"
-          $+$ ppDoc d
-          $+$ "Redeemer"
-          $+$ ppDoc r
-          $+$ "Value"
-          $+$ ppDoc v
-          $+$ "ContextBuilder"
-          $+$ ppDoc cb
-   in renderStyle ourStyle $
-        ""
-          $+$ hang "Case" 4 (text . show $ ex)
-          $+$ hang "Inputs" 4 dumpInputs
+prettySpender f seed = case f seed of
+  ItemsForSpending
+    { spendDatum = d :: datum
+    , spendRedeemer = r :: redeemer
+    , spendValue = v
+    , spendCB = cb
+    , spendExample = ex
+    } ->
+      let dumpInputs :: Doc
+          dumpInputs =
+            "Seed"
+              $+$ ppDoc seed
+              $+$ "Datum"
+              $+$ ppDoc @datum d
+              $+$ "Redeemer"
+              $+$ ppDoc @redeemer r
+              $+$ "Value"
+              $+$ ppDoc v
+              $+$ "ContextBuilder"
+              $+$ ppDoc cb
+       in renderStyle ourStyle $
+            ""
+              $+$ hang "Case" 4 (text . show $ ex)
+              $+$ hang "Inputs" 4 dumpInputs
 
 minterProperty ::
-  forall (a :: Type) (redeemer :: Type).
-  (ToData redeemer) =>
+  forall (a :: Type).
   MintingPolicy ->
   TransactionConfig ->
-  (a -> (redeemer, ContextBuilder 'ForMinting, Example)) ->
+  (a -> TestItems 'ForMinting) ->
   a ->
   Property
-minterProperty mp tc f seed =
-  let (r, cb, ex) = f seed
-      context = compileMinting tc cb
-      context' = Context . toBuiltinData $ context
-      r' = Redeemer . toBuiltinData $ r
-   in checkCoverage
-        . cover 50.0 (ex == Good) "good"
-        . produceResult ex tc context
-        . testMintingPolicyScript context' mp
-        $ r'
+minterProperty mp tc f seed = case f seed of
+  ItemsForMinting
+    { mintRedeemer = r
+    , mintCB = cb
+    , mintExample = ex
+    } ->
+      let context = compileMinting tc cb
+          context' = Context . toBuiltinData $ context
+          r' = Redeemer . toBuiltinData $ r
+       in checkCoverage
+            . cover 50.0 (ex == Good) "good"
+            . produceResult ex tc context
+            . testMintingPolicyScript context' mp
+            $ r'
 
 prettyMinter ::
-  forall (a :: Type) (redeemer :: Type).
-  (Show a, Show redeemer) =>
-  (a -> (redeemer, ContextBuilder 'ForMinting, Example)) ->
+  forall (a :: Type).
+  (Show a) =>
+  (a -> TestItems 'ForMinting) ->
   a ->
   String
-prettyMinter f seed =
-  let (r, cb, ex) = f seed
-      dumpInputs :: Doc
-      dumpInputs =
-        "Seed"
-          $+$ ppDoc seed
-          $+$ "Redeemer"
-          $+$ ppDoc r
-          $+$ "ContextBuilder"
-          $+$ ppDoc cb
-   in renderStyle ourStyle $
-        ""
-          $+$ hang "Case" 4 (text . show $ ex)
-          $+$ hang "Inputs" 4 dumpInputs
+prettyMinter f seed = case f seed of
+  ItemsForMinting
+    { mintRedeemer = r :: redeemer
+    , mintCB = cb
+    , mintExample = ex
+    } ->
+      let dumpInputs :: Doc
+          dumpInputs =
+            "Seed"
+              $+$ ppDoc seed
+              $+$ "Redeemer"
+              $+$ ppDoc @redeemer r
+              $+$ "ContextBuilder"
+              $+$ ppDoc cb
+       in renderStyle ourStyle $
+            ""
+              $+$ hang "Case" 4 (text . show $ ex)
+              $+$ hang "Inputs" 4 dumpInputs
 
 produceResult ::
   Example ->

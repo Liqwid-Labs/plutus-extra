@@ -18,6 +18,7 @@ module Test.Tasty.Plutus.TestData (
   fromArbitrary,
   static,
   Generator (..),
+  TestItems (..),
 ) where
 
 import Data.Kind (Type)
@@ -126,24 +127,44 @@ static x = Methodology (pure x) (const [])
 data Generator (a :: Type) (p :: Purpose) where
   -- | @since 5.0
   GenForSpending ::
+    (Show a) =>
+    Methodology a ->
+    (a -> TestItems 'ForSpending) ->
+    Generator a 'ForSpending
+  -- | @since 5.0
+  GenForMinting ::
+    (Show a) =>
+    Methodology a ->
+    (a -> TestItems 'ForMinting) ->
+    Generator a 'ForMinting
+
+data TestItems (p :: Purpose) where
+  -- | @since 5.0
+  ItemsForSpending ::
+    forall (datum :: Type) (redeemer :: Type).
     ( ToData datum
     , ToData redeemer
     , FromData datum
     , FromData redeemer
     , Show datum
     , Show redeemer
-    , Show a
     ) =>
-    Methodology a ->
-    (a -> (datum, redeemer, Value, ContextBuilder 'ForSpending, Example)) ->
-    Generator a 'ForSpending
+    { spendDatum :: datum
+    , spendRedeemer :: redeemer
+    , spendValue :: Value
+    , spendCB :: ContextBuilder 'ForSpending
+    , spendExample :: Example
+    } ->
+    TestItems 'ForSpending
   -- | @since 5.0
-  GenForMinting ::
+  ItemsForMinting ::
+    forall (redeemer :: Type).
     ( ToData redeemer
     , FromData redeemer
     , Show redeemer
-    , Show a
     ) =>
-    Methodology a ->
-    (a -> (redeemer, ContextBuilder 'ForMinting, Example)) ->
-    Generator a 'ForMinting
+    { mintRedeemer :: redeemer
+    , mintCB :: ContextBuilder 'ForMinting
+    , mintExample :: Example
+    } ->
+    TestItems 'ForMinting
