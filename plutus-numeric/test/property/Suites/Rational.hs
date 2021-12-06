@@ -14,12 +14,20 @@ import Test.QuickCheck (
   forAllShrinkShow,
   property,
   tabulate,
+  (.||.),
   (===),
  )
-import Test.QuickCheck.Arbitrary (arbitrary, shrink)
-import Test.QuickCheck.Gen (Gen, elements, oneof, suchThat)
+import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
+import Test.QuickCheck.Gen (
+  Gen,
+  chooseInteger,
+  elements,
+  oneof,
+  suchThat,
+ )
 import Test.QuickCheck.Modifiers (
   Negative (Negative),
+  NonNegative (NonNegative),
   NonZero (NonZero),
   Positive (Positive),
  )
@@ -63,14 +71,147 @@ tests =
       , testProperty "abs n % abs d = abs (n % d)" absBuildProp
       , testProperty "abs r * abs r' = abs (r * r')" absMultProp
       ]
+  , localOption go . testGroup "properFraction" $
+      [ testProperty "r = n + f, where (n, f) = properFraction r" pfInvertProp
+      , testProperty "signs of components match sign of input" pfSignProp
+      , testProperty "abs f < 1, where (_, f) = properFraction r" pfAbsProp
+      ]
+  , localOption go . testGroup "truncate" $
+      [ testProperty "truncate r = n where (n, _) = properFraction r" truncateProp
+      ]
+  , localOption go . testProperty "round" $ roundProp
   ]
   where
     go :: QuickCheckTests
     go = 1_000_000
 
--- TODO: round, truncate, properFraction
-
 -- Helpers
+
+roundProp :: Property
+roundProp = forAllShrinkShow gen shr ppShow go
+  where
+    gen :: Gen (Integer, Rational.Rational)
+    gen = oneof [minusOne, matching, plusOne]
+    minusOne :: Gen (Integer, Rational.Rational)
+    minusOne = oneof [eqNegOdd, gtNeg]
+    eqNegOdd :: Gen (Integer, Rational.Rational)
+    eqNegOdd = do
+      Odd n <- arbitrary
+      pure (negate . abs $ n, Rational.negate Rational.half)
+    gtNeg :: Gen (Integer, Rational.Rational)
+    gtNeg = do
+      Negative n <- arbitrary
+      Positive den <- arbitrary
+      let split = den `quot` 2
+      num <- chooseInteger (split + 1, den - 1)
+      pure (negate n, negate num Rational.% den)
+    matching :: Gen (Integer, Rational.Rational)
+    matching = oneof [ltAny, eqEven]
+    ltAny :: Gen (Integer, Rational.Rational)
+    ltAny = do
+      n <- arbitrary
+      Positive den <- arbitrary
+      num <- chooseInteger (0, den - 1)
+      let f = case signum n of
+            (-1) -> negate num Rational.% den
+            _ -> num Rational.% den
+      pure (n, f)
+    eqEven :: Gen (Integer, Rational.Rational)
+    eqEven = do
+      Even n <- arbitrary
+      f <- case signum n of
+        0 -> elements [Rational.half, Rational.negate Rational.half]
+        (-1) -> pure . Rational.negate $ Rational.half
+        _ -> pure Rational.half
+      pure (n, f)
+    plusOne :: Gen (Integer, Rational.Rational)
+    plusOne = oneof [eqPosOdd, gtNonNeg]
+    eqPosOdd :: Gen (Integer, Rational.Rational)
+    eqPosOdd = do
+      Odd n <- arbitrary
+      pure (abs n, Rational.half)
+    gtNonNeg :: Gen (Integer, Rational.Rational)
+    gtNonNeg = do
+      NonNegative n <- arbitrary
+      Positive den <- arbitrary
+      let split = den `quot` 2
+      num <- chooseInteger (split + 1, den - 1)
+      pure (n, num Rational.% den)
+    shr :: (Integer, Rational.Rational) -> [(Integer, Rational.Rational)]
+    shr = const [] -- not even going to _try_ shrinking this
+    go :: (Integer, Rational.Rational) -> Property
+    go (n, f) =
+      let r = Rational.fromInteger n PTx.+ f
+          rounded = Rational.round r
+          f' = Rational.abs f
+       in checkCoverage
+            . coverTable "Cases" caseTable
+            . tabulate "Cases" [nameCase n f']
+            $ if
+                | f' PTx.< Rational.half -> rounded === (n - 1)
+                | f' PTx.> Rational.half && signum n == (-1) -> rounded === (n - 1)
+                | f' PTx.> Rational.half -> rounded === (n + 1)
+                | f' PTx.== Rational.half && odd n -> case signum n of
+                  (-1) -> rounded === (n - 1)
+                  _ -> rounded === (n + 1)
+                | otherwise -> rounded === n
+    caseTable :: [(String, Double)]
+    caseTable =
+      [ ("n - 1", 33.3)
+      , ("n", 33.3)
+      , ("n + 1", 33.3)
+      ]
+    nameCase :: Integer -> Rational.Rational -> String
+    nameCase n f
+      | f PTx.< Rational.half = "n - 1"
+      | f PTx.> Rational.half && signum n == (-1) = "n - 1"
+      | f PTx.> Rational.half = "n + 1"
+      | f PTx.== Rational.half && odd n = case signum n of
+        (-1) -> "n - 1"
+        _ -> "n + 1"
+      | otherwise = "n"
+
+truncateProp :: Property
+truncateProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: Rational.Rational -> Property
+    go r =
+      let (n, _) = Rational.properFraction r
+       in n === Rational.truncate r
+
+pfAbsProp :: Property
+pfAbsProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: Rational.Rational -> Property
+    go r =
+      let (_, f) = Rational.properFraction r
+       in property (Rational.abs f PTx.< PTx.one)
+
+pfSignProp :: Property
+pfSignProp = forAllShrinkShow gen shr ppShow go
+  where
+    gen :: Gen Rational.Rational
+    gen = suchThat arbitrary (PTx./= PTx.zero)
+    shr :: Rational.Rational -> [Rational.Rational]
+    shr r = do
+      r' <- shrink r
+      guard (r' /= PTx.zero)
+      pure r'
+    go :: Rational.Rational -> Property
+    go r =
+      let (n, d) = Rational.properFraction r
+       in if r PTx.> PTx.zero
+            then (n PTx.> PTx.zero) .||. (d PTx.> PTx.zero)
+            else (n PTx.< PTx.zero) .||. (d PTx.< PTx.zero)
+
+pfInvertProp :: Property
+pfInvertProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: Rational.Rational -> Property
+    go r =
+      let (n, f) = Rational.properFraction r
+          n' = Rational.fromInteger n
+       in n' PTx.+ f === r
 
 absNonNegativeProp :: Property
 absNonNegativeProp = forAllShrinkShow arbitrary shrink ppShow go
@@ -272,3 +413,23 @@ signProp = forAllShrinkShow gen shr ppShow go
       , ("same signs", 33.3)
       , ("different signs", 33.3)
       ]
+
+newtype Odd = Odd Integer
+  deriving stock (Eq, Show)
+
+instance Arbitrary Odd where
+  arbitrary = Odd . (+ 1) . (* 2) <$> arbitrary
+  shrink (Odd n) = do
+    n' <- shrink n
+    guard (odd n')
+    pure . Odd $ n'
+
+newtype Even = Even Integer
+  deriving stock (Eq, Show)
+
+instance Arbitrary Even where
+  arbitrary = Even . (* 2) <$> arbitrary
+  shrink (Even n) = do
+    n' <- shrink n
+    guard (even n')
+    pure . Even $ n'
