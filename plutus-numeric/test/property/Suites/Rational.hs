@@ -4,6 +4,7 @@ module Suites.Rational (tests) where
 
 import Control.Monad (guard)
 import Data.Bifunctor (bimap)
+import Data.Maybe (maybeToList)
 import PlutusTx.Prelude qualified as PTx
 import PlutusTx.Rational qualified as Rational
 import Test.QuickCheck (
@@ -11,6 +12,7 @@ import Test.QuickCheck (
   checkCoverage,
   cover,
   coverTable,
+  discard,
   forAllShrinkShow,
   property,
   tabulate,
@@ -24,6 +26,7 @@ import Test.QuickCheck.Gen (
   elements,
   oneof,
   suchThat,
+  suchThatMap,
  )
 import Test.QuickCheck.Modifiers (
   Negative (Negative),
@@ -36,7 +39,7 @@ import Text.Show.Pretty (ppShow)
 
 tests :: [TestTree]
 tests =
-  [ localOption go . testGroup "%" $
+  [ localOption go . testGroup "ratio" $
       [ testProperty
           ( "Signs of numerator and denominator "
               <> "determine sign of rational"
@@ -48,9 +51,9 @@ tests =
               <> "determine value of rational"
           )
           absValProp
-      , testProperty "0 % x normalizes" zeroNormalProp
-      , testProperty "x % x normalizes" oneNormalProp
-      , testProperty "x % y = (x * z) % (y * z)" scaleNormalizationProp
+      , testProperty "ratio 0 x normalizes" zeroNormalProp
+      , testProperty "ratio x x normalizes" oneNormalProp
+      , testProperty "ratio x y = ratio (x * z) (y * z)" scaleNormalizationProp
       ]
   , localOption go . testGroup "fromInteger" $
       [ testProperty "fromInteger x = x % 1" fromIntegerProp
@@ -62,12 +65,12 @@ tests =
       , testProperty "denominator r > 0" positiveDenominatorProp
       ]
   , localOption go . testGroup "recip" $
-      [ testProperty "recip (x % y) = y % x" recipInversionProp
+      [ testProperty "recip (x / y) = y / x" recipInversionProp
       , testProperty "recip r * r = 1" recipMultiplicationProp
       ]
   , localOption go . testGroup "abs" $
       [ testProperty "abs r >= 0" absNonNegativeProp
-      , testProperty "abs n % abs d = abs (n % d)" absBuildProp
+      , testProperty "abs n / abs d = abs (n / d)" absBuildProp
       , testProperty "abs r * abs r' = abs (r * r')" absMultProp
       ]
   , localOption go . testGroup "properFraction" $
@@ -82,12 +85,12 @@ tests =
       [ testProperty "abs (round r) >= abs n, where (n, _) = properFraction r" roundPFProp
       , testProperty "halves round as expected" roundHalfProp
       , testProperty
-          ( "if abs f < 1 % 2, then round r = truncate r, "
+          ( "if abs f < half, then round r = truncate r, "
               <> "where (_, f) = properFraction r"
           )
           roundBelowHalfProp
       , testProperty
-          ( "if abs f > 1 % 2, then abs (round r) = abs (truncate r) + 1, "
+          ( "if abs f > half, then abs (round r) = abs (truncate r) + 1, "
               <> "where (_, f) = properFraction r"
           )
           roundAboveHalfProp
@@ -230,7 +233,9 @@ absBuildProp = forAllShrinkShow arbitrary shrink ppShow go
   where
     go :: (Integer, NonZero Integer) -> Property
     go (n, NonZero d) =
-      abs n Rational.% abs d === Rational.abs (n Rational.% d)
+      let lhs = Rational.ratio (abs n) (abs d)
+          rhs = Rational.abs <$> Rational.ratio n d
+       in lhs === rhs
 
 absMultProp :: Property
 absMultProp = forAllShrinkShow arbitrary shrink ppShow go
@@ -257,7 +262,9 @@ recipInversionProp = forAllShrinkShow arbitrary shrink ppShow go
   where
     go :: (NonZero Integer, NonZero Integer) -> Property
     go (NonZero n, NonZero d) =
-      Rational.recip (n Rational.% d) === d Rational.% n
+      let lhs = Rational.recip <$> Rational.ratio n d
+          rhs = Rational.ratio d n
+       in lhs === rhs
 
 numDenRelationProp :: Property
 numDenRelationProp = forAllShrinkShow arbitrary shrink ppShow go
@@ -277,26 +284,35 @@ fromIntegerProp :: Property
 fromIntegerProp = forAllShrinkShow arbitrary shrink ppShow go
   where
     go :: Integer -> Property
-    go i = Rational.fromInteger i === i Rational.% PTx.one
+    go i =
+      let lhs = Rational.fromInteger i
+          rhs = Rational.ratio i PTx.one
+       in Just lhs === rhs
 
 zeroNormalProp :: Property
 zeroNormalProp = forAllShrinkShow arbitrary shrink ppShow go
   where
     go :: NonZero Integer -> Property
-    go (NonZero i) = PTx.zero Rational.% i === PTx.zero
+    go (NonZero i) =
+      let lhs = Rational.ratio PTx.zero i
+       in lhs === Just PTx.zero
 
 oneNormalProp :: Property
 oneNormalProp = forAllShrinkShow arbitrary shrink ppShow go
   where
     go :: NonZero Integer -> Property
-    go (NonZero i) = i Rational.% i === PTx.one
+    go (NonZero i) =
+      let lhs = Rational.ratio i i
+       in lhs === Just PTx.one
 
 scaleNormalizationProp :: Property
 scaleNormalizationProp = forAllShrinkShow arbitrary shrink ppShow go
   where
     go :: (Integer, NonZero Integer, NonZero Integer) -> Property
     go (x, NonZero y, NonZero z) =
-      x Rational.% y === (x PTx.* z) Rational.% (y PTx.* z)
+      let lhs = Rational.ratio x y
+          rhs = Rational.ratio (x PTx.* z) (y PTx.* z)
+       in lhs === rhs
 
 absValProp :: Property
 absValProp = forAllShrinkShow gen shr ppShow go
@@ -345,18 +361,24 @@ absValProp = forAllShrinkShow gen shr ppShow go
     checkSignMatch n d =
       let absN = abs n
           absD = abs d
-          r = n Rational.% d
-       in if absN > absD
-            then property (r PTx.> PTx.one)
-            else property (r PTx.< PTx.one)
+          r = Rational.ratio n d
+       in case r of
+            Nothing -> discard
+            Just r' ->
+              if absN > absD
+                then property (r' PTx.> PTx.one)
+                else property (r' PTx.< PTx.one)
     checkSignDiffer :: Integer -> Integer -> Property
     checkSignDiffer n d =
       let absN = abs n
           absD = abs d
-          r = n Rational.% d
-       in if absN > absD
-            then property (r PTx.< PTx.negate PTx.one)
-            else property (r PTx.> PTx.negate PTx.one)
+          r = Rational.ratio n d
+       in case r of
+            Nothing -> discard
+            Just r' ->
+              if absN > absD
+                then property (r' PTx.< PTx.negate PTx.one)
+                else property (r' PTx.> PTx.negate PTx.one)
 
 signProp :: Property
 signProp = forAllShrinkShow gen shr ppShow go
@@ -404,10 +426,14 @@ signProp = forAllShrinkShow gen shr ppShow go
       checkCoverage
         . coverTable "Cases" caseTable
         . tabulate "Cases" [nameCase n d]
-        $ if
-            | signum n == 0 -> n Rational.% d === PTx.zero
-            | signum n == signum d -> property (n Rational.% d PTx.> PTx.zero)
-            | otherwise -> property (n Rational.% d PTx.< PTx.zero)
+        $ let r = Rational.ratio n d
+           in case r of
+                Nothing -> discard
+                Just r' ->
+                  if
+                      | signum n == 0 -> r' === PTx.zero
+                      | signum n == signum d -> property (r' PTx.> PTx.zero)
+                      | otherwise -> property (r' PTx.< PTx.zero)
     nameCase :: Integer -> Integer -> String
     nameCase n d
       | signum n == 0 = "zero numerator"
@@ -426,14 +452,17 @@ newtype BelowHalf = BelowHalf Rational.Rational
   deriving stock (Show)
 
 instance Arbitrary BelowHalf where
-  arbitrary = do
-    num <- chooseInteger (1, 135)
-    pure . BelowHalf $ num Rational.% 271 -- prime, so no change of reductions
+  arbitrary =
+    BelowHalf
+      <$> suchThatMap
+        (chooseInteger (1, 135))
+        (`Rational.ratio` 271)
   shrink (BelowHalf r) = do
     let num = Rational.numerator r
     num' <- shrink num
     guard (num' > 0)
-    pure . BelowHalf $ num' Rational.% 271
+    r' <- maybeToList $ Rational.ratio num' 271
+    pure . BelowHalf $ r'
 
 -- Generates values in (0.5, 1)
 newtype AboveHalf = AboveHalf Rational.Rational
@@ -441,11 +470,14 @@ newtype AboveHalf = AboveHalf Rational.Rational
   deriving stock (Show)
 
 instance Arbitrary AboveHalf where
-  arbitrary = do
-    num <- chooseInteger (136, 270)
-    pure . AboveHalf $ num Rational.% 271
+  arbitrary =
+    AboveHalf
+      <$> suchThatMap
+        (chooseInteger (136, 270))
+        (`Rational.ratio` 271)
   shrink (AboveHalf r) = do
     let num = Rational.numerator r
     num' <- shrink num
     guard (num' > 135)
-    pure . AboveHalf $ num' Rational.% 271
+    r' <- maybeToList $ Rational.ratio num' 271
+    pure . AboveHalf $ r'

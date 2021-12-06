@@ -1,25 +1,12 @@
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module PlutusTx.Rational.Internal (
   Rational (..),
   (%),
-  negate,
-  fromInteger,
-  numerator,
-  denominator,
-  properFraction,
-  recip,
-  abs,
-  truncate,
-  round,
-  half,
-  fromGHC,
-  toGHC,
+  ratio,
 ) where
 
 import Control.Monad (guard)
-import Data.Ratio qualified as GHC
 import PlutusTx.Prelude hiding (
   Rational,
   fromInteger,
@@ -135,63 +122,17 @@ n % d
 
 infixl 7 %
 
-{-# INLINEABLE negate #-}
-negate :: Rational -> Rational
-negate (Rational n d) = Rational (Plutus.negate n) d
-
-{-# INLINEABLE fromInteger #-}
-fromInteger :: Integer -> Rational
-fromInteger num = Rational num one
-
-{-# INLINEABLE numerator #-}
-numerator :: Rational -> Integer
-numerator (Rational n _) = n
-
-{-# INLINEABLE denominator #-}
-denominator :: Rational -> Integer
-denominator (Rational _ d) = d
-
-{-# INLINEABLE round #-}
-round :: Rational -> Integer
-round x =
-  let (n, r) = properFraction x
-      m = if r < zero then n - one else n + one
-      flag = abs r - Rational one 2
-   in if
-          | flag < zero -> n
-          | flag == zero -> if even n then n else m
-          | otherwise -> m
-
-{-# INLINEABLE truncate #-}
-truncate :: Rational -> Integer
-truncate (Rational n d) = n `quotient` d
-
-{-# INLINEABLE properFraction #-}
-properFraction :: Rational -> (Integer, Rational)
-properFraction (Rational n d) = (n `quotient` d, Rational (n `remainder` d) d)
-
-{-# INLINEABLE recip #-}
-recip :: Rational -> Rational
-recip (Rational n d)
-  | n == zero = error ()
-  | n < zero = Rational (Plutus.negate d) (Plutus.negate n)
-  | otherwise = Rational d n
-
-{-# INLINEABLE half #-}
-half :: Rational
-half = Rational 1 2
-
-fromGHC :: GHC.Rational -> Rational
-fromGHC r = GHC.numerator r % GHC.denominator r
-
-toGHC :: Rational -> GHC.Rational
-toGHC (Rational n d) = n GHC.% d
-
-{-# INLINEABLE abs #-}
-abs :: Rational -> Rational
-abs rat@(Rational n d)
-  | n < zero = Rational (Plutus.negate n) d
-  | otherwise = rat
+{- | Safely constructs a 'Rational' from a numerator and denominator. Returns
+ 'Nothing' if given a zero denominator.
+-}
+{-# INLINEABLE ratio #-}
+ratio :: Integer -> Integer -> Maybe Rational
+ratio n d
+  | d == zero = Nothing
+  | d < zero = Just (Plutus.negate n % Plutus.negate d)
+  | otherwise =
+    let gcd = euclid n d
+     in Just . Rational (n `quotient` gcd) $ d `quotient` gcd
 
 -- Helpers
 

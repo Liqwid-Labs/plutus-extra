@@ -47,8 +47,7 @@ main =
         ]
     , testGroup
         "Other"
-        [ fitsUnder "%" (fromCompiledCode ourRatMk) (fromCompiledCode pRatMk)
-        , fitsUnder
+        [ fitsUnder
             "fromInteger"
             (fromCompiledCode ourRatFromInteger)
             (fromCompiledCode pRatFromInteger)
@@ -185,12 +184,6 @@ pRatOne = $$(compile [||Plutus.one||])
 
 ourRatOne :: CompiledCode Our.Rational
 ourRatOne = $$(compile [||Plutus.one||])
-
-pRatMk :: CompiledCode (Integer -> Integer -> Plutus.Rational)
-pRatMk = $$(compile [||(PlutusRatio.%)||])
-
-ourRatMk :: CompiledCode (Integer -> Integer -> Our.Rational)
-ourRatMk = $$(compile [||(Our.%)||])
 
 pRatFromInteger :: CompiledCode (Integer -> Plutus.Rational)
 pRatFromInteger = $$(compile [||Plutus.fromInteger||])
