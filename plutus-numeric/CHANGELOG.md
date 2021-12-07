@@ -2,7 +2,11 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## Unreleased
+## 3.0 -- 2021-12-04
+
+### Removed
+
+* The operator `(^+)` is removed to avoid confusion. Use `powNat` instead.
 
 ## 2.2 -- 2021-11-17
 

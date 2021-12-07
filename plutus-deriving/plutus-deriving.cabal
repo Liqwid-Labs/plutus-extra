@@ -1,6 +1,6 @@
 cabal-version:      3.0
-name:               plutus-laws
-version:            2.3
+name:               plutus-deriving
+version:            1.0
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -43,24 +43,54 @@ common lang
     -Wmissing-export-lists -Werror -Wincomplete-record-updates
     -Wmissing-deriving-strategies
 
+common test-lang
+  import:        lang
+  build-depends:
+    , plutus-deriving
+    , tasty            ^>=1.4.1
+
 library
   import:          lang
-  exposed-modules:
-    Test.Tasty.Plutus.Arbitrary
-    Test.Tasty.Plutus.Laws
-
+  exposed-modules: PlutusTx.Deriving
   build-depends:
-    , aeson             ^>=1.5.6.0
-    , aeson-pretty      ^>=0.8.8
-    , bytestring        ^>=0.10.12.0
-    , invariant         ^>=0.5.3
     , plutus-tx
-    , pretty            ^>=1.1.3.6
-    , pretty-show       ^>=1.10
-    , QuickCheck        ^>=2.14.2
-    , tagged            ^>=0.8.6.1
-    , tasty             ^>=1.4.1
-    , tasty-quickcheck  ^>=0.10.1.2
-    , text              ^>=1.2.4.1
+    , template-haskell  ^>=2.16.0.0
 
   hs-source-dirs:  src
+
+library testlib
+  import:          lang
+  visibility:      private
+  exposed-modules: Test
+  build-depends:
+    , plutus-deriving
+    , plutus-tx
+    , QuickCheck                   ^>=2.14.2
+    , quickcheck-plutus-instances  ^>=1.2
+
+  hs-source-dirs:  test
+
+test-suite size
+  import:         test-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-ledger-api
+    , plutus-size-check  ^>=1.1
+    , plutus-tx
+    , plutus-tx-plugin
+    , testlib
+
+  hs-source-dirs: test/size
+
+test-suite laws
+  import:         test-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-laws       ^>=2.3
+    , plutus-tx
+    , tasty-quickcheck  ^>=0.10.1.2
+    , testlib
+
+  hs-source-dirs: test/laws
