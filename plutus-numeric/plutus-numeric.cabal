@@ -122,7 +122,7 @@ test-suite laws
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   build-depends:
-    , plutus-laws       ^>=2.2
+    , plutus-laws       ^>=2.3
     , tasty-quickcheck  ^>=0.10.1.2
 
   hs-source-dirs: test/laws

@@ -9,6 +9,7 @@ packages:
   ./plutus-laws/plutus-laws.cabal
   ./plutus-size-check/plutus-size-check.cabal
   ./quickcheck-plutus-instances/quickcheck-plutus-instances.cabal
+  ./plutus-deriving/plutus-deriving.cabal
 
 -- Always build tests and benchmarks.
 tests: true
