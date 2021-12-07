@@ -69,6 +69,16 @@ module Test.Tasty.Plutus.Laws (
   multiplicativeMonoidLaws,
   semiringConsistencyLaws,
   semiringConsistencyLawsWith,
+
+  -- ** Your own laws
+  
+  -- *** Type and operations
+  Laws,
+  law,
+
+  -- *** Testing
+  laws,
+  lawsWith,
 ) where
 
 import Data.Aeson (FromJSON, ToJSON (toJSON), decode, encode)
@@ -125,6 +135,45 @@ import Text.PrettyPrint (
  )
 import Text.Show.Pretty (ppDoc, ppShow)
 import Type.Reflection (Typeable, tyConName, typeRep, typeRepTyCon)
+import Data.List.NonEmpty (NonEmpty ((:|)))
+import Data.List.NonEmpty qualified as NonEmpty
+import Data.Functor.Invariant (Invariant (invmap))
+
+-- | @since 2.3
+newtype Laws (a :: Type) = Laws (Gen a -> (a -> [a]) -> NonEmpty (String, Property))
+
+-- | @since 2.3
+instance Invariant Laws where
+  invmap f g (Laws h) = Laws $ \gen shr -> h (g <$> gen) (fmap g . shr . f)
+
+-- | @since 2.3
+instance Semigroup (Laws a) where
+  Laws f <> Laws g = Laws (f <> g)
+
+-- | @since 2.3
+law :: forall (a :: Type) . String -> (Gen a -> (a -> [a]) -> Property) -> Laws a
+law description f = Laws (fmap (fmap ((:| []) . (description,))) f)
+
+-- | @since 2.3
+laws :: forall (a :: Type) . 
+  (Typeable a, Arbitrary a) =>
+  String -> 
+  Laws a -> 
+  TestTree
+laws lawsName = lawsWith lawsName arbitrary shrink 
+
+-- | @since 2.3
+lawsWith :: forall (a :: Type) . 
+  (Typeable a) => 
+  String -> 
+  Gen a -> 
+  (a -> [a]) -> 
+  Laws a -> 
+  TestTree
+lawsWith lawsName gen shr (Laws f) = 
+  testProperties (lawsName <> " laws for " <> typeName @a) .
+  NonEmpty.toList . 
+  f gen $ shr
 
 {- | Checks that 'ToJSON' and 'FromJSON' for @a@ form a partial isomorphism.
 
