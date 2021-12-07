@@ -4,6 +4,13 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 2.3 -- 2021-12-08
+
+### Added
+
+* `Laws` newtype for extending the existing laws-based testing.
+* `laws` and `lawsWith` for running custom `Laws`-based tests.
+
 ## 2.2 -- 2021-12-01
 
 ### Added
