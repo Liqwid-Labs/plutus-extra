@@ -54,8 +54,9 @@ library
     Test.Tasty.Plutus.WithScript
 
   other-modules:
-    Test.Tasty.Plutus.Internal
     Test.Tasty.Plutus.Internal.Context
+    Test.Tasty.Plutus.Internal.Env
+    Test.Tasty.Plutus.Internal.Feedback
     Test.Tasty.Plutus.Internal.Options
     Test.Tasty.Plutus.Internal.Run
     Test.Tasty.Plutus.Internal.WithScript
@@ -91,9 +92,7 @@ test-suite properties
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
-    Properties.SimpleValidator
-
-  hs-source-dirs: test
+  hs-source-dirs: test/Properties
   build-depends:
     , base                        ^>=4.14
     , plutus-contract

@@ -11,14 +11,17 @@
 module Test.Tasty.Plutus.TestData (
   -- * Data type
   TestData (..),
+  Outcome (..),
+  passIf,
 
   -- * QuickCheck support
-  Example (..),
   Methodology (..),
   fromArbitrary,
   static,
   Generator (..),
   TestItems (..),
+  Tokens (Tokens, unTokens),
+  token,
 ) where
 
 import Data.Kind (Type)
@@ -30,6 +33,8 @@ import Test.QuickCheck.Gen (Gen)
 import Test.Tasty.Plutus.Context (ContextBuilder)
 import Test.Tasty.Plutus.Internal.Context (
   Purpose (ForMinting, ForSpending),
+  Tokens (Tokens, unTokens),
+  token,
  )
 import Prelude
 
@@ -60,36 +65,51 @@ data TestData (p :: Purpose) where
     -- @since 3.0
     Value ->
     TestData 'ForSpending
-  -- | @since 3.0
   MintingTest ::
     (ToData redeemer, FromData redeemer, Show redeemer) =>
+    -- | The input redeemer.
+    --
+    -- @since 3.0
     redeemer ->
+    -- | The tokens to be minted by the script.
+    --
+    -- @since 4.1
+    Tokens ->
     TestData 'ForMinting
 
-{- | Describes whether a case is good (i.e. should pass) or bad (i.e. should
- fail). Used to classify generated outputs for QuickCheck-based tests.
+{- | Describes whether a case, comprised of a script and a test data for the
+ script, should pass or fail. Used to classify generated outputs for
+ QuickCheck-based tests; also internally used to classify unit tests.
 
- @since 3.1
+ @since 5.0
 -}
-data Example = Good | Bad
+data Outcome = Fail | Pass
   deriving stock
-    ( -- | @since 3.1
+    ( -- | @since 5.0
       Eq
-    , -- | @since 3.1
+    , -- | @since 5.0
       Show
     )
 
-{- | \'Maximal badness\': gives 'Bad' when any argument is 'Bad'.
+{- | \'Maximal badness\': gives 'Fail' when any argument is 'Fail'.
 
- @since 3.1
+ @since 4.0
 -}
-instance Semigroup Example where
+instance Semigroup Outcome where
   {-# INLINEABLE (<>) #-}
-  Bad <> _ = Bad
-  _ <> Bad = Bad
-  _ <> _ = Good
+  Fail <> _ = Fail
+  _ <> Fail = Fail
+  _ <> _ = Pass
   {-# INLINEABLE stimes #-}
   stimes = stimesIdempotent
+
+{- | Helper wrapper function
+
+ @since 4.1
+-}
+passIf :: Bool -> Outcome
+passIf True = Pass
+passIf False = Fail
 
 {- | A reification of 'Arbitrary'. Consists of a combination of generator and
  shrinker.
@@ -153,7 +173,7 @@ data TestItems (p :: Purpose) where
     , spendRedeemer :: redeemer
     , spendValue :: Value
     , spendCB :: ContextBuilder 'ForSpending
-    , spendExample :: Example
+    , spendOutcome :: Outcome
     } ->
     TestItems 'ForSpending
   -- | @since 5.0
@@ -164,7 +184,8 @@ data TestItems (p :: Purpose) where
     , Show redeemer
     ) =>
     { mintRedeemer :: redeemer
+    , mintTokens :: Tokens
     , mintCB :: ContextBuilder 'ForMinting
-    , mintExample :: Example
+    , mintOutcome :: Outcome
     } ->
     TestItems 'ForMinting

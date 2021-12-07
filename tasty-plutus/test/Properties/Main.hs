@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Properties.SimpleValidator (tests) where
+module Main (main) where
 
 --------------------------------------------------------------------------------
 
@@ -9,29 +9,28 @@ import Prelude hiding (fmap, ($), (&&), (+), (-), (==))
 import Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Value (Value)
 import Test.QuickCheck.Plutus.Instances ()
-import Test.Tasty (TestTree, localOption)
+import Test.Tasty (TestTree, defaultMain, localOption)
 import Test.Tasty.Plutus.Context (
   ContextBuilder,
   Purpose (ForSpending),
-  paysSelf,
   paysToPubKey,
+  paysToSelf,
  )
 import Test.Tasty.Plutus.Script.Property (scriptProperty)
-import Test.Tasty.Plutus.Script.Unit (toTestValidator)
 import Test.Tasty.Plutus.TestData (
-  Example (Bad, Good),
   Generator (GenForSpending),
   Methodology (Methodology),
+  Outcome (Fail, Pass),
   TestItems (
     ItemsForSpending,
     spendCB,
     spendDatum,
-    spendExample,
+    spendOutcome,
     spendRedeemer,
     spendValue
   ),
  )
-import Test.Tasty.Plutus.WithScript (withValidator)
+import Test.Tasty.Plutus.WithScript (toTestValidator, withValidator)
 import Test.Tasty.QuickCheck (Gen, QuickCheckTests (QuickCheckTests), arbitrary, genericShrink, oneof)
 
 --------------------------------------------------------------------------------
@@ -51,6 +50,9 @@ import Wallet.Emulator.Types (WalletNumber (WalletNumber))
 import Wallet.Emulator.Wallet (Wallet, fromWalletNumber, walletPubKeyHash)
 
 --------------------------------------------------------------------------------
+
+main :: IO ()
+main = defaultMain tests
 
 tests :: TestTree
 tests =
@@ -75,15 +77,15 @@ transform1 (pkh, int, int', val) =
     , spendRedeemer = (int, val)
     , spendValue = val
     , spendCB = cb
-    , spendExample = ex
+    , spendOutcome = ex
     }
   where
     cb :: ContextBuilder 'ForSpending
     cb =
-      paysSelf zero (pkh, int')
+      paysToSelf zero (pkh, int')
         <> paysToPubKey userPKHash val
-    ex :: Example
-    ex = if int == int' then Good else Bad
+    ex :: Outcome
+    ex = if int == int' then Pass else Fail
 
 transform2 :: (PubKeyHash, Integer, Integer, Value) -> TestItems 'ForSpending
 transform2 (pkh, int, int', val) =
@@ -92,15 +94,15 @@ transform2 (pkh, int, int', val) =
     , spendRedeemer = (int', val)
     , spendValue = val
     , spendCB = cb
-    , spendExample = ex
+    , spendOutcome = ex
     }
   where
     cb :: ContextBuilder 'ForSpending
     cb =
-      paysSelf zero (pkh, int)
+      paysToSelf zero (pkh, int)
         <> paysToPubKey userPKHash val
-    ex :: Example
-    ex = if int == int' then Good else Bad
+    ex :: Outcome
+    ex = if int == int' then Pass else Fail
 
 simpleValidator :: (PubKeyHash, Integer) -> (Integer, Value) -> ScriptContext -> Bool
 simpleValidator (_, secret) (guess, value) sc =
