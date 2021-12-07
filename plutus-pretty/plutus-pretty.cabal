@@ -43,6 +43,14 @@ common lang
     -Wmissing-export-lists -Werror -Wincomplete-record-updates
     -Wmissing-deriving-strategies
 
+common test-lang
+  import:        lang
+  build-depends:
+    , plutus-pretty
+    , tasty          ^>=1.4.1
+
+  ghc-options:   -threaded -O2 -rtsopts -with-rtsopts=-N
+
 library
   import:          lang
   exposed-modules:
@@ -65,16 +73,27 @@ library
   hs-source-dirs:  src
 
 test-suite script-size
-  import:         lang
+  import:         test-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:  Test
   build-depends:
     , plutus-ledger-api
-    , plutus-pretty
     , plutus-size-check  ^>=1.1
     , plutus-tx
     , plutus-tx-plugin
-    , tasty              ^>=1.4.1
 
   hs-source-dirs: test/script-size
+
+test-suite properties
+  import:         test-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-tx
+    , pretty-show
+    , QuickCheck                   ^>=2.14.2
+    , quickcheck-plutus-instances  ^>=1.2
+    , tasty-quickcheck             ^>=0.10.1.2
+
+  hs-source-dirs: test/properties
