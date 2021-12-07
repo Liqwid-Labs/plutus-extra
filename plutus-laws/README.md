@@ -32,7 +32,7 @@ specification of generators and shrinkers to use while testing the laws.
 
 As this wraps `tasty-quickcheck`, we also support any options that
 `tasty-quickcheck` supports, such as for controlling how many tests get run.
-Lasty, we supply some helpers for writing your own laws and tests.
+Lastly, we supply some helpers for writing your own laws and tests.
 
 ## What are the goals of this project?
 

@@ -71,7 +71,7 @@ module Test.Tasty.Plutus.Laws (
   semiringConsistencyLawsWith,
 
   -- ** Your own laws
-  
+
   -- *** Type and operations
   Laws,
   law,
@@ -84,7 +84,10 @@ module Test.Tasty.Plutus.Laws (
 import Data.Aeson (FromJSON, ToJSON (toJSON), decode, encode)
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString.Lazy qualified as Lazy
+import Data.Functor.Invariant (Invariant (invmap))
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty ((:|)))
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as T
 import Data.Text.Encoding (decodeUtf8)
 import PlutusTx.IsData.Class (
@@ -135,11 +138,15 @@ import Text.PrettyPrint (
  )
 import Text.Show.Pretty (ppDoc, ppShow)
 import Type.Reflection (Typeable, tyConName, typeRep, typeRepTyCon)
-import Data.List.NonEmpty (NonEmpty ((:|)))
-import Data.List.NonEmpty qualified as NonEmpty
-import Data.Functor.Invariant (Invariant (invmap))
 
--- | @since 2.3
+{- | An opaque newtype describing a collection of laws. You can construct 'Laws'
+ in two ways:
+
+ * Using 'law' to describe a single law; and
+ * Using the '<>' operator to combine 'Laws' together.
+
+ @since 2.3
+-}
 newtype Laws (a :: Type) = Laws (Gen a -> (a -> [a]) -> NonEmpty (String, Property))
 
 -- | @since 2.3
@@ -150,30 +157,56 @@ instance Invariant Laws where
 instance Semigroup (Laws a) where
   Laws f <> Laws g = Laws (f <> g)
 
--- | @since 2.3
-law :: forall (a :: Type) . String -> (Gen a -> (a -> [a]) -> Property) -> Laws a
+{- | Given a description, and a way of constructing a 'Property' from a
+ generator and shrinker, define a 'Laws' consisting of just the given law.
+
+ This allows libraries to provide their own 'Laws' without having to depend on
+ 'plutus-laws' directly: you can provide functions of type @'Gen' a -> (a ->
+ [a]) -> 'Property'@, which can be wrapped using 'law' for anyone who needs
+ them.
+
+ = Note
+
+ If your 'Property' may be subject to coverage problems, it is your
+ responsibility to check these. In particular, any property whose form is
+ similar to "if P(x), then check1 else check2" could be subject to coverage
+ issues if P(x) is unlikely on a randomly-generated @a@.
+
+ @since 2.3
+-}
+law :: forall (a :: Type). String -> (Gen a -> (a -> [a]) -> Property) -> Laws a
 law description f = Laws (fmap (fmap ((:| []) . (description,))) f)
 
--- | @since 2.3
-laws :: forall (a :: Type) . 
-  (Typeable a, Arbitrary a) =>
-  String -> 
-  Laws a -> 
-  TestTree
-laws lawsName = lawsWith lawsName arbitrary shrink 
+{- | Given a description of what kind of laws are being tested, and a 'Laws'
+ containing the individual laws to test, check those laws.
 
--- | @since 2.3
-lawsWith :: forall (a :: Type) . 
-  (Typeable a) => 
-  String -> 
-  Gen a -> 
-  (a -> [a]) -> 
-  Laws a -> 
+ @since 2.3
+-}
+laws ::
+  forall (a :: Type).
+  (Typeable a, Arbitrary a) =>
+  String ->
+  Laws a ->
   TestTree
-lawsWith lawsName gen shr (Laws f) = 
-  testProperties (lawsName <> " laws for " <> typeName @a) .
-  NonEmpty.toList . 
-  f gen $ shr
+laws lawsName = lawsWith lawsName arbitrary shrink
+
+{- | As 'laws', but with explicit generator and shrinker.
+
+ @since 2.3
+-}
+lawsWith ::
+  forall (a :: Type).
+  (Typeable a) =>
+  String ->
+  Gen a ->
+  (a -> [a]) ->
+  Laws a ->
+  TestTree
+lawsWith lawsName gen shr (Laws f) =
+  testProperties (lawsName <> " laws for " <> typeName @a)
+    . NonEmpty.toList
+    . f gen
+    $ shr
 
 {- | Checks that 'ToJSON' and 'FromJSON' for @a@ form a partial isomorphism.
 
