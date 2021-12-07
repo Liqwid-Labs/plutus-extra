@@ -269,7 +269,7 @@ spenderProperty val tc f seed = case f seed of
           d' = Datum . toBuiltinData $ d
           r' = Redeemer . toBuiltinData $ r
        in checkCoverage
-            . cover 5.0 (ex == Good) "Successful validation"
+            . cover 45.0 (ex == Good) "Successful validation"
             . produceResult ex tc context
             . testValidatorScript context' val d'
             $ r'
@@ -322,7 +322,7 @@ minterProperty mp tc f seed = case f seed of
           context' = Context . toBuiltinData $ context
           r' = Redeemer . toBuiltinData $ r
        in checkCoverage
-            . cover 5.0 (ex == Good) "Successful validation"
+            . cover 45.0 (ex == Good) "Successful validation"
             . produceResult ex tc context
             . testMintingPolicyScript context' mp
             $ r'
