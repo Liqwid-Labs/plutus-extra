@@ -14,18 +14,19 @@
 
  > myProperties :: TestTree
  > myProperties = withValidator "Property testing my spending" myValidator $ do
- >   scriptProperty "Some property" myGenerator mkContext
- >   scriptProperty "Some other property" anotherGenerator mkContext
+ >   scriptProperty "Some spending property" $ GenForSpending gen' transform'
+ >   scriptProperty "Some minting property" $ GenForMinting gen'' transform''
  >   ...
+
+ A small example of using can be found
+ <https://github.com/Liqwid-Labs/plutus-extra/tasty-plutus/test/Properties/Main.hs here>
 
  = Note
 
- In general, we assume that the 'ContextBuilder' is kept (fairly) stable; the
- goal of 'scriptProperty' is to test behaviour under changing 'TestData' (aka,
- inputs). However, frequently, there is a need to know about what kind of
- inputs we have to make a context that even makes sense at all, regardless of
- whether the inputs are \'good\' or not. Therefore, we provide a \'hook\' into
- this system for when it's needed.
+ In general, the purpose of scriptProperty is to test the stable behavior
+ of the script for various inputs. Not independent, but mutually consistent
+ random data are transferred to the script. Using the expected outcome
+ allows us to control the correctness of the result of running the script.
 -}
 module Test.Tasty.Plutus.Script.Property (
   scriptProperty,
@@ -145,22 +146,24 @@ import Text.Show.Pretty (ppDoc)
 import Type.Reflection (Typeable)
 import Prelude
 
-{- | Given a way of generating 'TestData', and converting a generated 'TestData'
- into a 'ContextBuilder', check that:
+{- | Given a 'Generator' containig a way to generate a seed,
+and a function to create 'TestItems' from the seed, check that:
 
- * For any 'TestData' classified as 'Pass', the script succeeds; and
- * For any 'TestData' classified as 'Fail', the script fails.
+ * For any 'TestItems' with Outcome equals 'Pass', the script succeeds; and
+ * For any 'TestItems' with Outcome equals 'Fail', the script fails.
 
  This will also check /coverage/: specifically, the property will fail unless
- the provided generation method produces roughly equal numbers of 'Pass' and
+ the provided way produces roughly equal numbers of 'Pass' and
  'Fail'-classified cases.
 
- @since 3.1
+ @since 5.0
 -}
 scriptProperty ::
   forall (a :: Type) (p :: Purpose).
   (Typeable a) =>
+  -- | Property name
   String ->
+  -- | Data generator
   Generator a p ->
   WithScript p ()
 scriptProperty name generator = case generator of
@@ -278,7 +281,7 @@ spenderProperty opts val f seed = case f seed of
               , envExpected = outcome
               }
        in checkCoverage
-            . cover 5.0 (outcome == Pass) "Successful validation"
+            . cover 45.0 (outcome == Pass) "Successful validation"
             . (`runReader` env)
             . produceResult
             $ getScriptResult envScript envTestData (getContext getSC) env
