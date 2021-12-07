@@ -19,97 +19,72 @@ import PlutusTx.Skeleton.Internal (
  )
 import PlutusTx.Skeleton.String (bsToString, intToString)
 
--- Lines tagged with their indentation. Uses an endomorphism-based
--- representation.
-newtype Builder = Builder ([(Integer, BuiltinString)] -> [(Integer, BuiltinString)])
-
-instance Semigroup Builder where
-  {-# INLINEABLE (<>) #-}
-  Builder f <> Builder g = Builder (g . f)
-
-instance Monoid Builder where
-  {-# INLINEABLE mempty #-}
-  mempty = Builder id
+newtype Builder = Builder [BuiltinString]
+  deriving (Semigroup, Monoid) via [BuiltinString]
 
 {-# INLINEABLE build #-}
 build :: Builder -> BuiltinString
-build (Builder f) = intersperse "\n" . fmap render . f $ []
+build (Builder xs) = foldr go "" xs
+  where
+    go :: BuiltinString -> BuiltinString -> BuiltinString
+    go x acc = x <> acc
 
 {-# INLINEABLE renderSkeleton #-}
 renderSkeleton :: Skeleton -> Builder
-renderSkeleton = renderRec 0
-
--- Helpers
-
-{-# INLINEABLE renderRec #-}
-renderRec :: Integer -> Skeleton -> Builder
-renderRec indent = \case
+renderSkeleton = \case
   ByteStringS bibs ->
-    embed indent "BuiltinByteString:"
-      <> embed (increase indent) (bsToString bibs)
-  BoolS b ->
-    embed indent ("Bool: " <> if b then "True" else "False")
-  IntegerS i ->
-    embed indent ("Integer: " <> intToString i)
-  StringS bis ->
-    embed indent "BuiltinString:"
-      <> embed (increase indent) bis
-  AssocMapS aMap ->
-    embed indent "AssocMap:"
-      <> foldMap (renderKeyVal (increase indent)) aMap
-  ConS conName conArgs ->
-    embed indent conName
-      <> foldMap (renderRec (increase indent)) conArgs
+    embed "BuiltinByteString:" <+> embed (bsToString bibs)
+  BoolS b -> embed (if b then "True" else "False")
+  IntegerS i -> embed (intToString i)
+  StringS bis -> embed ("\"" <> bis <> "\"")
+  AssocMapS aMap -> embed "AssocMap:" <\> foldMap renderKeyVal aMap
+  ConS conName conArgs -> embed (conName <> ":") <\> foldMap renderConArg conArgs
   RecS recConName fieldVal fieldVals ->
-    embed indent ("Record " <> recConName <> ":")
-      <> renderFieldVal (increase indent) fieldVal
-      <> foldMap (renderFieldVal (increase indent)) fieldVals
-  TupleS x xs ->
-    embed indent "Tuple:"
-      <> renderRec (increase indent) x
-      <> foldMap (renderRec (increase indent)) xs
-  ListS xs ->
-    embed indent "List:"
-      <> foldMap (renderRec (increase indent)) xs
+    embed ("Record " <> recConName <> ":")
+      <\> foldr renderFieldVals (renderFieldVal fieldVal) fieldVals
+  TupleS x xs -> embed "Tuple:" <+> foldr renderTuple (renderSkeleton x) xs
+  ListS xs -> embed "[" <\> foldMap renderListItem xs <\> embed "]"
 
 {-# INLINEABLE renderKeyVal #-}
-renderKeyVal :: Integer -> (Skeleton, Skeleton) -> Builder
-renderKeyVal indent (k, v) =
-  embed indent "Key:"
-    <> renderRec (increase indent) k
-    <> embed indent "Value:"
-    <> renderRec (increase indent) v
+renderKeyVal :: (Skeleton, Skeleton) -> Builder
+renderKeyVal (k, v) =
+  embed "\n, " <> renderSkeleton k <> embed " -> " <> renderSkeleton v
+
+{-# INLINEABLE renderConArg #-}
+renderConArg :: Skeleton -> Builder
+renderConArg arg = embed "\n, " <> renderSkeleton arg
 
 {-# INLINEABLE renderFieldVal #-}
-renderFieldVal :: Integer -> (BuiltinString, Skeleton) -> Builder
-renderFieldVal indent (field, val) =
-  embed indent (field <> ":")
-    <> renderRec (increase indent) val
+renderFieldVal :: (BuiltinString, Skeleton) -> Builder
+renderFieldVal (name, val) =
+  embed ("\n, " <> name <> ":") <+> renderSkeleton val
 
-{-# INLINEABLE increase #-}
-increase :: Integer -> Integer
-increase = (+ 2)
+{-# INLINEABLE renderFieldVals #-}
+renderFieldVals :: (BuiltinString, Skeleton) -> Builder -> Builder
+renderFieldVals x acc = acc <> renderFieldVal x
+
+{-# INLINEABLE renderTuple #-}
+renderTuple :: Skeleton -> Builder -> Builder
+renderTuple sk acc = (acc <> embed ",") <+> renderSkeleton sk
+
+{-# INLINEABLE renderListItem #-}
+renderListItem :: Skeleton -> Builder
+renderListItem sk = renderSkeleton sk <> embed ", "
+
+-- Space
+{-# INLINEABLE (<+>) #-}
+(<+>) :: Builder -> Builder -> Builder
+xs <+> ys = xs <> embed " " <> ys
+
+infixl 6 <+>
+
+-- Newline
+{-# INLINEABLE (<\>) #-}
+(<\>) :: Builder -> Builder -> Builder
+xs <\> ys = xs <> embed "\n" <> ys
+
+infixl 6 <\>
 
 {-# INLINEABLE embed #-}
-embed :: Integer -> BuiltinString -> Builder
-embed indent s = Builder . (:) $ (indent, s)
-
--- Adds indentation according to annotation.
-{-# INLINEABLE render #-}
-render :: (Integer, BuiltinString) -> BuiltinString
-render (indent, s) = repeat indent s <> s
-
--- Links together every element of the list with the given linking string.
-{-# INLINEABLE intersperse #-}
-intersperse :: BuiltinString -> [BuiltinString] -> BuiltinString
-intersperse sep = \case
-  [] -> ""
-  [s] -> s
-  (s : ss) -> s <> sep <> intersperse sep ss
-
--- Links together n copies of argument
-{-# INLINEABLE repeat #-}
-repeat :: Integer -> BuiltinString -> BuiltinString
-repeat i s
-  | i <= zero = ""
-  | otherwise = s <> repeat (i - one) s
+embed :: BuiltinString -> Builder
+embed s = Builder [s]
