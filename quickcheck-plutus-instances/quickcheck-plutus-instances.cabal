@@ -50,10 +50,12 @@ library
     Test.QuickCheck.Plutus.Modifiers
 
   build-depends:
-    , bytestring         ^>=0.10.12.0
+    , bytestring            ^>=0.10.12.0
     , plutus-ledger
     , plutus-ledger-api
     , plutus-tx
-    , QuickCheck         ^>=2.14.2
+    , QuickCheck            ^>=2.14.2
+    , quickcheck-instances  ^>=0.3.25.2
+    , text                  ^>=1.2.4.1
 
   hs-source-dirs:  src
