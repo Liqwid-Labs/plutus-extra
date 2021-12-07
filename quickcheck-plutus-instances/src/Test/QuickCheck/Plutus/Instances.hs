@@ -27,6 +27,7 @@ import Control.Monad (guard)
 import Data.ByteString (ByteString)
 import Data.Kind (Type)
 import Data.Maybe (maybeToList)
+import Data.Text (Text)
 import Data.Word (Word8)
 import GHC.Exts qualified as GHC
 import Ledger.Oracle (
@@ -72,6 +73,7 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins.Internal (
   BuiltinByteString (BuiltinByteString),
   BuiltinData (BuiltinData),
+  BuiltinString (BuiltinString),
  )
 import PlutusTx.Prelude qualified as PTx
 import Test.QuickCheck.Arbitrary (
@@ -90,6 +92,7 @@ import Test.QuickCheck.Gen (
   variant,
   vectorOf,
  )
+import Test.QuickCheck.Instances.Text ()
 import Test.QuickCheck.Modifiers (NonNegative (NonNegative))
 import Test.QuickCheck.Plutus.Modifiers (UniqueKeys (UniqueKeys))
 
@@ -613,6 +616,19 @@ instance Function AssetClass where
     where
       into :: AssetClass -> (CurrencySymbol, TokenName)
       into (AssetClass x) = x
+
+-- | @since 1.2
+deriving via Text instance Arbitrary BuiltinString
+
+-- | @since 1.2
+deriving via Text instance CoArbitrary BuiltinString
+
+-- | @since 1.2
+instance Function BuiltinString where
+  function = functionMap into BuiltinString
+    where
+      into :: BuiltinString -> Text
+      into (BuiltinString t) = t
 
 -- Helpers
 
