@@ -10,6 +10,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 * Instances of `Arbitrary`, `CoArbitrary` and `Function` for `AssetClass`,
   `BuiltinString`.
+* A `NonZero` wrapper for Plutus numerical types.
 
 ## 1.1 -- 2021-11-16
 
