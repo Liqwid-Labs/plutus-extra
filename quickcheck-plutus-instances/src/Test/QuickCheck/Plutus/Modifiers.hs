@@ -12,6 +12,7 @@ module Test.QuickCheck.Plutus.Modifiers (
   UniqueList (..),
   UniqueKeys (..),
   NonNegative (..),
+  NonZero (..),
 ) where
 
 import Control.Monad (guard)
@@ -186,6 +187,45 @@ instance (Function a) => Function (NonNegative a) where
     where
       into :: NonNegative a -> a
       into (NonNegative x) = x
+
+{- | A newtype around numerical types which ensures they are not zero; that is,
+ that their value is not 'PlutusTx.zero'. This is a Plutus-specific
+ generalization of the wrapper of the same name from QuickCheck.
+
+ @since 1.2
+-}
+newtype NonZero (a :: Type) = NonZero a
+  deriving stock
+    ( -- | @since 1.2
+      Show
+    )
+  deriving
+    ( -- | @since 1.2
+      Eq
+    , -- | @since 1.2
+      PlutusTx.Eq
+    , -- | @since 1.2
+      CoArbitrary
+    )
+    via a
+
+-- | @since 1.2
+instance
+  (Arbitrary a, PlutusTx.Eq a, PlutusTx.AdditiveMonoid a) =>
+  Arbitrary (NonZero a)
+  where
+  arbitrary = NonZero <$> suchThat arbitrary (PlutusTx./= PlutusTx.zero)
+  shrink (NonZero x) = do
+    x' <- shrink x
+    guard (x' PlutusTx./= PlutusTx.zero)
+    pure . NonZero $ x'
+
+-- | @since 1.2
+instance (Function a) => Function (NonZero a) where
+  function = functionMap into NonZero
+    where
+      into :: NonZero a -> a
+      into (NonZero x) = x
 
 -- Helpers
 
