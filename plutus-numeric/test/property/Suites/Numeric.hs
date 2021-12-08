@@ -5,7 +5,6 @@ module Suites.Numeric (tests) where
 import Data.Kind (Type)
 import Helpers (
   NonNegative (NonNegative),
-  NonZero (NonZero),
  )
 import PlutusTx.Numeric.Extra (
   IntegralDomain (
@@ -15,9 +14,6 @@ import PlutusTx.Numeric.Extra (
     restrictMay,
     signum
   ),
-  reciprocal,
-  (/),
-  (^),
  )
 import PlutusTx.Prelude qualified as Plutus
 import PlutusTx.Ratio (Rational)
@@ -28,7 +24,6 @@ import Test.QuickCheck (
   (=/=),
   (===),
  )
-import Test.QuickCheck.Modifiers (Negative (Negative), Positive (Positive))
 import Test.Tasty (TestTree, localOption, testGroup)
 import Test.Tasty.HUnit (assertEqual, testCase)
 import Test.Tasty.QuickCheck (QuickCheckTests, testProperty)
@@ -36,19 +31,7 @@ import Prelude hiding (Rational, abs, divMod, signum, (/), (^))
 
 tests :: [TestTree]
 tests =
-  [ localOption go . testGroup "MultiplicativeGroup, Rational" $
-      [ testProperty "if x / y = z, then y * z = x" mgProp1
-      , testProperty "x / y = x * reciprocal y" mgProp2
-      , testProperty "x ^ 0 = 1" mgProp3
-      , testProperty "x ^ 1 = x" mgProp4
-      , localOption goSmall
-          . testProperty "If i < 0, x /= 0, x ^ i = recip (x ^ |i|)"
-          $ mgProp5
-      , localOption goSmall
-          . testProperty "If i > 1, then x ^ i = x * x ^ (i - 1)"
-          $ mgProp6
-      ]
-  , localOption go . testGroup "IntegralDomain, Integer" $
+  [ localOption go . testGroup "IntegralDomain, Integer" $
       [ testProperty "abs x >= 0" (idProp1 @Integer)
       , testCase "abs 0 = 0" . assertEqual "" (Plutus.zero :: Integer) $ abs Plutus.zero
       , testProperty "abs (x * y) = abs x * abs y" (idProp2 @Integer)
@@ -72,8 +55,6 @@ tests =
   where
     go :: QuickCheckTests
     go = 1000000
-    goSmall :: QuickCheckTests
-    goSmall = 10000
 
 idProp1 ::
   forall (a :: Type) (r :: Type).
@@ -142,43 +123,3 @@ idProp7 = forAllShrink arbitrary shrink go
     go x = case restrictMay x of
       Nothing -> abs x =/= x
       Just _ -> abs x === x
-
-mgProp1 :: Property
-mgProp1 = forAllShrink arbitrary shrink go
-  where
-    go :: (Rational, NonZero Rational) -> Property
-    go (x, NonZero y) =
-      let z = x / y
-       in x === y Plutus.* z
-
-mgProp2 :: Property
-mgProp2 = forAllShrink arbitrary shrink go
-  where
-    go :: (Rational, NonZero Rational) -> Property
-    go (x, NonZero y) = x / y === x Plutus.* reciprocal y
-
-mgProp3 :: Property
-mgProp3 = forAllShrink arbitrary shrink go
-  where
-    go :: Rational -> Property
-    go x = x ^ Plutus.zero === Plutus.one
-
-mgProp4 :: Property
-mgProp4 = forAllShrink arbitrary shrink go
-  where
-    go :: Rational -> Property
-    go x = x ^ Plutus.one === x
-
-mgProp5 :: Property
-mgProp5 = forAllShrink arbitrary shrink go
-  where
-    go :: (NonZero Rational, Negative Integer) -> Property
-    go (NonZero x, Negative i) =
-      x ^ i === reciprocal (x ^ abs i)
-
-mgProp6 :: Property
-mgProp6 = forAllShrink arbitrary shrink go
-  where
-    go :: (Rational, Positive Integer) -> Property
-    go (x, Positive i) =
-      x ^ i === x Plutus.* (x ^ (i - 1))

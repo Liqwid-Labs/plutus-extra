@@ -2,6 +2,7 @@ module PlutusTx.Numeric.Laws (
   additiveHemigroupLaws,
   euclideanClosedLaws,
   euclideanClosedSignedLaws,
+  multiplicativeGroupLaws,
 ) where
 
 import Data.Kind (Type)
@@ -9,6 +10,7 @@ import PlutusTx.Numeric.Extra (
   AdditiveHemigroup ((^-)),
   EuclideanClosed (divMod),
   IntegralDomain (abs),
+  MultiplicativeGroup (powInteger, reciprocal, (/)),
  )
 import PlutusTx.Prelude qualified as PTx
 import Test.QuickCheck (
@@ -21,10 +23,14 @@ import Test.QuickCheck (
  )
 import Test.QuickCheck.Arbitrary (liftArbitrary, liftShrink)
 import Test.QuickCheck.Gen (Gen)
+import Test.QuickCheck.Modifiers (
+  Negative (Negative),
+  Positive (Positive),
+ )
 import Test.Tasty.Plutus.Arbitrary (Pair (Pair), Triple (Triple))
 import Test.Tasty.Plutus.Laws (Laws, law)
 import Text.Show.Pretty (ppShow)
-import Prelude hiding (abs, divMod)
+import Prelude hiding (abs, divMod, (/))
 
 -- | @since 4.0
 additiveHemigroupLaws ::
@@ -115,6 +121,61 @@ euclideanClosedSignedLaws =
               let (_, r) = x `divMod` y
                   r' = abs r
                in property (PTx.zero PTx.<= r') .&&. property (r' PTx.< abs y)
+
+{- | The 'PTx.AdditiveMonoid' constraint is required to ensure non-zeroes in the
+ tests, as the laws assume this. All instances of @y@ denote a non-zero value.
+
+ @since 4.0
+-}
+multiplicativeGroupLaws ::
+  forall (a :: Type).
+  (Show a, MultiplicativeGroup a, Eq a, PTx.AdditiveMonoid a) =>
+  Laws a
+multiplicativeGroupLaws =
+  law "if x / y = z, then y * z = x" mgInversion
+    <> law "x / y = x * reciprocal y" mgDivRecip
+    <> law "powInteger x 0 = 1" mgPowZero
+    <> law "powInteger x 1 = x" mgPowOne
+    <> law
+      ( "if i < 0, "
+          <> "then powInteger y i = reciprocal . powInteger y . abs $ i"
+      )
+      mgPowNeg
+    <> law "if i > 0, then powInteger x i = x * powInteger x (i - 1)" mgPowPos
+  where
+    mgInversion :: Gen a -> (a -> [a]) -> Property
+    mgInversion gen shr =
+      forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow $
+        \(Pair x y) ->
+          if y == PTx.zero
+            then discard
+            else
+              let z = x / y
+               in y PTx.* z === x
+    mgDivRecip :: Gen a -> (a -> [a]) -> Property
+    mgDivRecip gen shr =
+      forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow $
+        \(Pair x y) ->
+          if y == PTx.zero
+            then discard
+            else (x / y) === (x PTx.* reciprocal y)
+    mgPowZero :: Gen a -> (a -> [a]) -> Property
+    mgPowZero gen shr = forAllShrinkShow gen shr ppShow $
+      \x -> powInteger x PTx.zero === PTx.one
+    mgPowOne :: Gen a -> (a -> [a]) -> Property
+    mgPowOne gen shr = forAllShrinkShow gen shr ppShow $
+      \x -> powInteger x PTx.one === x
+    mgPowNeg :: Gen a -> (a -> [a]) -> Property
+    mgPowNeg gen shr =
+      forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow $
+        \(Negative i, x) ->
+          if x == PTx.zero
+            then discard
+            else powInteger x i === (reciprocal . powInteger x . abs $ i)
+    mgPowPos :: Gen a -> (a -> [a]) -> Property
+    mgPowPos gen shr =
+      forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow $
+        \(Positive i, x) -> powInteger x i === x PTx.* powInteger x (i - 1)
 
 -- Helpers
 

@@ -6,6 +6,7 @@ import PlutusTx.Numeric.Laws (
   additiveHemigroupLaws,
   euclideanClosedLaws,
   euclideanClosedSignedLaws,
+  multiplicativeGroupLaws,
  )
 import PlutusTx.Rational (Rational)
 import Test.Tasty (adjustOption, defaultMain, testGroup)
@@ -62,6 +63,8 @@ main =
     , laws @NatRatio "Additive hemigroup" additiveHemigroupLaws
     , laws @Natural "EuclideanClosed" euclideanClosedLaws
     , laws @Integer "EuclideanClosed" euclideanClosedSignedLaws
+    , -- , laws @Rational "Multiplicative group" multiplicativeGroupLaws
+      laws @NatRatio "Multiplicative group" multiplicativeGroupLaws
     ]
   where
     testMinimum :: QuickCheckTests
