@@ -134,30 +134,16 @@ mkConstr conName =
     . fmap skeletizeVar
 
 mkRec :: Name -> [(Name, Name)] -> Exp
-mkRec recConName = \case
-  [] -> AppE (recApp 'ConS) . ListE $ []
-  ((fieldName, varName) : fieldVarNames) ->
-    AppE
-      ( AppE
-          (recApp 'RecS)
-          ( TupE
-              [ Just . builtinStringLit $ fieldName
-              , Just . skeletizeVar $ varName
-              ]
-          )
-      )
-      . ListE
-      . fmap go
-      $ fieldVarNames
+mkRec recConName = AppE (recApp 'RecS) . ListE . fmap go
   where
-    recApp :: Name -> Exp
-    recApp name = AppE (ConE name) (builtinStringLit recConName)
     go :: (Name, Name) -> Exp
     go (fieldName, varName) =
       TupE
         [ Just . builtinStringLit $ fieldName
         , Just . skeletizeVar $ varName
         ]
+    recApp :: Name -> Exp
+    recApp name = AppE (ConE name) (builtinStringLit recConName)
 
 builtinStringLit :: Name -> Exp
 builtinStringLit = AppE (VarE 'fromString) . LitE . StringL . nameBase

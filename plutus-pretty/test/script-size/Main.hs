@@ -32,12 +32,12 @@ import Test.Tasty.Plutus.Size (bytes, fitsInto)
 main :: IO ()
 main =
   defaultMain . testGroup "On-chain size" $
-    [ fitsInto "skeletize" [bytes| 499 |] . fromCompiledCode $ testSkeletize
-    , fitsInto "showSkeletal" [bytes| 2573 |] . fromCompiledCode $ testShowSkeletal
-    , fitsInto "traceSkeletal" [bytes| 2575 |] . fromCompiledCode $ testTraceSkeletal
-    , fitsInto "traceErrorSkeletal" [bytes| 2590 |] . fromCompiledCode $ testTraceErrorSkeletal
-    , fitsInto "traceIfFalseSkeletal" [bytes| 2586 |] . fromCompiledCode $ testTraceIfFalseSkeletal
-    , fitsInto "traceIfTrueSkeletal" [bytes| 2586 |] . fromCompiledCode $ testTraceIfTrueSkeletal
+    [ fitsInto "skeletize" [bytes| 925 |] . fromCompiledCode $ testSkeletize
+    , fitsInto "showSkeletal" [bytes| 2258 |] . fromCompiledCode $ testShowSkeletal
+    , fitsInto "traceSkeletal" [bytes| 2260 |] . fromCompiledCode $ testTraceSkeletal
+    , fitsInto "traceErrorSkeletal" [bytes| 2274 |] . fromCompiledCode $ testTraceErrorSkeletal
+    , fitsInto "traceIfFalseSkeletal" [bytes| 2270 |] . fromCompiledCode $ testTraceIfFalseSkeletal
+    , fitsInto "traceIfTrueSkeletal" [bytes| 2270 |] . fromCompiledCode $ testTraceIfTrueSkeletal
     ]
 
 -- Helpers

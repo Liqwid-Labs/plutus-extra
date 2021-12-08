@@ -6,9 +6,7 @@ module PlutusTx.Skeleton.Builder (build, renderSkeleton) where
 import PlutusTx.Prelude
 import PlutusTx.Skeleton.Internal (
   Skeleton (
-    AssocMapS,
     BoolS,
-    ByteStringS,
     ConS,
     IntegerS,
     ListS,
@@ -17,7 +15,7 @@ import PlutusTx.Skeleton.Internal (
     TupleS
   ),
  )
-import PlutusTx.Skeleton.String (bsToString, intToString)
+import PlutusTx.Skeleton.String (intToString)
 
 newtype Builder = Builder [BuiltinString]
   deriving (Semigroup, Monoid) via [BuiltinString]
@@ -32,23 +30,14 @@ build (Builder xs) = foldr go "" xs
 {-# INLINEABLE renderSkeleton #-}
 renderSkeleton :: Skeleton -> Builder
 renderSkeleton = \case
-  ByteStringS bibs ->
-    embed "BuiltinByteString:" <+> embed (bsToString bibs)
   BoolS b -> embed (if b then "True" else "False")
   IntegerS i -> embed (intToString i)
   StringS bis -> embed ("\"" <> bis <> "\"")
-  AssocMapS aMap -> embed "AssocMap:" <\> foldMap renderKeyVal aMap
   ConS conName conArgs -> embed (conName <> ":") <\> foldMap renderConArg conArgs
-  RecS recConName fieldVal fieldVals ->
-    embed ("Record " <> recConName <> ":")
-      <\> foldr renderFieldVals (renderFieldVal fieldVal) fieldVals
-  TupleS x xs -> embed "Tuple:" <+> foldr renderTuple (renderSkeleton x) xs
+  RecS recConName fieldVals ->
+    embed ("Record " <> recConName <> ":") <\> foldMap renderFieldVal fieldVals
+  TupleS x y -> embed "Tuple:" <+> (renderSkeleton x <> embed ", " <> renderSkeleton y)
   ListS xs -> embed "[" <\> foldMap renderListItem xs <\> embed "]"
-
-{-# INLINEABLE renderKeyVal #-}
-renderKeyVal :: (Skeleton, Skeleton) -> Builder
-renderKeyVal (k, v) =
-  embed "\n, " <> renderSkeleton k <> embed " -> " <> renderSkeleton v
 
 {-# INLINEABLE renderConArg #-}
 renderConArg :: Skeleton -> Builder
@@ -58,14 +47,6 @@ renderConArg arg = embed "\n, " <> renderSkeleton arg
 renderFieldVal :: (BuiltinString, Skeleton) -> Builder
 renderFieldVal (name, val) =
   embed ("\n, " <> name <> ":") <+> renderSkeleton val
-
-{-# INLINEABLE renderFieldVals #-}
-renderFieldVals :: (BuiltinString, Skeleton) -> Builder -> Builder
-renderFieldVals x acc = acc <> renderFieldVal x
-
-{-# INLINEABLE renderTuple #-}
-renderTuple :: Skeleton -> Builder -> Builder
-renderTuple sk acc = (acc <> embed ",") <+> renderSkeleton sk
 
 {-# INLINEABLE renderListItem #-}
 renderListItem :: Skeleton -> Builder
