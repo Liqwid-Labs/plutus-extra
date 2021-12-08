@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               tasty-plutus
-version:            4.2
+version:            5.0
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -102,7 +102,7 @@ test-suite properties
     , plutus-tx
     , plutus-tx-plugin
     , quickcheck-plutus-instances ^>=1.2
-    , tasty-plutus                ^>=4.2
+    , tasty-plutus                ^>=5.0
     , tasty                       ^>=1.4.1
     , tasty-quickcheck            ^>=0.10.1.2
 
