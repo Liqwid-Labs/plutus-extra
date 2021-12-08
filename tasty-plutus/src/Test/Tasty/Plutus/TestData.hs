@@ -103,9 +103,9 @@ instance Semigroup Outcome where
   {-# INLINEABLE stimes #-}
   stimes = stimesIdempotent
 
-{- | Helper wrapper function
+{- | Helper wrapper function for creating 'Outcome' from a condition.
 
- @since 4.1
+ @since 5.0
 -}
 passIf :: Bool -> Outcome
 passIf True = Pass

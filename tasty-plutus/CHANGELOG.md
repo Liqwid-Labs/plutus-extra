@@ -2,11 +2,11 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## Unreleased
+## 5.0
 
 ### Added
 
-* `passIf` combinator
+* `passIf` combinator for creating `Outcome` from a condition.
 * `TestItems (p :: Purpose)` type represens the data set for script checking
 * Property based testing example (test/Properties/Main.hs)
 
