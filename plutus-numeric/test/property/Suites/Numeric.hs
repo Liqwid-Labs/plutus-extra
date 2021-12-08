@@ -15,7 +15,6 @@ import PlutusTx.Numeric.Extra (
     restrictMay,
     signum
   ),
-  divMod,
   reciprocal,
   (/),
   (^),
@@ -26,8 +25,6 @@ import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Property,
   forAllShrink,
-  (.&&.),
-  (.||.),
   (=/=),
   (===),
  )
@@ -39,12 +36,7 @@ import Prelude hiding (Rational, abs, divMod, signum, (/), (^))
 
 tests :: [TestTree]
 tests =
-  [ localOption go . testGroup "EuclideanClosed, Integer" $
-      [ testProperty "if divMod x y = (d, r), then (d * y) + r = x" ecProp1
-      , testProperty "divMod x 0 = (0, x)" ecProp2
-      , testProperty "if divMod x y = (d, r) and y /= 0, then 0 <= |r| < |y|" ecProp3
-      ]
-  , localOption go . testGroup "MultiplicativeGroup, Rational" $
+  [ localOption go . testGroup "MultiplicativeGroup, Rational" $
       [ testProperty "if x / y = z, then y * z = x" mgProp1
       , testProperty "x / y = x * reciprocal y" mgProp2
       , testProperty "x ^ 0 = 1" mgProp3
@@ -150,33 +142,6 @@ idProp7 = forAllShrink arbitrary shrink go
     go x = case restrictMay x of
       Nothing -> abs x =/= x
       Just _ -> abs x === x
-
-ecProp1 :: Property
-ecProp1 = forAllShrink arbitrary shrink go
-  where
-    go :: (Integer, Integer) -> Property
-    go (x, y) =
-      let (d, r) = divMod x y
-       in (d Plutus.* y) Plutus.+ r === x
-
-ecProp2 :: Property
-ecProp2 = forAllShrink arbitrary shrink go
-  where
-    go :: Integer -> Property
-    go x = divMod x Plutus.zero === (Plutus.zero, x)
-
-ecProp3 :: Property
-ecProp3 = forAllShrink arbitrary shrink go
-  where
-    go :: (Integer, Integer) -> Property
-    go (x, y) =
-      let (_, r) = divMod x y
-          absY = abs y
-          absR = abs r
-       in (y === Plutus.zero)
-            .||. ( (Plutus.compare Plutus.zero absR =/= GT)
-                    .&&. (Plutus.compare absR absY === LT)
-                 )
 
 mgProp1 :: Property
 mgProp1 = forAllShrink arbitrary shrink go

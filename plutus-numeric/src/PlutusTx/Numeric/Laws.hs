@@ -1,17 +1,22 @@
 module PlutusTx.Numeric.Laws (
   additiveHemigroupLaws,
   euclideanClosedLaws,
+  euclideanClosedSignedLaws,
 ) where
 
 import Data.Kind (Type)
 import PlutusTx.Numeric.Extra (
   AdditiveHemigroup ((^-)),
   EuclideanClosed (divMod),
+  IntegralDomain (abs),
  )
 import PlutusTx.Prelude qualified as PTx
 import Test.QuickCheck (
   Property,
+  discard,
   forAllShrinkShow,
+  property,
+  (.&&.),
   (===),
  )
 import Test.QuickCheck.Arbitrary (liftArbitrary, liftShrink)
@@ -19,7 +24,7 @@ import Test.QuickCheck.Gen (Gen)
 import Test.Tasty.Plutus.Arbitrary (Pair (Pair), Triple (Triple))
 import Test.Tasty.Plutus.Laws (Laws, law)
 import Text.Show.Pretty (ppShow)
-import Prelude hiding (divMod)
+import Prelude hiding (abs, divMod)
 
 -- | @since 4.0
 additiveHemigroupLaws ::
@@ -63,22 +68,74 @@ euclideanClosedLaws ::
   (Show a, EuclideanClosed a, Eq a) =>
   Laws a
 euclideanClosedLaws =
-  law "if x `divMod` y = (d, r), then (d * r) + y = x" ecInversion
-    <> law "x `divMod` 0 = (0, x)" ecZeroDiv
+  ecInversionLaw
+    <> ecZeroDivLaw
     <> law
       ( "if x `divMod` y = (d, r) and y /= 0, "
           <> "then 0 <= r < y"
       )
       ecNonZeroDiv
   where
-    ecInversion :: Gen a -> (a -> [a]) -> Property
-    ecInversion gen shr =
+    ecNonZeroDiv :: Gen a -> (a -> [a]) -> Property
+    ecNonZeroDiv gen shr =
       forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow $
         \(Pair x y) ->
-          let (d, r) = x `divMod` y
-           in (d PTx.* y) PTx.+ r === x
-    ecZeroDiv :: Gen a -> (a -> [a]) -> Property
-    ecZeroDiv gen shr = forAllShrinkShow gen shr ppShow $
-      \x -> x `divMod` PTx.zero === (PTx.zero, x)
+          if y PTx.== PTx.zero
+            then discard
+            else
+              let (_, r) = x `divMod` y
+               in property (PTx.zero PTx.<= r) .&&. property (r PTx.< y)
+
+{- | This is for types /with/ an additive inverse, hence the additional
+ constraints. If your type lacks additive inverses, use 'euclideanClosedLaws'
+ instead.
+
+ @since 4.0
+-}
+euclideanClosedSignedLaws ::
+  forall (a :: Type) (b :: Type).
+  (Show a, EuclideanClosed a, Eq a, IntegralDomain a b) =>
+  Laws a
+euclideanClosedSignedLaws =
+  ecInversionLaw
+    <> ecZeroDivLaw
+    <> law
+      ( "if x `divMod` y = (d, r) and y /= 0, "
+          <> "then 0 <= abs r < abs y"
+      )
+      ecNonZeroDiv
+  where
     ecNonZeroDiv :: Gen a -> (a -> [a]) -> Property
-    ecNonZeroDiv gen shr = _
+    ecNonZeroDiv gen shr =
+      forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow $
+        \(Pair x y) ->
+          if y PTx.== PTx.zero
+            then discard
+            else
+              let (_, r) = x `divMod` y
+                  r' = abs r
+               in property (PTx.zero PTx.<= r') .&&. property (r' PTx.< abs y)
+
+-- Helpers
+
+ecInversionLaw ::
+  forall (a :: Type).
+  (Show a, EuclideanClosed a, Eq a) =>
+  Laws a
+ecInversionLaw = law "if x `divMod` y = (d, r), then (d * y) + r = x" go
+  where
+    go :: Gen a -> (a -> [a]) -> Property
+    go gen shr = forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow $
+      \(Pair x y) ->
+        let (d, r) = x `divMod` y
+         in (d PTx.* y) PTx.+ r === x
+
+ecZeroDivLaw ::
+  forall (a :: Type).
+  (Show a, Eq a, EuclideanClosed a) =>
+  Laws a
+ecZeroDivLaw = law "x `divMod` 0 = (0, x)" go
+  where
+    go :: Gen a -> (a -> [a]) -> Property
+    go gen shr = forAllShrinkShow gen shr ppShow $
+      \x -> x `divMod` PTx.zero === (PTx.zero, x)

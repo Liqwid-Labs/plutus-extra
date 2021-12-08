@@ -2,7 +2,11 @@ module Main (main) where
 
 import PlutusTx.NatRatio (NatRatio)
 import PlutusTx.Natural (Natural)
-import PlutusTx.Numeric.Laws (additiveHemigroupLaws)
+import PlutusTx.Numeric.Laws (
+  additiveHemigroupLaws,
+  euclideanClosedLaws,
+  euclideanClosedSignedLaws,
+ )
 import PlutusTx.Rational (Rational)
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.Plutus.Laws (
@@ -56,6 +60,8 @@ main =
     , semiringConsistencyLaws @NatRatio
     , laws @Natural "Additive hemigroup" additiveHemigroupLaws
     , laws @NatRatio "Additive hemigroup" additiveHemigroupLaws
+    , laws @Natural "EuclideanClosed" euclideanClosedLaws
+    , laws @Integer "EuclideanClosed" euclideanClosedSignedLaws
     ]
   where
     testMinimum :: QuickCheckTests
