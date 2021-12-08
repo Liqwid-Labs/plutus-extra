@@ -15,13 +15,7 @@ import Prelude hiding (divMod, (/), (^))
 
 tests :: [TestTree]
 tests =
-  [ localOption go . testGroup "Monus" $
-      [ testProperty "a + (b ^- a) = b + (a ^- b)" monusProp1
-      , testProperty "(a ^- b) ^- c = a ^- (b + c)" monusProp2
-      , testProperty "a ^- a = 0" monusProp3
-      , testProperty "0 ^- a = 0" monusProp4
-      ]
-  , localOption go . testGroup "MultiplicativeGroup" $
+  [ localOption go . testGroup "MultiplicativeGroup" $
       [ testProperty "if x / y = z, then y * z = x" mgProp1
       , testProperty "x / y = x * reciprocal y" mgProp2
       , testProperty "x ^ 0 = 1" mgProp3
@@ -107,30 +101,6 @@ mgProp6 = forAllShrink arbitrary shrink go
     go :: (NatRatio, Positive Integer) -> Property
     go (x, Positive i) =
       x ^ i === x Plutus.* (x ^ (i - 1))
-
-monusProp1 :: Property
-monusProp1 = forAllShrink arbitrary shrink go
-  where
-    go :: (NatRatio, NatRatio) -> Property
-    go (x, y) = (x Plutus.+ (y ^- x)) === (y Plutus.+ (x ^- y))
-
-monusProp2 :: Property
-monusProp2 = forAllShrink arbitrary shrink go
-  where
-    go :: (NatRatio, NatRatio, NatRatio) -> Property
-    go (x, y, z) = ((x ^- y) ^- z) === (x ^- (y Plutus.+ z))
-
-monusProp3 :: Property
-monusProp3 = forAllShrink arbitrary shrink go
-  where
-    go :: NatRatio -> Property
-    go x = x ^- x === Plutus.zero
-
-monusProp4 :: Property
-monusProp4 = forAllShrink arbitrary shrink go
-  where
-    go :: NatRatio -> Property
-    go x = Plutus.zero ^- x === Plutus.zero
 
 ceilingProp1 :: NatRatio -> Bool
 ceilingProp1 nr = NR.fromNatural (NR.ceiling nr) Plutus.>= nr

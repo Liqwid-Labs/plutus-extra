@@ -2,6 +2,7 @@ module Main (main) where
 
 import PlutusTx.NatRatio (NatRatio)
 import PlutusTx.Natural (Natural)
+import PlutusTx.Numeric.Laws (additiveHemigroupLaws)
 import PlutusTx.Rational (Rational)
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.Plutus.Laws (
@@ -10,6 +11,7 @@ import Test.Tasty.Plutus.Laws (
   additiveSemigroupLaws,
   dataLaws,
   jsonLaws,
+  laws,
   multiplicativeMonoidLaws,
   multiplicativeSemigroupLaws,
   plutusEqLaws,
@@ -52,6 +54,8 @@ main =
     , semiringConsistencyLaws @Natural
     , semiringConsistencyLaws @Rational
     , semiringConsistencyLaws @NatRatio
+    , laws @Natural "Additive hemigroup" additiveHemigroupLaws
+    , laws @NatRatio "Additive hemigroup" additiveHemigroupLaws
     ]
   where
     testMinimum :: QuickCheckTests

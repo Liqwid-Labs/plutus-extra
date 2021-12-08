@@ -58,6 +58,7 @@ library
     PlutusTx.Natural
     PlutusTx.Numeric.Extra
     PlutusTx.Numeric.Gen
+    PlutusTx.Numeric.Laws
     PlutusTx.Ratio.Extra
     PlutusTx.Rational
     PlutusTx.SchemaUtils
@@ -75,6 +76,7 @@ library
     , hedgehog           ^>=1.0.5
     , openapi3           ^>=3.1.0
     , playground-common
+    , plutus-laws        ^>=2.3
     , plutus-tx
     , pretty-show        ^>=1.10
     , QuickCheck         ^>=2.14.2
