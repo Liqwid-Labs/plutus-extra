@@ -342,7 +342,7 @@ minterProperty opts mp f seed = case f seed of
               , envExpected = outcome
               }
        in checkCoverage
-            . cover 45.0 (outcome == Pass) "Unsuccessful validation"
+            . cover 45.0 (outcome == Pass) "Successful validation"
             . (`runReader` env)
             . produceResult
             $ getScriptResult envScript envTestData (getContext getSC) env
