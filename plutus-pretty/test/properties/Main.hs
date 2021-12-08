@@ -42,10 +42,11 @@ tupleSkeletalProp = forAllShrinkShow arbitrary shrink ppShow go
     go :: (BuiltinString, Integer) -> Property
     go tup@(s, i) =
       let lhs =
-            "Tuple: "
+            "{ \"fst\": "
               PTx.<> showSkeletal s
-              PTx.<> ", "
+              PTx.<> ", \"snd\": "
               PTx.<> showSkeletal i
+              PTx.<> " }"
           rhs = showSkeletal tup
        in lhs === rhs
 
@@ -55,11 +56,11 @@ recordSkeletalProp = forAllShrinkShow arbitrary shrink ppShow go
     go :: Foo -> Property
     go f@(Foo x y) =
       let lhs =
-            "Record Foo:\n"
-              PTx.<> "\n, bar: "
+            "{ \"recordTag\": \"Foo\", \"fields\": { \"bar\": "
               PTx.<> showSkeletal x
-              PTx.<> "\n, baz: "
+              PTx.<> " , \"baz\": "
               PTx.<> showSkeletal y
+              PTx.<> " ,  } }"
        in lhs === showSkeletal f
 
 data Foo = Foo

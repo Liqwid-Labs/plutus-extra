@@ -33,11 +33,11 @@ main :: IO ()
 main =
   defaultMain . testGroup "On-chain size" $
     [ fitsInto "skeletize" [bytes| 925 |] . fromCompiledCode $ testSkeletize
-    , fitsInto "showSkeletal" [bytes| 2258 |] . fromCompiledCode $ testShowSkeletal
-    , fitsInto "traceSkeletal" [bytes| 2260 |] . fromCompiledCode $ testTraceSkeletal
-    , fitsInto "traceErrorSkeletal" [bytes| 2274 |] . fromCompiledCode $ testTraceErrorSkeletal
-    , fitsInto "traceIfFalseSkeletal" [bytes| 2270 |] . fromCompiledCode $ testTraceIfFalseSkeletal
-    , fitsInto "traceIfTrueSkeletal" [bytes| 2270 |] . fromCompiledCode $ testTraceIfTrueSkeletal
+    , fitsInto "showSkeletal" [bytes| 2493 |] . fromCompiledCode $ testShowSkeletal
+    , fitsInto "traceSkeletal" [bytes| 2495 |] . fromCompiledCode $ testTraceSkeletal
+    , fitsInto "traceErrorSkeletal" [bytes| 2510 |] . fromCompiledCode $ testTraceErrorSkeletal
+    , fitsInto "traceIfFalseSkeletal" [bytes| 2505 |] . fromCompiledCode $ testTraceIfFalseSkeletal
+    , fitsInto "traceIfTrueSkeletal" [bytes| 2505 |] . fromCompiledCode $ testTraceIfTrueSkeletal
     ]
 
 -- Helpers

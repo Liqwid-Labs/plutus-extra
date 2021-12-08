@@ -30,27 +30,58 @@ build (Builder xs) = foldr go "" xs
 {-# INLINEABLE renderSkeleton #-}
 renderSkeleton :: Skeleton -> Builder
 renderSkeleton = \case
-  BoolS b -> embed (if b then "True" else "False")
+  BoolS b -> embed (if b then "true" else "false")
   IntegerS i -> embed (intToString i)
   StringS bis -> embed ("\"" <> bis <> "\"")
-  ConS conName conArgs -> embed (conName <> ":") <\> foldMap renderConArg conArgs
-  RecS recConName fieldVals ->
-    embed ("Record " <> recConName <> ":") <\> foldMap renderFieldVal fieldVals
-  TupleS x y -> embed "Tuple:" <+> (renderSkeleton x <> embed ", " <> renderSkeleton y)
-  ListS xs -> embed "[" <\> foldMap renderListItem xs <\> embed "]"
+  ConS conName conArgs -> renderTagged conName conArgs
+  RecS recConName fieldVals -> renderKV recConName fieldVals
+  TupleS x y -> renderTuple x y
+  ListS xs -> renderArray xs
 
-{-# INLINEABLE renderConArg #-}
-renderConArg :: Skeleton -> Builder
-renderConArg arg = embed "\n, " <> renderSkeleton arg
+{-# INLINEABLE renderTagged #-}
+renderTagged :: BuiltinString -> [Skeleton] -> Builder
+renderTagged name args =
+  embed "{ \"tag\":"
+    <+> embed ("\"" <> name <> "\",")
+    <+> embed "\"arguments\":"
+    <+> renderArray args
+    <+> embed "}"
 
-{-# INLINEABLE renderFieldVal #-}
-renderFieldVal :: (BuiltinString, Skeleton) -> Builder
-renderFieldVal (name, val) =
-  embed ("\n, " <> name <> ":") <+> renderSkeleton val
+{-# INLINEABLE renderKV #-}
+renderKV :: BuiltinString -> [(BuiltinString, Skeleton)] -> Builder
+renderKV name fieldVals =
+  embed "{ \"recordTag\":"
+    <+> embed ("\"" <> name <> "\",")
+    <+> embed "\"fields\":"
+    <+> renderFieldVals fieldVals
+    <+> embed "}"
 
-{-# INLINEABLE renderListItem #-}
-renderListItem :: Skeleton -> Builder
-renderListItem sk = renderSkeleton sk <> embed ", "
+{-# INLINEABLE renderTuple #-}
+renderTuple :: Skeleton -> Skeleton -> Builder
+renderTuple x y =
+  embed "{ \"fst\":"
+    <+> (renderSkeleton x <> embed ",")
+    <+> embed "\"snd\":"
+    <+> renderSkeleton y
+    <+> embed "}"
+
+{-# INLINEABLE renderArray #-}
+renderArray :: [Skeleton] -> Builder
+renderArray xs = embed "[" <+> go xs <+> embed "]"
+  where
+    go :: [Skeleton] -> Builder
+    go = \case
+      [] -> mempty
+      (y : ys) -> renderSkeleton y <> embed ", " <> go ys
+
+{-# INLINEABLE renderFieldVals #-}
+renderFieldVals :: [(BuiltinString, Skeleton)] -> Builder
+renderFieldVals fieldVals = embed "{" <+> go fieldVals <+> embed "}"
+  where
+    go :: [(BuiltinString, Skeleton)] -> Builder
+    go = \case
+      [] -> mempty
+      (k, v) : kvs -> embed ("\"" <> k <> "\":") <+> renderSkeleton v <+> embed "," <+> go kvs
 
 -- Space
 {-# INLINEABLE (<+>) #-}
@@ -58,13 +89,6 @@ renderListItem sk = renderSkeleton sk <> embed ", "
 xs <+> ys = xs <> embed " " <> ys
 
 infixl 6 <+>
-
--- Newline
-{-# INLINEABLE (<\>) #-}
-(<\>) :: Builder -> Builder -> Builder
-xs <\> ys = xs <> embed "\n" <> ys
-
-infixl 6 <\>
 
 {-# INLINEABLE embed #-}
 embed :: BuiltinString -> Builder
