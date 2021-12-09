@@ -4,6 +4,17 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 1.3 -- 2021-12-09
+
+### Added
+
+* `uniqueListOf` for generating UniqueList of the given length
+
+### Changed
+
+* Instance Arbitrary for `Value` limited by number of AssetClasses.
+  Now the number equals to `(log2 testSize)^2`
+
 ## 1.2 -- 2021-11-23
 
 ### Added

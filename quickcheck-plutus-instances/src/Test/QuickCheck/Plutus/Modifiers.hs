@@ -13,6 +13,7 @@ module Test.QuickCheck.Plutus.Modifiers (
   UniqueKeys (..),
   NonNegative (..),
   NonZero (..),
+  uniqueListOf,
 ) where
 
 import Control.Monad (guard)
@@ -62,22 +63,7 @@ newtype UniqueList (a :: Type) = UniqueList [a]
 
 -- | @since 1.1
 instance (Arbitrary a, PlutusTx.Ord a) => Arbitrary (UniqueList a) where
-  arbitrary = UniqueList <$> sized go
-    where
-      go :: Int -> Gen [a]
-      go s = do
-        len <- chooseInt (0, s)
-        recGen len
-      recGen :: Int -> Gen [a]
-      recGen len
-        | len == 0 = pure []
-        | len == 1 = (: []) <$> arbitrary
-        | otherwise = do
-          let leftLen = len `quot` 2
-          let rightLen = len - leftLen
-          leftHalf <- recGen leftLen
-          rightHalf <- recGen rightLen
-          pure . merge leftHalf $ rightHalf
+  arbitrary = sized $ \ size -> chooseInt (0, size) >>= uniqueListOf
   shrink (UniqueList xs) = UniqueList <$> (filter isSorted . shrink $ xs)
 
 -- | @since 1.1
@@ -91,7 +77,11 @@ instance (Function a) => Function (UniqueList a) where
 
  @since 1.1
 -}
-newtype UniqueKeys (k :: Type) (v :: Type) = UniqueKeys (AssocMap.Map k v)
+newtype UniqueKeys (k :: Type) (v :: Type) =
+  UniqueKeys
+  { -- | @since 1.3
+    unUniqueKeys :: AssocMap.Map k v
+  }
   deriving stock
     ( -- | @since 1.1
       Show
@@ -226,6 +216,28 @@ instance (Function a) => Function (NonZero a) where
     where
       into :: NonZero a -> a
       into (NonZero x) = x
+
+{- | Generates a UniqueList of the given length.
+ 
+ @since 1.3
+-}
+uniqueListOf ::
+  forall (a :: Type).
+  (Arbitrary a, PlutusTx.Ord a) =>
+  Int ->
+  Gen (UniqueList a)
+uniqueListOf size = UniqueList <$> recGen size
+  where
+    recGen :: Int -> Gen [a]
+    recGen len
+      | len == 0 = pure []
+      | len == 1 = (: []) <$> arbitrary
+      | otherwise = do
+        let leftLen = len `quot` 2
+        let rightLen = len - leftLen
+        leftHalf <- recGen leftLen
+        rightHalf <- recGen rightLen
+        pure . merge leftHalf $ rightHalf
 
 -- Helpers
 
