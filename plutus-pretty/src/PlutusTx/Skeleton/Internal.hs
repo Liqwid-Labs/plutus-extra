@@ -170,7 +170,10 @@ instance (Skeletal a) => Skeletal [a] where
   {-# INLINEABLE skeletize #-}
   skeletize = ListS . fmap skeletize
 
--- | @since 2.1
+{- | We represent a 'AssocMap.Map' as a list of tuples of its key-value pairs.
+
+ @since 2.1
+-}
 instance (Skeletal k, Skeletal v) => Skeletal (AssocMap.Map k v) where
   {-# INLINEABLE skeletize #-}
   skeletize = ListS . fmap skeletize . AssocMap.toList

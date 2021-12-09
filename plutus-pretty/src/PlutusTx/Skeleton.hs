@@ -36,6 +36,44 @@ import PlutusTx.Skeleton.QQ (makeSkeletal)
 {- | Constructs a prettyprinted 'BuiltinString' representation of any type with
  a 'Skeletal' instance.
 
+ = Representation specifics
+
+ We use a JSON representation of the 'Skeleton' of @a@. More precisely:
+
+ * 'Bool's are represented as a JSON boolean.
+ * 'Integer's are represented as JSON numbers.
+ * 'BuiltinString's are represented as JSON strings.
+ * 'BuiltinByteString's are represented as JSON strings, with each byte
+   represented as an escaped numerical code.
+ * ADTs which are records are represented as tagged JSON objects (see below).
+ * ADTS which are /not/ records are represented as a different kind of
+   tagged JSON object (see below).
+ * Tuples are represented as a two-item object (see below).
+ * Lists are represented as JSON arrays of the representations of the
+   'Skeleton's of the list's values.
+
+ For record ADTs, we use JSON objects with the following structure:
+
+ * A \'recordTag\' field, storing the name of the record value's constructor
+   as a JSON string.
+ * A \'fields\' field, storing a JSON object whose keys are the record field
+   names, and whose values are the JSON representations of the 'Skeleton's of
+   the corresponding record field values.
+
+ For non-record ADTs, we use JSON objects with the following structure:
+
+ * A \'tag\' field, storing the name of the data constructor of the value as a
+   JSON string.
+ * An \'arguments\' field, storing a JSON array of the JSON representations of
+   all the constructor arguments.
+
+ For tuples, we use JSON objects with the following structure:
+
+ * A \'fst\' field, storing the JSON representation of the tuple's first
+   element.
+ * A \'snd\' field, storing the JSON representation of the tuple's second
+   element.
+
  @since 2.1
 -}
 {-# INLINEABLE showSkeletal #-}
@@ -46,7 +84,8 @@ showSkeletal ::
   BuiltinString
 showSkeletal = build . renderSkeleton . skeletize
 
-{- | As 'trace', but for any 'Skeletal'.
+{- | As 'trace', but for any 'Skeletal'. Will trace the representation emitted
+ by 'showSkeletal'.
 
  @since 2.1
 -}
@@ -59,7 +98,8 @@ traceSkeletal ::
   b
 traceSkeletal x = trace (showSkeletal x)
 
-{- | As 'traceError', but for any 'Skeletal'.
+{- | As 'traceError', but for any 'Skeletal'. Will trace the representation
+ emitted by 'showSkeletal'.
 
  @since 2.1
 -}
@@ -71,7 +111,8 @@ traceErrorSkeletal ::
   b
 traceErrorSkeletal x = traceError (showSkeletal x)
 
-{- | As 'traceIfFalse', but for any 'Skeletal'.
+{- | As 'traceIfFalse', but for any 'Skeletal'. Will trace the representation
+ emitted by 'showSkeletal'.
 
  @since 2.1
 -}
@@ -84,7 +125,8 @@ traceIfFalseSkeletal ::
   Bool
 traceIfFalseSkeletal x = traceIfFalse (showSkeletal x)
 
-{- | As 'traceIfTrue', but for any 'Skeletal'.
+{- | As 'traceIfTrue', but for any 'Skeletal'. Will trace the representation
+ emitted by 'showSkeletal'.
 
  @since 2.1
 -}
