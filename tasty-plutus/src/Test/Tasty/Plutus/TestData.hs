@@ -19,8 +19,7 @@ module Test.Tasty.Plutus.TestData (
   fromArbitrary,
   static,
   Generator (..),
-  fromArbitrarySpending,
-  fromArbitraryMinting,
+  TestItems (..),
   Tokens (Tokens, unTokens),
   token,
 ) where
@@ -31,6 +30,7 @@ import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.IsData.Class (FromData, ToData)
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Test.QuickCheck.Gen (Gen)
+import Test.Tasty.Plutus.Context (ContextBuilder)
 import Test.Tasty.Plutus.Internal.Context (
   Purpose (ForMinting, ForSpending),
   Tokens (Tokens, unTokens),
@@ -103,9 +103,9 @@ instance Semigroup Outcome where
   {-# INLINEABLE stimes #-}
   stimes = stimesIdempotent
 
-{- | Helper wrapper function
+{- | Helper wrapper function for creating 'Outcome' from a condition.
 
- @since 4.1
+ @since 5.0
 -}
 passIf :: Bool -> Outcome
 passIf True = Pass
@@ -138,14 +138,42 @@ static ::
   Methodology a
 static x = Methodology (pure x) (const [])
 
-{- | Contains a means of generating a 'TestData', as well as a way to determine
- a \'good\' or \'bad\' generated case.
+{- | Contains a means of generating a seed and a function
+ for creating 'TestItems' from the seed.
 
- @since 3.1
+ @since 5.0
 -}
-data Generator (p :: Purpose) where
-  -- | @since 3.1
+data Generator (a :: Type) (p :: Purpose) where
+  -- | @since 5.0
   GenForSpending ::
+    (Show a) =>
+    -- | 'Methodology' for seed
+    -- @since 5.0
+    Methodology a ->
+    -- | Function for producing 'TestItems' from the seed
+    -- @since 5.0
+    (a -> TestItems 'ForSpending) ->
+    Generator a 'ForSpending
+  GenForMinting ::
+    (Show a) =>
+    -- | 'Methodology' for seed
+    -- @since 5.0
+    Methodology a ->
+    -- | Function for producing 'TestItems' from the seed
+    -- @since 5.0
+    (a -> TestItems 'ForMinting) ->
+    Generator a 'ForMinting
+
+{- | Сontains the necessary data set for script checking.
+ This dataset does not cover any set of tests or conditions.
+ It is used only to check the result of calling the script with certain values.
+
+ @since 5.0
+-}
+data TestItems (p :: Purpose) where
+  -- | @since 5.0
+  ItemsForSpending ::
+    forall (datum :: Type) (redeemer :: Type).
     ( ToData datum
     , ToData redeemer
     , FromData datum
@@ -153,55 +181,41 @@ data Generator (p :: Purpose) where
     , Show datum
     , Show redeemer
     ) =>
-    (datum -> redeemer -> Value -> Outcome) ->
-    Methodology datum ->
-    Methodology redeemer ->
-    Methodology Value ->
-    Generator 'ForSpending
-  -- | @since 4.1
-  GenForMinting ::
+    { -- | Datum provided to the Validator
+      -- @since 5.0
+      spendDatum :: datum
+    , -- | Redeemer provided to the Validator
+      -- @since 5.0
+      spendRedeemer :: redeemer
+    , -- | Value spended from the Validator
+      -- @since 5.0
+      spendValue :: Value
+    , -- | ContextBuilder used for creating ScriptContext
+      -- @since 5.0
+      spendCB :: ContextBuilder 'ForSpending
+    , -- | Result expected from calling the Validator
+      -- | @since 5.0
+      spendOutcome :: Outcome
+    } ->
+    TestItems 'ForSpending
+  -- | @since 5.0
+  ItemsForMinting ::
+    forall (redeemer :: Type).
     ( ToData redeemer
     , FromData redeemer
     , Show redeemer
     ) =>
-    (redeemer -> Tokens -> Outcome) ->
-    Methodology redeemer ->
-    Methodology Tokens ->
-    Generator 'ForMinting
-
-{- | Generate using 'Arbitrary' instances. A 'Methodology' for 'Value' has to be
- passed manually, as it's (currently) missing an instance.
-
- @since 3.1
--}
-fromArbitrarySpending ::
-  forall (datum :: Type) (redeemer :: Type).
-  ( ToData datum
-  , FromData datum
-  , Arbitrary datum
-  , Show datum
-  , ToData redeemer
-  , FromData redeemer
-  , Show redeemer
-  , Arbitrary redeemer
-  ) =>
-  (datum -> redeemer -> Value -> Outcome) ->
-  Methodology Value ->
-  Generator 'ForSpending
-fromArbitrarySpending f = GenForSpending f fromArbitrary fromArbitrary
-
-{- | Generate using 'Arbitrary' instances.
-
- @since 4.1
--}
-fromArbitraryMinting ::
-  forall (redeemer :: Type).
-  ( ToData redeemer
-  , FromData redeemer
-  , Show redeemer
-  , Arbitrary redeemer
-  ) =>
-  (redeemer -> Tokens -> Outcome) ->
-  Methodology Tokens ->
-  Generator 'ForMinting
-fromArbitraryMinting f = GenForMinting f fromArbitrary
+    { -- | Redeemer provided to the MintingPolicy
+      -- @since 5.0
+      mintRedeemer :: redeemer
+    , -- | Tokens minted with the MintingPolicy
+      -- @since 5.0
+      mintTokens :: Tokens
+    , -- | ContextBuilder used for creating ScriptContext
+      -- @since 5.0
+      mintCB :: ContextBuilder 'ForMinting
+    , -- | Result expected from calling the MintingPolicy
+      -- | @since 5.0
+      mintOutcome :: Outcome
+    } ->
+    TestItems 'ForMinting

@@ -2,17 +2,24 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## Unreleased
+## 5.0
 
 ### Added
 
-* `passIf` combinator
+* `passIf` combinator for creating `Outcome` from a condition.
+* `TestItems (p :: Purpose)` type represens the data set for script checking
+* Property based testing example (test/Properties/Main.hs)
 
 ### Changed
 
 * Rename `Example` to `Outcome` and its two constructors `Good` and `Bad` to
   `Pass` and `Fail` respectively, unifying with the internal type used in unit
   tests.
+* Changed API for property based testing:
+  * Changed type and implementation for `scriptProperty`
+* `Generator (p :: Purpose)` replaced with `Generator (a :: Type) (p :: Purpose)`,
+    changed types for data constructors `GenForSpending` and `GenForMinting`
+* Property based testing coverage check changed from 0.5% to 45%
 
 ## 4.2 -- 2021-11-26
 

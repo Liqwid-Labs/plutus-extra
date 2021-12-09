@@ -14,25 +14,24 @@
 
  > myProperties :: TestTree
  > myProperties = withValidator "Property testing my spending" myValidator $ do
- >   scriptProperty "Some property" myGenerator mkContext
- >   scriptProperty "Some other property" anotherGenerator mkContext
+ >   scriptProperty "Some spending property" $ GenForSpending gen' transform'
+ >   scriptProperty "Some minting property" $ GenForMinting gen'' transform''
  >   ...
+
+ A small example of using can be found
+ <https://github.com/Liqwid-Labs/plutus-extra/tasty-plutus/test/Properties/Main.hs here>
 
  = Note
 
- In general, we assume that the 'ContextBuilder' is kept (fairly) stable; the
- goal of 'scriptProperty' is to test behaviour under changing 'TestData' (aka,
- inputs). However, frequently, there is a need to know about what kind of
- inputs we have to make a context that even makes sense at all, regardless of
- whether the inputs are \'good\' or not. Therefore, we provide a \'hook\' into
- this system for when it's needed.
+ In general, the purpose of scriptProperty is to test the stable behavior
+ of the script for various inputs. Not independent, but mutually consistent
+ random data are transferred to the script. Using the expected outcome
+ allows us to control the correctness of the result of running the script.
 -}
 module Test.Tasty.Plutus.Script.Property (
   scriptProperty,
 ) where
 
-import Control.Arrow ((>>>))
-import Control.Monad (guard)
 import Control.Monad.RWS.Strict (tell)
 import Control.Monad.Reader (Reader, ask, asks, runReader)
 import Data.Kind (Type)
@@ -50,8 +49,6 @@ import Plutus.V1.Ledger.Scripts (
   ),
   Validator,
  )
-import Plutus.V1.Ledger.Value (Value)
-import PlutusTx.IsData.Class (FromData, ToData)
 import Test.QuickCheck (
   Args (maxSize, maxSuccess),
   Gen,
@@ -118,7 +115,19 @@ import Test.Tasty.Plutus.TestData (
   Methodology (Methodology),
   Outcome (Fail, Pass),
   TestData (MintingTest, SpendingTest),
-  Tokens,
+  TestItems (
+    ItemsForMinting,
+    ItemsForSpending,
+    mintCB,
+    mintOutcome,
+    mintRedeemer,
+    mintTokens,
+    spendCB,
+    spendDatum,
+    spendOutcome,
+    spendRedeemer,
+    spendValue
+  ),
  )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
@@ -137,77 +146,63 @@ import Text.Show.Pretty (ppDoc)
 import Type.Reflection (Typeable)
 import Prelude
 
-{- | Given a way of generating 'TestData', and converting a generated 'TestData'
- into a 'ContextBuilder', check that:
+{- | Given a 'Generator' containig a way to generate a seed,
+and a function to create 'TestItems' from the seed, check that:
 
- * For any 'TestData' classified as 'Pass', the script succeeds; and
- * For any 'TestData' classified as 'Fail', the script fails.
+ * For any 'TestItems' with Outcome equals 'Pass', the script succeeds; and
+ * For any 'TestItems' with Outcome equals 'Fail', the script fails.
 
  This will also check /coverage/: specifically, the property will fail unless
- the provided generation method produces roughly equal numbers of 'Pass' and
+ the provided way produces roughly equal numbers of 'Pass' and
  'Fail'-classified cases.
 
- @since 3.1
+ @since 5.0
 -}
 scriptProperty ::
-  forall (p :: Purpose).
+  forall (a :: Type) (p :: Purpose).
+  (Typeable a) =>
+  -- | Property name
   String ->
-  Generator p ->
-  (TestData p -> ContextBuilder p) ->
+  -- | Data generator
+  Generator a p ->
   WithScript p ()
-scriptProperty name gen mkCB = case gen of
-  GenForSpending f mDat mRed mVal -> WithSpending $ do
-    val <- ask
-    let generator = spendingTupleGen f mDat mRed mVal
-    let shrinker = spendingTupleShrink f mDat mRed mVal
-    tell
-      . Seq.singleton
-      . singleTest name
-      . Spender val generator shrinker
-      $ mkCB
-  GenForMinting f mRed mToks -> WithMinting $ do
-    mp <- ask
-    let generator = mintingTupleGen f mRed mToks
-    let shrinker = mintingTupleShrink f mRed mToks
-    tell
-      . Seq.singleton
-      . singleTest name
-      . Minter mp generator shrinker
-      $ mkCB
+scriptProperty name generator = case generator of
+  GenForSpending (Methodology gen shrinker) f ->
+    WithSpending $ do
+      val <- ask
+      tell
+        . Seq.singleton
+        . singleTest name
+        $ Spender val gen shrinker f
+  GenForMinting (Methodology gen shrinker) f ->
+    WithMinting $ do
+      mp <- ask
+      tell
+        . Seq.singleton
+        . singleTest name
+        $ Minter mp gen shrinker f
 
 -- Helpers
 
-data PropertyTest (p :: Purpose) where
+data PropertyTest (a :: Type) (p :: Purpose) where
   Spender ::
-    ( ToData datum
-    , ToData redeemer
-    , FromData datum
-    , FromData redeemer
-    , Show datum
-    , Show redeemer
-    ) =>
     Validator ->
-    Gen (Outcome, datum, redeemer, Value) ->
-    ((Outcome, datum, redeemer, Value) -> [(Outcome, datum, redeemer, Value)]) ->
-    (TestData 'ForSpending -> ContextBuilder 'ForSpending) ->
-    PropertyTest 'ForSpending
+    Gen a ->
+    (a -> [a]) ->
+    (a -> TestItems 'ForSpending) ->
+    PropertyTest a 'ForSpending
   Minter ::
-    ( ToData redeemer
-    , FromData redeemer
-    , Show redeemer
-    ) =>
     MintingPolicy ->
-    Gen (Outcome, redeemer, Tokens) ->
-    ( (Outcome, redeemer, Tokens) ->
-      [(Outcome, redeemer, Tokens)]
-    ) ->
-    (TestData 'ForMinting -> ContextBuilder 'ForMinting) ->
-    PropertyTest 'ForMinting
+    Gen a ->
+    (a -> [a]) ->
+    (a -> TestItems 'ForMinting) ->
+    PropertyTest a 'ForMinting
 
 data PropertyEnv (p :: Purpose) = PropertyEnv
   { envOpts :: OptionSet
-  , envPropertyTest :: PropertyTest p
+  , envScript :: SomeScript p
   , envTestData :: TestData p
+  , envContextBuilder :: ContextBuilder p
   , envExpected :: Outcome
   }
 
@@ -217,37 +212,20 @@ getConf ::
   TransactionConfig
 getConf = prepareConf envOpts
 
-getCB ::
-  forall (p :: Purpose).
-  PropertyEnv p ->
-  ContextBuilder p
-getCB env = case envPropertyTest env of
-  Spender _ _ _ mkCB -> mkCB $ envTestData env
-  Minter _ _ _ mkCB -> mkCB $ envTestData env
-
-getScript ::
-  forall (p :: Purpose).
-  PropertyEnv p ->
-  SomeScript p
-getScript =
-  envPropertyTest >>> \case
-    Spender val _ _ _ -> SomeSpender val
-    Minter mp _ _ _ -> SomeMinter mp
-
 getSC ::
   forall (p :: Purpose).
   PropertyEnv p ->
   ScriptContext
-getSC = getScriptContext getConf getCB envTestData
+getSC = getScriptContext getConf envContextBuilder envTestData
 
 getDumpedState ::
   forall (p :: Purpose).
   [Text] ->
   PropertyEnv p ->
   Doc
-getDumpedState = dumpState' getConf getCB envTestData
+getDumpedState = dumpState' getConf envContextBuilder envTestData
 
-instance (Typeable p) => IsTest (PropertyTest p) where
+instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
   run opts vt _ = do
     let PropertyTestCount testCount' = lookupOption opts
     let PropertyMaxSize maxSize' = lookupOption opts
@@ -261,10 +239,10 @@ instance (Typeable p) => IsTest (PropertyTest p) where
     where
       go :: Property
       go = case vt of
-        Spender _ gen shrinker _ ->
-          forAllShrinkShow gen shrinker prettySpender $ spenderProperty opts vt
-        Minter _ gen shrinker _ ->
-          forAllShrinkShow gen shrinker prettyMinter $ minterProperty opts vt
+        Spender val gen shrinker f ->
+          forAllShrinkShow gen shrinker (prettySpender f) $ spenderProperty opts val f
+        Minter mp gen shrinker f ->
+          forAllShrinkShow gen shrinker (prettyMinter f) $ minterProperty opts mp f
   testOptions =
     Tagged
       [ Option @Fee Proxy
@@ -278,148 +256,124 @@ instance (Typeable p) => IsTest (PropertyTest p) where
       ]
 
 spenderProperty ::
-  forall (datum :: Type) (redeemer :: Type).
-  ( ToData datum
-  , ToData redeemer
-  , FromData datum
-  , FromData redeemer
-  , Show datum
-  , Show redeemer
-  ) =>
+  forall (a :: Type).
   OptionSet ->
-  PropertyTest 'ForSpending ->
-  (Outcome, datum, redeemer, Value) ->
+  Validator ->
+  (a -> TestItems 'ForSpending) ->
+  a ->
   Property
-spenderProperty opts vt (ex, d, r, v) =
-  let td = SpendingTest d r v
-      env =
-        PropertyEnv
-          { envOpts = opts
-          , envPropertyTest = vt
-          , envExpected = ex
-          , envTestData = td
-          }
-   in checkCoverage
-        . cover 0.5 (ex == Pass) "good"
-        . (`runReader` env)
-        . produceResult
-        $ getScriptResult getScript envTestData (getContext getSC) env
+spenderProperty opts val f seed = case f seed of
+  ItemsForSpending
+    { spendDatum = d :: datum
+    , spendRedeemer = r :: redeemer
+    , spendValue = v
+    , spendCB = cb
+    , spendOutcome = outcome
+    } ->
+      let td = SpendingTest d r v
+          script = SomeSpender val
+          env =
+            PropertyEnv
+              { envOpts = opts
+              , envScript = script
+              , envTestData = td
+              , envContextBuilder = cb
+              , envExpected = outcome
+              }
+       in checkCoverage
+            . cover 45.0 (outcome == Pass) "Successful validation"
+            . (`runReader` env)
+            . produceResult
+            $ getScriptResult envScript envTestData (getContext getSC) env
 
 prettySpender ::
-  forall (datum :: Type) (redeemer :: Type).
-  (Show datum, Show redeemer) =>
-  (Outcome, datum, redeemer, Value) ->
+  forall (a :: Type).
+  (Show a) =>
+  (a -> TestItems 'ForSpending) ->
+  a ->
   String
-prettySpender (ex, d, r, v) =
-  renderStyle ourStyle $
-    ""
-      $+$ hang "Case" 4 (text . show $ ex)
-      $+$ hang "Inputs" 4 dumpInputs
-  where
-    dumpInputs :: Doc
-    dumpInputs =
-      "Datum"
-        $+$ ppDoc d
-        $+$ "Redeemer"
-        $+$ ppDoc r
-        $+$ "Value"
-        $+$ ppDoc v
+prettySpender f seed = case f seed of
+  ItemsForSpending
+    { spendDatum = d :: datum
+    , spendRedeemer = r :: redeemer
+    , spendValue = v
+    , spendCB = cb
+    , spendOutcome = outcome
+    } ->
+      let dumpInputs :: Doc
+          dumpInputs =
+            "Seed"
+              $+$ ppDoc seed
+              $+$ "Datum"
+              $+$ ppDoc @datum d
+              $+$ "Redeemer"
+              $+$ ppDoc @redeemer r
+              $+$ "Value"
+              $+$ ppDoc v
+              $+$ "ContextBuilder"
+              $+$ ppDoc cb
+       in renderStyle ourStyle $
+            ""
+              $+$ hang "Case" 4 (text . show $ outcome)
+              $+$ hang "Inputs" 4 dumpInputs
 
 minterProperty ::
-  forall (redeemer :: Type).
-  (FromData redeemer, ToData redeemer, Show redeemer) =>
+  forall (a :: Type).
   OptionSet ->
-  PropertyTest 'ForMinting ->
-  (Outcome, redeemer, Tokens) ->
+  MintingPolicy ->
+  (a -> TestItems 'ForMinting) ->
+  a ->
   Property
-minterProperty opts vt (ex, r, toks) =
-  let td = MintingTest r toks
-      env =
-        PropertyEnv
-          { envOpts = opts
-          , envPropertyTest = vt
-          , envExpected = ex
-          , envTestData = td
-          }
-   in checkCoverage
-        . cover 0.5 (ex == Pass) "good"
-        . (`runReader` env)
-        . produceResult
-        $ getScriptResult getScript envTestData (getContext getSC) env
+minterProperty opts mp f seed = case f seed of
+  ItemsForMinting
+    { mintRedeemer = r
+    , mintTokens = toks
+    , mintCB = cb
+    , mintOutcome = outcome
+    } ->
+      let td = MintingTest r toks
+          script = SomeMinter mp
+          env =
+            PropertyEnv
+              { envOpts = opts
+              , envScript = script
+              , envTestData = td
+              , envContextBuilder = cb
+              , envExpected = outcome
+              }
+       in checkCoverage
+            . cover 45.0 (outcome == Pass) "Successful validation"
+            . (`runReader` env)
+            . produceResult
+            $ getScriptResult envScript envTestData (getContext getSC) env
 
 prettyMinter ::
-  forall (redeemer :: Type).
-  (Show redeemer) =>
-  (Outcome, redeemer, Tokens) ->
+  forall (a :: Type).
+  (Show a) =>
+  (a -> TestItems 'ForMinting) ->
+  a ->
   String
-prettyMinter (ex, r, ts) =
-  renderStyle ourStyle $
-    ""
-      $+$ hang "Case" 4 (text . show $ ex)
-      $+$ hang "Inputs" 4 dumpInputs
-  where
-    dumpInputs :: Doc
-    dumpInputs =
-      "Redeemer"
-        $+$ ppDoc r
-        $+$ "Tokens"
-        $+$ ppDoc ts
-
-spendingTupleGen ::
-  forall (datum :: Type) (redeemer :: Type).
-  (datum -> redeemer -> Value -> Outcome) ->
-  Methodology datum ->
-  Methodology redeemer ->
-  Methodology Value ->
-  Gen (Outcome, datum, redeemer, Value)
-spendingTupleGen f mDat mRed mVal = do
-  let Methodology genD _ = mDat
-  let Methodology genR _ = mRed
-  let Methodology genVal _ = mVal
-  (d, r, v) <- (,,) <$> genD <*> genR <*> genVal
-  pure (f d r v, d, r, v)
-
-spendingTupleShrink ::
-  forall (datum :: Type) (redeemer :: Type).
-  (datum -> redeemer -> Value -> Outcome) ->
-  Methodology datum ->
-  Methodology redeemer ->
-  Methodology Value ->
-  (Outcome, datum, redeemer, Value) ->
-  [(Outcome, datum, redeemer, Value)]
-spendingTupleShrink f mDat mRed mVal (ex, d, r, v) = do
-  let Methodology _ shrinkD = mDat
-  let Methodology _ shrinkR = mRed
-  let Methodology _ shrinkV = mVal
-  (d', r', v') <- (,,) <$> shrinkD d <*> shrinkR r <*> shrinkV v
-  guard (f d' r' v' == ex)
-  pure (ex, d', r', v')
-
-mintingTupleGen ::
-  forall (redeemer :: Type).
-  (redeemer -> Tokens -> Outcome) ->
-  Methodology redeemer ->
-  Methodology Tokens ->
-  Gen (Outcome, redeemer, Tokens)
-mintingTupleGen f mRed mToks = do
-  let Methodology genR _ = mRed
-  let Methodology genToks _ = mToks
-  (r, ts) <- (,) <$> genR <*> genToks
-  pure (f r ts, r, ts)
-
-mintingTupleShrink ::
-  forall (redeemer :: Type).
-  (redeemer -> Tokens -> Outcome) ->
-  Methodology redeemer ->
-  Methodology Tokens ->
-  (Outcome, redeemer, Tokens) ->
-  [(Outcome, redeemer, Tokens)]
-mintingTupleShrink f mRed mToks (ex, r, ts) = do
-  let Methodology _ shrinkR = mRed
-  let Methodology _ shrinkTs = mToks
-  (r', ts') <- (,) <$> shrinkR r <*> shrinkTs ts
-  guard (f r ts == ex)
-  pure (ex, r', ts')
+prettyMinter f seed = case f seed of
+  ItemsForMinting
+    { mintRedeemer = r :: redeemer
+    , mintTokens = ts
+    , mintCB = cb
+    , mintOutcome = outcome
+    } ->
+      let dumpInputs :: Doc
+          dumpInputs =
+            "Seed"
+              $+$ ppDoc seed
+              $+$ "Redeemer"
+              $+$ ppDoc @redeemer r
+              $+$ "Tokens"
+              $+$ ppDoc ts
+              $+$ "ContextBuilder"
+              $+$ ppDoc cb
+       in renderStyle ourStyle $
+            ""
+              $+$ hang "Case" 4 (text . show $ outcome)
+              $+$ hang "Inputs" 4 dumpInputs
 
 counter :: String -> Property
 counter s = counterexample s False
@@ -428,7 +382,7 @@ produceResult ::
   Either ScriptError ([Text], ScriptResult) ->
   Reader (PropertyEnv p) Property
 produceResult sr = do
-  ex <- asks envExpected
+  outcome <- asks envExpected
   case sr of
     Left err -> case err of
       EvaluationError logs msg ->
@@ -437,7 +391,7 @@ produceResult sr = do
           Fail -> pass
       EvaluationException name msg -> pure . counter $ scriptException name msg
       MalformedScript msg -> pure . counter $ malformedScript msg
-    Right (logs, res) -> case (ex, res) of
+    Right (logs, res) -> case (outcome, res) of
       (_, NoOutcome) -> asks (counter . noOutcome state)
       (Fail, ScriptPassed) -> asks (counter . unexpectedSuccess state)
       (Fail, ScriptFailed) -> pass
