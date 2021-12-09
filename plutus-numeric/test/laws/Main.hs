@@ -6,6 +6,7 @@ import PlutusTx.Numeric.Laws (
   additiveHemigroupLaws,
   euclideanClosedLaws,
   euclideanClosedSignedLaws,
+  integralDomainLaws,
   multiplicativeGroupLaws,
  )
 import PlutusTx.Rational (Rational)
@@ -65,6 +66,8 @@ main =
     , laws @Integer "EuclideanClosed" euclideanClosedSignedLaws
     , -- , laws @Rational "Multiplicative group" multiplicativeGroupLaws
       laws @NatRatio "Multiplicative group" multiplicativeGroupLaws
+    , laws @Integer "IntegralDomain" integralDomainLaws
+    -- laws @Rational "IntegralDomain" integralDomainLaws
     ]
   where
     testMinimum :: QuickCheckTests

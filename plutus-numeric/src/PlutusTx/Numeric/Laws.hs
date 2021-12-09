@@ -3,13 +3,14 @@ module PlutusTx.Numeric.Laws (
   euclideanClosedLaws,
   euclideanClosedSignedLaws,
   multiplicativeGroupLaws,
+  integralDomainLaws,
 ) where
 
 import Data.Kind (Type)
 import PlutusTx.Numeric.Extra (
   AdditiveHemigroup ((^-)),
   EuclideanClosed (divMod),
-  IntegralDomain (abs),
+  IntegralDomain (abs, addExtend, projectAbs, restrictMay, signum),
   MultiplicativeGroup (powInteger, reciprocal, (/)),
  )
 import PlutusTx.Prelude qualified as PTx
@@ -19,6 +20,7 @@ import Test.QuickCheck (
   forAllShrinkShow,
   property,
   (.&&.),
+  (=/=),
   (===),
  )
 import Test.QuickCheck.Arbitrary (liftArbitrary, liftShrink)
@@ -30,7 +32,7 @@ import Test.QuickCheck.Modifiers (
 import Test.Tasty.Plutus.Arbitrary (Pair (Pair), Triple (Triple))
 import Test.Tasty.Plutus.Laws (Laws, law)
 import Text.Show.Pretty (ppShow)
-import Prelude hiding (abs, divMod, (/))
+import Prelude hiding (abs, divMod, signum, (/))
 
 -- | @since 4.0
 additiveHemigroupLaws ::
@@ -176,6 +178,47 @@ multiplicativeGroupLaws =
     mgPowPos gen shr =
       forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow $
         \(Positive i, x) -> powInteger x i === x PTx.* powInteger x (i - 1)
+
+-- | @since 4.0
+integralDomainLaws ::
+  forall (a :: Type) (b :: Type).
+  (Show a, Eq a, IntegralDomain a b) =>
+  Laws a
+integralDomainLaws =
+  law "abs x >= 0" absGEZero
+    <> law "x <= abs x" absGESelf
+    <> law "abs (x * y) = abs x * abs y" absMulDist
+    <> law "abs x * signum x = x" absSignumAgreement
+    <> law "addExtend . projectAbs $ x = abs x" projectExtend
+    <> law "restrictMay x = Just y if and only if abs x = x" restrictMayAbs
+  where
+    absGEZero :: Gen a -> (a -> [a]) -> Property
+    absGEZero gen shr = forAllShrinkShow gen shr ppShow $
+      \x -> property (abs x PTx.>= PTx.zero)
+    absMulDist :: Gen a -> (a -> [a]) -> Property
+    absMulDist gen shr =
+      forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow $
+        \(Pair x y) ->
+          let lhs = abs (x PTx.* y)
+              rhs = abs x PTx.* abs y
+           in lhs === rhs
+    absGESelf :: Gen a -> (a -> [a]) -> Property
+    absGESelf gen shr = forAllShrinkShow gen shr ppShow $
+      \x -> property (x PTx.<= abs x)
+    absSignumAgreement :: Gen a -> (a -> [a]) -> Property
+    absSignumAgreement gen shr = forAllShrinkShow gen shr ppShow $
+      \x -> abs x PTx.* signum x === x
+    projectExtend :: Gen a -> (a -> [a]) -> Property
+    projectExtend gen shr = forAllShrinkShow gen shr ppShow $
+      \x ->
+        let lhs = addExtend . projectAbs $ x
+            rhs = abs x
+         in lhs === rhs
+    restrictMayAbs :: Gen a -> (a -> [a]) -> Property
+    restrictMayAbs gen shr = forAllShrinkShow gen shr ppShow $
+      \x -> case restrictMay x of
+        Nothing -> abs x =/= x
+        Just _ -> abs x === x
 
 -- Helpers
 

@@ -96,7 +96,6 @@ test-suite property
     Suites.Consistency
     Suites.NatRatio
     Suites.Natural
-    Suites.Numeric
     Suites.Rational
 
   build-depends:

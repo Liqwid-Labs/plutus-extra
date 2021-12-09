@@ -262,23 +262,21 @@ type Hemifield a = (AdditiveHemigroup a, MultiplicativeGroup a)
  For 'abs', the following laws apply:
 
  1. @'abs' x '>=' 'zero'@
- 2. @'abs' 'zero' = 'zero'@
+ 2. @x '<=' 'abs' x@
  3. @'abs' (x '*' y) = 'abs' x '*' 'abs' y@
- 4. @'abs' (x '+' y) '<=' 'abs' x '+' 'abs' y@
 
  Additionally, if you define 'signum', the following law applies:
 
- 5. @'abs' x '*' 'signum' x = x@
+ 4. @'abs' x '*' 'signum' x = x@
 
- For the methods relating to the additive restriction, the following laws
- apply:
+ For the methods relating to the additive restriction, the following law
+ applies:
 
- 1. @'projectAbs' '.' 'addExtend' = 'id'@
- 2. If @'abs' x = x@, then @'addExtend' '.' 'projectAbs' '$' x = x@
+ 1. @'addExtend' '.' 'projectAbs' '$' x = 'abs' x@
 
  Additionally, if you define 'restrictMay', the following law applies:
 
- 3. @restrictMay x = Just y@ if and only if @abs x = x@.
+ 2. @restrictMay x = Just y@ if and only if @abs x = x@.
 
  @since 1.0
 -}
