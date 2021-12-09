@@ -463,7 +463,8 @@ instance Arbitrary Value where
     UniqueList css <- uniqueListOf num
     lst <- forM css $ \cs -> do
       UniqueList tns <- uniqueListOf num
-      pure $ (cs, AssocMap.fromList tns)
+      lst' <- forM tns $ \tn -> (tn,) <$> arbitrary
+      pure (cs, AssocMap.fromList lst')
     pure . Value . AssocMap.fromList $ lst
   shrink (Value mp) =
     fmap (Value . unUniqueKeys) . liftShrink shrinkAsUniqueKeys . UniqueKeys $ mp
