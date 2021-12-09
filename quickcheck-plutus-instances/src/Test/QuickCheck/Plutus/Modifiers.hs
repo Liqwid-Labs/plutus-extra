@@ -63,7 +63,7 @@ newtype UniqueList (a :: Type) = UniqueList [a]
 
 -- | @since 1.1
 instance (Arbitrary a, PlutusTx.Ord a) => Arbitrary (UniqueList a) where
-  arbitrary = sized $ \ size -> chooseInt (0, size) >>= uniqueListOf
+  arbitrary = sized $ \size -> chooseInt (0, size) >>= uniqueListOf
   shrink (UniqueList xs) = UniqueList <$> (filter isSorted . shrink $ xs)
 
 -- | @since 1.1
@@ -77,8 +77,7 @@ instance (Function a) => Function (UniqueList a) where
 
  @since 1.1
 -}
-newtype UniqueKeys (k :: Type) (v :: Type) =
-  UniqueKeys
+newtype UniqueKeys (k :: Type) (v :: Type) = UniqueKeys
   { -- | @since 1.3
     unUniqueKeys :: AssocMap.Map k v
   }
@@ -218,7 +217,7 @@ instance (Function a) => Function (NonZero a) where
       into (NonZero x) = x
 
 {- | Generates a UniqueList of the given length.
- 
+
  @since 1.3
 -}
 uniqueListOf ::

@@ -462,10 +462,10 @@ instance Arbitrary Value where
     num <- log2 <$> getSize
     UniqueList css <- uniqueListOf num
     lst <- forM css $ \cs -> do
-        UniqueList tns <- uniqueListOf num
-        pure $ (cs, AssocMap.fromList tns)
+      UniqueList tns <- uniqueListOf num
+      pure $ (cs, AssocMap.fromList tns)
     pure . Value . AssocMap.fromList $ lst
-  shrink (Value mp) = 
+  shrink (Value mp) =
     fmap (Value . unUniqueKeys) . liftShrink shrinkAsUniqueKeys . UniqueKeys $ mp
     where
       shrinkAsUniqueKeys ::
@@ -686,5 +686,5 @@ shrinkNonNegative i = do
 -- Integer part of logarithm base 2
 log2 :: Int -> Int
 log2 n
-  | n <=1 = 0
-  | otherwise = 1 + log2 (n `div` 2) 
+  | n <= 1 = 0
+  | otherwise = 1 + log2 (n `div` 2)
