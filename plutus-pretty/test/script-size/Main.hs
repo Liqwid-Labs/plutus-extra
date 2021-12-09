@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Main (
@@ -26,17 +27,17 @@ import PlutusTx.Skeleton (
 import PlutusTx.TH (compile)
 import Test (Foo)
 import Test.Tasty (defaultMain, testGroup)
-import Test.Tasty.Plutus.Size (fitsOnChain)
+import Test.Tasty.Plutus.Size (bytes, fitsInto)
 
 main :: IO ()
 main =
   defaultMain . testGroup "On-chain size" $
-    [ fitsOnChain "skeletize" . fromCompiledCode $ testSkeletize
-    , fitsOnChain "showSkeletal" . fromCompiledCode $ testShowSkeletal
-    , fitsOnChain "traceSkeletal" . fromCompiledCode $ testTraceSkeletal
-    , fitsOnChain "traceErrorSkeletal" . fromCompiledCode $ testTraceErrorSkeletal
-    , fitsOnChain "traceIfFalseSkeletal" . fromCompiledCode $ testTraceIfFalseSkeletal
-    , fitsOnChain "traceIfTrueSkeletal" . fromCompiledCode $ testTraceIfTrueSkeletal
+    [ fitsInto "skeletize" [bytes| 925 |] . fromCompiledCode $ testSkeletize
+    , fitsInto "showSkeletal" [bytes| 2493 |] . fromCompiledCode $ testShowSkeletal
+    , fitsInto "traceSkeletal" [bytes| 2495 |] . fromCompiledCode $ testTraceSkeletal
+    , fitsInto "traceErrorSkeletal" [bytes| 2510 |] . fromCompiledCode $ testTraceErrorSkeletal
+    , fitsInto "traceIfFalseSkeletal" [bytes| 2505 |] . fromCompiledCode $ testTraceIfFalseSkeletal
+    , fitsInto "traceIfTrueSkeletal" [bytes| 2505 |] . fromCompiledCode $ testTraceIfTrueSkeletal
     ]
 
 -- Helpers
