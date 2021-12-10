@@ -177,7 +177,7 @@ and a function to create 'TestItems' from the seed, check that:
 
  * For any 'TestItems' the script always fails.
 
- This test ignores 'Outcome' from 'TestItems' and changes if to 'Fail'
+ This test ignores 'Outcome' from 'TestItems' and changes it to 'Fail'
 
  @since 5.0
 -}
@@ -196,7 +196,7 @@ and a function to create 'TestItems' from the seed, check that:
 
  * For any 'TestItems' the script always succeeds.
 
- This test ignores 'Outcome' from 'TestItems' and changes if to 'Pass'
+ This test ignores 'Outcome' from 'TestItems' and changes it to 'Pass'
 
  @since 5.0
 -}
