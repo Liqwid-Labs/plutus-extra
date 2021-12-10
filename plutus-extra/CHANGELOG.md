@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.1 --
+
+### Added
+
+- Instances of `Arbitrary`, `CoArbitrary` and `Function` for
+  `NonEmpty`
+
 ## 3.0 -- 2021-11-11
 
 - Plutus upgraded

@@ -45,7 +45,13 @@ module PlutusTx.NonEmpty (
 --------------------------------------------------------------------------------
 
 import Data.Kind (Type)
-import Prelude (Show, show)
+import Test.QuickCheck (
+  Arbitrary (arbitrary, shrink),
+  CoArbitrary (coarbitrary),
+  Function (function),
+  functionMap,
+ )
+import Prelude qualified
 
 --------------------------------------------------------------------------------
 
@@ -67,9 +73,9 @@ infixr 5 :|
 -- | A NonEmpty list is one which always has at least one element.
 data NonEmpty (a :: Type) = a :| [a]
 
-instance Show a => Show (NonEmpty a) where
+instance Prelude.Show a => Prelude.Show (NonEmpty a) where
   {-# INLINEABLE show #-}
-  show xs = "NonEmpty " ++ show (toList xs)
+  show xs = "NonEmpty " ++ Prelude.show (toList xs)
 
 instance Eq a => Eq (NonEmpty a) where
   {-# INLINEABLE (==) #-}
@@ -144,6 +150,27 @@ instance UnsafeFromData a => UnsafeFromData (NonEmpty a) where
   unsafeFromBuiltinData d = case unsafeFromBuiltinData d of
     (a : as) -> a :| as
     _ -> Builtins.error ()
+
+-- | @since 3.1
+instance (Arbitrary a) => Arbitrary (NonEmpty a) where
+  arbitrary = (:|) Prelude.<$> arbitrary Prelude.<*> arbitrary
+  shrink (a :| as) = do
+    a' <- shrink a
+    as' <- shrink as
+    Prelude.pure (a' :| as')
+
+-- | @since 3.1
+instance (CoArbitrary a) => CoArbitrary (NonEmpty a) where
+  coarbitrary (a :| as) = coarbitrary a . coarbitrary as
+
+-- | @since 3.1
+instance (Function a) => Function (NonEmpty a) where
+  function = functionMap to from
+    where
+      to :: NonEmpty a -> (a, [a])
+      to (a :| as) = (a, as)
+      from :: (a, [a]) -> NonEmpty a
+      from (a, as) = a :| as
 
 {-# INLINEABLE toList #-}
 
