@@ -26,7 +26,7 @@ module PlutusTx.Rational (
   -- * Conversion
   fromInteger,
   fromGHC,
-  toGHC,
+  Internal.toGHC,
 
   -- * Other functionality
   negate,
@@ -69,14 +69,6 @@ fromInteger num = Rational num one
 -}
 fromGHC :: GHC.Rational -> Rational
 fromGHC r = GHC.numerator r Internal.% GHC.denominator r
-
-{- | Converts a 'Rational' to a GHC 'GHC.Rational', preserving value. Does not
- work on-chain.
-
- @since 4.0
--}
-toGHC :: Rational -> GHC.Rational
-toGHC (Rational n d) = n GHC.% d
 
 {- | Produces the additive inverse of its argument.
 

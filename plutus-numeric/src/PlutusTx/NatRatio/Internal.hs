@@ -37,8 +37,9 @@ import PlutusTx.IsData.Class (
  )
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Natural.Internal (Natural (Natural))
-import PlutusTx.Prelude
-import PlutusTx.Ratio qualified as Ratio
+import PlutusTx.Prelude hiding (Rational, (%))
+import PlutusTx.Rational qualified as Ratio
+import PlutusTx.Rational.Internal ((%))
 import PlutusTx.SchemaUtils (
   RatioFields ((:%:)),
   jsonFieldSym,
@@ -66,7 +67,7 @@ import Prelude qualified
 
  @since 1.0
 -}
-newtype NatRatio = NatRatio Rational
+newtype NatRatio = NatRatio Ratio.Rational
   deriving stock
     ( -- | @since 1.0
       Prelude.Show
@@ -95,7 +96,7 @@ newtype NatRatio = NatRatio Rational
     , -- | @since 1.0
       ToArgument
     )
-    via Rational
+    via Ratio.Rational
   deriving
     ( -- | @since @1.2
       ToSchema
@@ -143,13 +144,13 @@ instance Arbitrary NatRatio where
   arbitrary = do
     Natural num <- arbitrary
     Natural den <- suchThat arbitrary (> zero)
-    Prelude.pure . NatRatio $ num Ratio.% den
+    Prelude.pure . NatRatio $ num % den
   shrink nr = do
     let Natural num = numerator nr
     let Natural den = denominator nr
     num' <- Prelude.filter (> 0) . shrink $ num
     den' <- Prelude.filter (> 0) . shrink $ den
-    Prelude.pure . NatRatio $ num' Ratio.% den'
+    Prelude.pure . NatRatio $ num' % den'
 
 -- | @since 2.2
 instance CoArbitrary NatRatio where
@@ -165,7 +166,7 @@ instance Function NatRatio where
       into :: NatRatio -> (Natural, Natural)
       into nr = (numerator nr, denominator nr)
       outOf :: (Natural, Natural) -> NatRatio
-      outOf (Natural num, Natural den) = NatRatio $ num Ratio.% den
+      outOf (Natural num, Natural den) = NatRatio $ num % den
 
 {- | Safely construct a 'NatRatio'. Checks for a zero denominator.
 
@@ -176,7 +177,7 @@ natRatio :: Natural -> Natural -> Maybe NatRatio
 natRatio (Natural n) (Natural m) =
   if m == 0
     then Nothing
-    else Just . NatRatio $ n Ratio.% m
+    else Just . NatRatio $ n % m
 
 {- | Convert a 'Natural' into a 'NatRatio' with the same value.
 
@@ -254,7 +255,7 @@ properFraction (NatRatio r) =
 
  @since 1.0
 -}
-toRational :: NatRatio -> Rational
+toRational :: NatRatio -> Ratio.Rational
 toRational (NatRatio r) = r
 
 {- | Newtype for deriving
