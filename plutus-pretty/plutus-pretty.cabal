@@ -93,7 +93,7 @@ test-suite properties
     , plutus-tx
     , pretty-show
     , QuickCheck                   ^>=2.14.2
-    , quickcheck-plutus-instances  ^>=1.3
+    , quickcheck-plutus-instances  ^>=1.4
     , tasty-quickcheck             ^>=0.10.1.2
 
   hs-source-dirs: test/properties
