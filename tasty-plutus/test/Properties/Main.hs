@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Main (main) where
@@ -15,6 +16,7 @@ import Test.Tasty.Plutus.Context (
   Purpose (ForSpending),
   paysToPubKey,
  )
+import Test.Tasty.Plutus.Options (maxSize, testCount)
 import Test.Tasty.Plutus.Script.Property (scriptProperty, scriptPropertyPass)
 import Test.Tasty.Plutus.TestData (
   Generator (GenForSpending),
@@ -32,8 +34,6 @@ import Test.Tasty.Plutus.TestData (
 import Test.Tasty.Plutus.WithScript (toTestValidator, withValidator)
 import Test.Tasty.QuickCheck (
   Gen,
-  QuickCheckMaxSize (QuickCheckMaxSize),
-  QuickCheckTests (QuickCheckTests),
   arbitrary,
   genericShrink,
   oneof,
@@ -59,8 +59,8 @@ main = defaultMain tests
 
 tests :: TestTree
 tests =
-  localOption (QuickCheckMaxSize 10) $
-    localOption (QuickCheckTests 100) $
+  localOption [maxSize| 20 |] $
+    localOption [testCount| 100 |] $
       withValidator "Property based testing" testSimpleValidator $ do
         scriptProperty "Validator checks the sum of the inputs" $
           GenForSpending gen1 transform1
