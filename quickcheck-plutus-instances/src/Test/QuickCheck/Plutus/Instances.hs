@@ -23,10 +23,11 @@
 -}
 module Test.QuickCheck.Plutus.Instances () where
 
-import Control.Monad (guard)
+import Control.Monad (forM, guard)
 import Data.ByteString (ByteString)
 import Data.Kind (Type)
 import Data.Maybe (maybeToList)
+import Data.Text (Text)
 import Data.Word (Word8)
 import GHC.Exts qualified as GHC
 import Ledger.Oracle (
@@ -72,6 +73,7 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins.Internal (
   BuiltinByteString (BuiltinByteString),
   BuiltinData (BuiltinData),
+  BuiltinString (BuiltinString),
  )
 import PlutusTx.Prelude qualified as PTx
 import Test.QuickCheck.Arbitrary (
@@ -84,14 +86,20 @@ import Test.QuickCheck.Function (Function (function), functionMap)
 import Test.QuickCheck.Gen (
   Gen,
   chooseInt,
+  getSize,
   oneof,
   scale,
   sized,
   variant,
   vectorOf,
  )
+import Test.QuickCheck.Instances.Text ()
 import Test.QuickCheck.Modifiers (NonNegative (NonNegative))
-import Test.QuickCheck.Plutus.Modifiers (UniqueKeys (UniqueKeys))
+import Test.QuickCheck.Plutus.Modifiers (
+  UniqueKeys (UniqueKeys, unUniqueKeys),
+  UniqueList (UniqueList),
+  uniqueListOf,
+ )
 
 -- | @since 1.0
 instance Arbitrary BuiltinByteString where
@@ -449,10 +457,22 @@ instance (Function k, Function v) => Function (AssocMap.Map k v) where
   function = functionMap AssocMap.toList AssocMap.fromList
 
 -- | @since 1.1
-deriving via
-  (UniqueKeys CurrencySymbol (UniqueKeys TokenName Integer))
-  instance
-    Arbitrary Value
+instance Arbitrary Value where
+  arbitrary = do
+    num <- log2 <$> getSize
+    UniqueList css <- uniqueListOf num
+    lst <- forM css $ \cs -> do
+      UniqueList tns <- uniqueListOf num
+      lst' <- forM tns $ \tn -> (tn,) <$> arbitrary
+      pure (cs, AssocMap.fromList lst')
+    pure . Value . AssocMap.fromList $ lst
+  shrink (Value mp) =
+    fmap (Value . unUniqueKeys) . liftShrink shrinkAsUniqueKeys . UniqueKeys $ mp
+    where
+      shrinkAsUniqueKeys ::
+        AssocMap.Map TokenName Integer ->
+        [AssocMap.Map TokenName Integer]
+      shrinkAsUniqueKeys = fmap unUniqueKeys . shrink . UniqueKeys
 
 -- | @since 1.1
 deriving via
@@ -614,6 +634,19 @@ instance Function AssetClass where
       into :: AssetClass -> (CurrencySymbol, TokenName)
       into (AssetClass x) = x
 
+-- | @since 1.2
+deriving via Text instance Arbitrary BuiltinString
+
+-- | @since 1.2
+deriving via Text instance CoArbitrary BuiltinString
+
+-- | @since 1.2
+instance Function BuiltinString where
+  function = functionMap into BuiltinString
+    where
+      into :: BuiltinString -> Text
+      into (BuiltinString t) = t
+
 -- Helpers
 
 -- Generates ByteStrings up to 64 bytes long
@@ -650,3 +683,9 @@ shrinkNonNegative :: Integer -> [Integer]
 shrinkNonNegative i = do
   NonNegative i' <- shrink . NonNegative $ i
   pure i'
+
+-- Integer part of logarithm base 2
+log2 :: Int -> Int
+log2 n
+  | n <= 1 = 0
+  | otherwise = 1 + log2 (n `div` 2)

@@ -2,15 +2,15 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 5.0
+## 5.0 -- 2021-12-10
 
 ### Added
 
 * `passIf` combinator for creating `Outcome` from a condition.
 * `TestItems (p :: Purpose)` type represens the data set for script checking
-* Property based testing example (test/Properties/Main.hs)
 * `scriptPropertyFail` to test the conditions under which a script should always succeed
 * `scriptPropertyPass` to test the conditions under which a script should always fail
+* Property based testing example (test/Properties/Main.hs)
 
 ### Changed
 

@@ -12,6 +12,8 @@ module Test.QuickCheck.Plutus.Modifiers (
   UniqueList (..),
   UniqueKeys (..),
   NonNegative (..),
+  NonZero (..),
+  uniqueListOf,
 ) where
 
 import Control.Monad (guard)
@@ -61,22 +63,7 @@ newtype UniqueList (a :: Type) = UniqueList [a]
 
 -- | @since 1.1
 instance (Arbitrary a, PlutusTx.Ord a) => Arbitrary (UniqueList a) where
-  arbitrary = UniqueList <$> sized go
-    where
-      go :: Int -> Gen [a]
-      go s = do
-        len <- chooseInt (0, s)
-        recGen len
-      recGen :: Int -> Gen [a]
-      recGen len
-        | len == 0 = pure []
-        | len == 1 = (: []) <$> arbitrary
-        | otherwise = do
-          let leftLen = len `quot` 2
-          let rightLen = len - leftLen
-          leftHalf <- recGen leftLen
-          rightHalf <- recGen rightLen
-          pure . merge leftHalf $ rightHalf
+  arbitrary = sized $ \size -> chooseInt (0, size) >>= uniqueListOf
   shrink (UniqueList xs) = UniqueList <$> (filter isSorted . shrink $ xs)
 
 -- | @since 1.1
@@ -90,7 +77,10 @@ instance (Function a) => Function (UniqueList a) where
 
  @since 1.1
 -}
-newtype UniqueKeys (k :: Type) (v :: Type) = UniqueKeys (AssocMap.Map k v)
+newtype UniqueKeys (k :: Type) (v :: Type) = UniqueKeys
+  { -- | @since 1.3
+    unUniqueKeys :: AssocMap.Map k v
+  }
   deriving stock
     ( -- | @since 1.1
       Show
@@ -186,6 +176,67 @@ instance (Function a) => Function (NonNegative a) where
     where
       into :: NonNegative a -> a
       into (NonNegative x) = x
+
+{- | A newtype around numerical types which ensures they are not zero; that is,
+ that their value is not 'PlutusTx.zero'. This is a Plutus-specific
+ generalization of the wrapper of the same name from QuickCheck.
+
+ @since 1.2
+-}
+newtype NonZero (a :: Type) = NonZero a
+  deriving stock
+    ( -- | @since 1.2
+      Show
+    )
+  deriving
+    ( -- | @since 1.2
+      Eq
+    , -- | @since 1.2
+      PlutusTx.Eq
+    , -- | @since 1.2
+      CoArbitrary
+    )
+    via a
+
+-- | @since 1.2
+instance
+  (Arbitrary a, PlutusTx.Eq a, PlutusTx.AdditiveMonoid a) =>
+  Arbitrary (NonZero a)
+  where
+  arbitrary = NonZero <$> suchThat arbitrary (PlutusTx./= PlutusTx.zero)
+  shrink (NonZero x) = do
+    x' <- shrink x
+    guard (x' PlutusTx./= PlutusTx.zero)
+    pure . NonZero $ x'
+
+-- | @since 1.2
+instance (Function a) => Function (NonZero a) where
+  function = functionMap into NonZero
+    where
+      into :: NonZero a -> a
+      into (NonZero x) = x
+
+{- | Generates a UniqueList of the given length.
+
+ @since 1.3
+-}
+uniqueListOf ::
+  forall (a :: Type).
+  (Arbitrary a, PlutusTx.Ord a) =>
+  Int ->
+  Gen (UniqueList a)
+uniqueListOf size = UniqueList <$> recGen size
+  where
+    recGen :: Int -> Gen [a]
+    recGen len
+      | len == 0 = pure []
+      | len == 1 = (: []) <$> arbitrary
+      | otherwise = do
+        let leftLen = len `quot` 2
+        let rightLen = len - leftLen
+        leftHalf <- recGen leftLen
+        rightHalf <- recGen rightLen
+        pure . merge leftHalf $ rightHalf
 
 -- Helpers
 
