@@ -1,3 +1,4 @@
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Main (main) where
@@ -15,7 +16,8 @@ import Test.Tasty.Plutus.Context (
   Purpose (ForSpending),
   paysToPubKey,
  )
-import Test.Tasty.Plutus.Script.Property (scriptProperty)
+import Test.Tasty.Plutus.Options (maxSize, testCount)
+import Test.Tasty.Plutus.Script.Property (scriptProperty, scriptPropertyPass)
 import Test.Tasty.Plutus.TestData (
   Generator (GenForSpending),
   Methodology (Methodology),
@@ -32,8 +34,6 @@ import Test.Tasty.Plutus.TestData (
 import Test.Tasty.Plutus.WithScript (toTestValidator, withValidator)
 import Test.Tasty.QuickCheck (
   Gen,
-  QuickCheckMaxSize (QuickCheckMaxSize),
-  QuickCheckTests (QuickCheckTests),
   arbitrary,
   genericShrink,
   oneof,
@@ -59,11 +59,15 @@ main = defaultMain tests
 
 tests :: TestTree
 tests =
-  localOption (QuickCheckMaxSize 20) $
-    localOption (QuickCheckTests 100) $
+  localOption [maxSize| 20 |] $
+    localOption [testCount| 100 |] $
       withValidator "Property based testing" testSimpleValidator $ do
-        scriptProperty "Validator checks the sum of the inputs" $ GenForSpending gen1 transform1
-        scriptProperty "Validator checks the product of the inputs" $ GenForSpending gen1 transform2
+        scriptProperty "Validator checks the sum of the inputs" $
+          GenForSpending gen1 transform1
+        scriptProperty "Validator checks the product of the inputs" $
+          GenForSpending gen1 transform2
+        scriptPropertyPass "Validator succeeds if the sum and product are correct" $
+          GenForSpending gen1 transform3
 
 gen1 :: Methodology (Integer, Integer, Integer, Integer, Value)
 gen1 = Methodology gen' genericShrink
@@ -105,6 +109,22 @@ transform2 (i1, i2, _, iProd, val) =
     cb = paysToPubKey userPKHash val
     out :: Outcome
     out = if iProd == i1 * i2 then Pass else Fail
+
+-- | Always creates TestItems with correct sum and product
+transform3 :: (Integer, Integer, Integer, Integer, Value) -> TestItems 'ForSpending
+transform3 (i1, i2, _, _, val) =
+  ItemsForSpending
+    { spendDatum = (i1, i2)
+    , spendRedeemer = (i1 + i2, i1 * i2)
+    , spendValue = val
+    , spendCB = cb
+    , spendOutcome = out
+    }
+  where
+    cb :: ContextBuilder 'ForSpending
+    cb = paysToPubKey userPKHash val
+    out :: Outcome
+    out = Pass
 
 {- | A validator for testing property-based testing functionality.
 
