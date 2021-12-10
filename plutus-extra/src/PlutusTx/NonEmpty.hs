@@ -72,6 +72,12 @@ infixr 5 :|
 
 -- | A NonEmpty list is one which always has at least one element.
 data NonEmpty (a :: Type) = a :| [a]
+  deriving stock
+    ( -- | @since 3.1
+      Prelude.Eq
+    , -- | @since 3.1
+      Prelude.Ord
+    )
 
 instance Prelude.Show a => Prelude.Show (NonEmpty a) where
   {-# INLINEABLE show #-}
