@@ -33,8 +33,10 @@ main =
   defaultMain . adjustOption (max testMinimum) . testGroup "Laws" $
     [ jsonLaws @Natural
     , jsonLaws @NatRatio
+    , jsonLaws @Rational
     , dataLaws @Natural
     , dataLaws @NatRatio
+    , dataLaws @Rational
     , plutusEqLaws @Natural
     , plutusEqLawsSubstitution @Natural
     , plutusEqLaws @Rational

@@ -3,20 +3,28 @@
 
 module PlutusTx.Rational.Internal (
   Rational (..),
+  RatioSchema (..),
   (%),
   ratio,
   toGHC,
+  numerator,
+  denominator,
 ) where
 
 import Control.Monad (guard)
 import Data.Aeson (
   FromJSON (parseJSON),
   ToJSON (toJSON),
+  Value,
   object,
   withObject,
   (.:),
  )
+import Data.Aeson.Types (Parser)
+import Data.OpenApi (ToSchema (declareNamedSchema))
 import Data.Ratio qualified as GHC
+import GHC.Generics (Generic)
+import GHC.TypeLits (KnownSymbol, Symbol)
 import PlutusTx.IsData.Class (
   FromData (fromBuiltinData),
   ToData (toBuiltinData),
@@ -31,6 +39,12 @@ import PlutusTx.Prelude hiding (
   (%),
  )
 import PlutusTx.Prelude qualified as Plutus
+import PlutusTx.SchemaUtils (
+  RatioFields ((:%:)),
+  jsonFieldSym,
+  ratioDeclareNamedSchema,
+  ratioTypeName,
+ )
 import Test.QuickCheck.Arbitrary (
   Arbitrary (arbitrary, shrink),
   CoArbitrary (coarbitrary),
@@ -51,6 +65,11 @@ data Rational = Rational Integer Integer
     , -- | @since 4.0
       Prelude.Show
     )
+  deriving
+    ( -- | @since 4.0
+      ToSchema
+    )
+    via (RatioSchema ("numerator" ':%: "denominator"))
 
 -- | @since 4.0
 instance Eq Rational where
@@ -185,8 +204,6 @@ instance FromJSON Rational where
 instance PrettyVal Rational where
   prettyVal = prettyVal . toGHC
 
--- TODO: ToSchema
-
 {-# INLINEABLE (%) #-}
 (%) :: Integer -> Integer -> Rational
 n % d
@@ -220,7 +237,96 @@ ratio n d
 toGHC :: Rational -> GHC.Rational
 toGHC (Rational n d) = n GHC.% d
 
+{- | Returns the (possibly reduced) numerator of its argument.
+
+ @since 4.0
+-}
+{-# INLINEABLE numerator #-}
+numerator :: Rational -> Integer
+numerator (Rational n _) = n
+
+{- | Returns the (possibly reduced) denominator of its argument. This will
+ always be greater than 1, although the type does not describe this.
+
+ @since 4.0
+-}
+{-# INLINEABLE denominator #-}
+denominator :: Rational -> Integer
+denominator (Rational _ d) = d
+
+{- | Newtype for deriving 'ToSchema', 'ToJSON' and 'FromJSON' instances
+  for newtypes over 'Rational' with the specified field names for the
+  numerator and denominator.
+
+= Example
+
+@
+newtype PercentageChangeRatio = PercentageChangeRatio Rational
+  deriving
+    (ToJSON, FromJSON, OpenApi.ToSchema)
+    via (RatioSchema ("Change" ':%: "Value"))
+@
+
+ @since 2.3
+-}
+newtype RatioSchema (dir :: RatioFields)
+  = RatioSchema Rational
+  deriving stock
+    ( -- | @since 2.3
+      Prelude.Show
+    , -- | @since 2.3
+      Generic
+    )
+
+-- | @since 2.3
+instance
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
+  ) =>
+  ToJSON (RatioSchema (numerator ':%: denominator))
+  where
+  toJSON :: RatioSchema (numerator ':%: denominator) -> Value
+  toJSON (RatioSchema r) =
+    object
+      [ (jsonFieldSym @numerator, toJSON @Integer $ numerator r)
+      , (jsonFieldSym @denominator, toJSON @Integer $ denominator r)
+      ]
+
+-- | @since 2.3
+instance
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
+  ) =>
+  FromJSON (RatioSchema (numerator ':%: denominator))
+  where
+  parseJSON :: Value -> Parser (RatioSchema (numerator ':%: denominator))
+  parseJSON =
+    withObject (ratioTypeName @numerator @denominator "Ratio") $ \obj ->
+      mkRatioSchema
+        Prelude.<$> obj .: jsonFieldSym @numerator
+        Prelude.<*> obj .: jsonFieldSym @denominator
+
+-- | @since 2.3
+instance
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
+  ) =>
+  ToSchema (RatioSchema (numerator ':%: denominator))
+  where
+  declareNamedSchema _ =
+    ratioDeclareNamedSchema @numerator @denominator "RatioSchema"
+
 -- Helpers
+
+mkRatioSchema ::
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  Integer ->
+  Integer ->
+  RatioSchema (numerator ':%: denominator)
+mkRatioSchema num denom = RatioSchema (num % denom)
 
 -- Euclid's algorithm
 {-# INLINEABLE euclid #-}

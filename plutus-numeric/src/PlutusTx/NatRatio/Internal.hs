@@ -88,10 +88,10 @@ newtype NatRatio = NatRatio Ratio.Rational
     )
     via Ratio.Rational
   deriving
-    ( -- | @since @1.2
+    ( -- | @since 1.2
       ToSchema
     )
-    via (NatRatioSchema ("denominator" ':%: "numerator"))
+    via (NatRatioSchema ("numerator" ':%: "denominator"))
 
 {- | Represents this like a positive-only ratio.
 

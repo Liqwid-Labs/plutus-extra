@@ -59,7 +59,6 @@ library
     PlutusTx.Numeric.Extra
     PlutusTx.Numeric.Gen
     PlutusTx.Numeric.Laws
-    PlutusTx.Ratio.Extra
     PlutusTx.Rational
     PlutusTx.SchemaUtils
 

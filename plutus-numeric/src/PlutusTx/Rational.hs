@@ -30,8 +30,8 @@ module PlutusTx.Rational (
 
   -- * Other functionality
   negate,
-  numerator,
-  denominator,
+  Internal.numerator,
+  Internal.denominator,
   abs,
   properFraction,
   recip,
@@ -77,23 +77,6 @@ fromGHC r = GHC.numerator r Internal.% GHC.denominator r
 {-# INLINEABLE negate #-}
 negate :: Rational -> Rational
 negate (Rational n d) = Rational (Plutus.negate n) d
-
-{- | Returns the (possibly reduced) numerator of its argument.
-
- @since 4.0
--}
-{-# INLINEABLE numerator #-}
-numerator :: Rational -> Integer
-numerator (Rational n _) = n
-
-{- | Returns the (possibly reduced) denominator of its argument. This will
- always be greater than 1, although the type does not describe this.
-
- @since 4.0
--}
-{-# INLINEABLE denominator #-}
-denominator :: Rational -> Integer
-denominator (Rational _ d) = d
 
 {- | Returns the absolute value of its argument. Specialized for 'Rational's.
 

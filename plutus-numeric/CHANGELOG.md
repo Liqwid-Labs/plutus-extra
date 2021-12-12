@@ -13,7 +13,14 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Changed
 
-* `ToSchema` and `ToArgument` instances from Plutus are gone.
+* `RatioSchema` is now exported from `PlutusTx.Rational`.
+* `IntegralDomain` instance for `NatRatio` now 'extends into'
+  `PlutusTx.Rational`'s `Rational`.
+
+### Removed
+
+* `PlutusTx.Ratio.Extra` module.
+* `ToSchema` and `ToArgument` instances from Plutus.
 
 ## 3.0 -- 2021-12-04
 
