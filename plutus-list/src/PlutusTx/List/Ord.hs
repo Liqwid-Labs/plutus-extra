@@ -7,7 +7,7 @@
  Maintainer: Xiaoyan Ren <xiaoyan@mlabs.city>
  Portability: GHC only
  Stability: Experimental
- Functions for checking the sortedness of lists.
+ Functions related to sorting lists.
 -}
 module PlutusTx.List.Ord (
   isSorted,
@@ -22,7 +22,6 @@ module PlutusTx.List.Ord (
   ordNubBy,
 ) where
 
-import Data.Function (on)
 import Data.Kind (Type)
 import PlutusTx.Prelude
 import Prelude qualified ()
@@ -101,7 +100,15 @@ isSortedAscending ::
   Bool
 isSortedAscending = isSortedBy (<)
 
-{- | The inlineable version of @sort@ in @base@.
+{- | The sort function implements a stable sorting algorithm. It is a special
+case of 'sortBy', which allows the programmer to supply their own comparison
+function.
+
+Elements are arranged from lowest to highest, keeping duplicates in the order
+they appeared in the input.
+
+>>> sort [1,6,4,3,2,5]
+[1,2,3,4,5,6]
 
  @since 1.0
 -}
@@ -109,50 +116,43 @@ isSortedAscending = isSortedBy (<)
 sort :: forall (a :: Type). (Ord a) => [a] -> [a]
 sort = sortBy compare
 
-{- | The inlineable version of @sortOn@ in @base@.
+{- | Sort a list by comparing the results of a key function applied to each
+element.
+
+Elements are arranged from lowest to highest, keeping duplicates in the order
+they appeared in the input.
+
+>>> sortOn fst [(2, "world"), (4, "!"), (1, "Hello")]
+[(1,"Hello"),(2,"world"),(4,"!")]
 
  @since 1.0
 -}
 {-# INLINEABLE sortOn #-}
 sortOn :: forall (a :: Type) (b :: Type). (Ord b) => (a -> b) -> [a] -> [a]
-sortOn = sortBy . (compare `on`)
+sortOn f = sortBy $ \x y -> compare (f x) (f y)
 
-{- | The inlineable version of @sortBy@ in @base@.
+{- | The 'sortBy' function is the non-overloaded function of 'sort'. In order
+to reduce code size, this is a naive implementation of mergesort, slower than
+the version in @base@.
 
  @since 1.0
 -}
 {-# INLINEABLE sortBy #-}
 sortBy :: forall (a :: Type). (a -> a -> Ordering) -> [a] -> [a]
-sortBy cmp = mergeAll . sequences
+sortBy cmp = mergeAll . map (: [])
   where
-    sequences (a : b : xs)
-      | a `cmp` b == GT = descending b [a] xs
-      | otherwise = ascending b (a :) xs
-    sequences xs = [xs]
-
-    descending a as (b : bs)
-      | a `cmp` b == GT = descending b (a : as) bs
-    descending a as bs = (a : as) : sequences bs
-
-    ascending a as (b : bs)
-      | a `cmp` b /= GT = ascending b (\ys -> as (a : ys)) bs
-    ascending a as bs =
-      let !x = as [a]
-       in x : sequences bs
-
-    mergeAll [x] = x
+    mergeAll [] = []
+    mergeAll [t] = t
     mergeAll xs = mergeAll (mergePairs xs)
 
-    mergePairs (a : b : xs) =
-      let !x = merge a b
-       in x : mergePairs xs
+    mergePairs (x : y : xs) = merge x y : mergePairs xs
     mergePairs xs = xs
 
-    merge as@(a : as') bs@(b : bs')
-      | a `cmp` b == GT = b : merge as bs'
-      | otherwise = a : merge as' bs
-    merge [] bs = bs
-    merge as [] = as
+    merge [] ys = ys
+    merge xs [] = xs
+    merge (x : xs) (y : ys)
+      | x `cmp` y == GT = y : merge (x : xs) ys
+      | otherwise = x : merge xs (y : ys)
 
 {- | \( \mathcal{O}(n \log n) \). This function removes duplicate elements in a
  list and sorts the list in ascending order.
