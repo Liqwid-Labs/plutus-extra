@@ -26,8 +26,7 @@ import Data.Aeson (
   (.:),
  )
 import Data.Aeson.Types (Parser)
-import Data.Coerce (coerce)
-import Data.OpenApi qualified as OpenApi
+import Data.OpenApi (ToSchema (declareNamedSchema))
 import GHC.Generics (Generic)
 import GHC.TypeLits (KnownSymbol, Symbol)
 import PlutusTx.IsData.Class (
@@ -44,14 +43,7 @@ import PlutusTx.SchemaUtils (
   RatioFields ((:%:)),
   jsonFieldSym,
   ratioDeclareNamedSchema,
-  ratioFixFormArgument,
-  ratioFormSchema,
   ratioTypeName,
- )
-import Schema (
-  FormSchema,
-  ToArgument (toArgument),
-  ToSchema (toSchema),
  )
 import Test.QuickCheck.Arbitrary (
   Arbitrary (arbitrary, shrink),
@@ -93,15 +85,11 @@ newtype NatRatio = NatRatio Ratio.Rational
       ToData
     , -- | @since 1.0
       ToJSON
-    , -- | @since 1.0
-      ToArgument
     )
     via Ratio.Rational
   deriving
     ( -- | @since @1.2
       ToSchema
-    , -- | @since @1.2
-      OpenApi.ToSchema
     )
     via (NatRatioSchema ("denominator" ':%: "numerator"))
 
@@ -258,16 +246,16 @@ properFraction (NatRatio r) =
 toRational :: NatRatio -> Ratio.Rational
 toRational (NatRatio r) = r
 
-{- | Newtype for deriving
-'ToSchema', 'ToArgument', 'OpenApi.ToSchema', 'ToJSON' and 'FromJSON' instances
-for newtypes over NatRatio with the specified field names for the numerator and denominator.
+{- | Newtype for deriving 'ToSchema', 'ToJSON' and 'FromJSON' instances
+ for newtypes over 'NatRatio' with the specified field names for the numerator
+ and denominator.
 
 = Example
 
 @
 newtype ExchangeRatio = ExchangeRatio NatRatio
   deriving
-    (ToJSON, FromJSON, OpenApi.ToSchema)
+    (ToJSON, FromJSON, ToSchema)
     via (NatRatioSchema ("Bitcoin" ':%: "USD"))
 @
 
@@ -321,33 +309,6 @@ instance
   , KnownSymbol denominator
   ) =>
   ToSchema (NatRatioSchema (numerator ':%: denominator))
-  where
-  toSchema :: FormSchema
-  toSchema = ratioFormSchema @numerator @denominator
-
--- | @since 2.3
-instance
-  forall (numerator :: Symbol) (denominator :: Symbol).
-  ( KnownSymbol numerator
-  , KnownSymbol denominator
-  ) =>
-  ToArgument (NatRatioSchema (numerator ':%: denominator))
-  where
-  toArgument (NatRatioSchema ratio) =
-    ratioFixFormArgument @numerator @denominator num denom
-    where
-      num :: Integer
-      num = coerce . numerator $ ratio
-      denom :: Integer
-      denom = coerce . denominator $ ratio
-
--- | @since 2.3
-instance
-  forall (numerator :: Symbol) (denominator :: Symbol).
-  ( KnownSymbol numerator
-  , KnownSymbol denominator
-  ) =>
-  OpenApi.ToSchema (NatRatioSchema (numerator ':%: denominator))
   where
   declareNamedSchema _ =
     ratioDeclareNamedSchema @numerator @denominator "NatRatioSchema"

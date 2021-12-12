@@ -11,7 +11,7 @@ import Data.Aeson (
   (.:),
  )
 import Data.Aeson.Types (Parser)
-import Data.OpenApi qualified as OpenApi
+import Data.OpenApi (ToSchema (declareNamedSchema))
 import GHC.Generics (Generic)
 import GHC.TypeLits (KnownSymbol, Symbol)
 import PlutusTx.Prelude qualified
@@ -20,22 +20,13 @@ import PlutusTx.SchemaUtils (
   RatioFields ((:%:)),
   jsonFieldSym,
   ratioDeclareNamedSchema,
-  ratioFixFormArgument,
-  ratioFormSchema,
   ratioTypeName,
- )
-import Schema (
-  FormSchema,
-  ToArgument,
-  ToSchema,
-  toArgument,
-  toSchema,
  )
 import Prelude
 
-{- | Newtype for deriving
-'ToSchema', 'ToArgument', 'OpenApi.ToSchema', 'ToJSON' and 'FromJSON' instances
-for newtypes over Rational with the specified field names for the numerator and denominator.
+{- | Newtype for deriving 'ToSchema', 'ToJSON' and 'FromJSON' instances
+  for newtypes over 'Rational' with the specified field names for the
+  numerator and denominator.
 
 = Example
 
@@ -101,33 +92,6 @@ instance
   , KnownSymbol denominator
   ) =>
   ToSchema (RatioSchema (numerator ':%: denominator))
-  where
-  toSchema :: FormSchema
-  toSchema = ratioFormSchema @numerator @denominator
-
--- | @since 2.3
-instance
-  forall (numerator :: Symbol) (denominator :: Symbol).
-  ( KnownSymbol numerator
-  , KnownSymbol denominator
-  ) =>
-  ToArgument (RatioSchema (numerator ':%: denominator))
-  where
-  toArgument (RatioSchema ratio) =
-    ratioFixFormArgument @numerator @denominator num denom
-    where
-      num :: Integer
-      num = Ratio.numerator ratio
-      denom :: Integer
-      denom = Ratio.denominator ratio
-
--- | @since 2.3
-instance
-  forall (numerator :: Symbol) (denominator :: Symbol).
-  ( KnownSymbol numerator
-  , KnownSymbol denominator
-  ) =>
-  OpenApi.ToSchema (RatioSchema (numerator ':%: denominator))
   where
   declareNamedSchema _ =
     ratioDeclareNamedSchema @numerator @denominator "RatioSchema"

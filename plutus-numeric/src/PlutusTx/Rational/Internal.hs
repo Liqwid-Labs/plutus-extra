@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module PlutusTx.Rational.Internal (
@@ -21,6 +22,7 @@ import PlutusTx.IsData.Class (
   ToData (toBuiltinData),
   UnsafeFromData (unsafeFromBuiltinData),
  )
+import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude hiding (
   Rational,
   fromInteger,
@@ -183,7 +185,7 @@ instance FromJSON Rational where
 instance PrettyVal Rational where
   prettyVal = prettyVal . toGHC
 
--- TODO: ToArgument, ToSchema (both flavours), PrettyVal
+-- TODO: ToSchema
 
 {-# INLINEABLE (%) #-}
 (%) :: Integer -> Integer -> Rational
@@ -226,3 +228,5 @@ euclid :: Integer -> Integer -> Integer
 euclid x y
   | y == zero = x
   | otherwise = euclid y (x `modulo` y)
+
+$(makeLift ''Rational)

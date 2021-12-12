@@ -64,10 +64,10 @@ main =
     , laws @NatRatio "Additive hemigroup" additiveHemigroupLaws
     , laws @Natural "EuclideanClosed" euclideanClosedLaws
     , laws @Integer "EuclideanClosed" euclideanClosedSignedLaws
-    , -- , laws @Rational "Multiplicative group" multiplicativeGroupLaws
-      laws @NatRatio "Multiplicative group" multiplicativeGroupLaws
+    , laws @Rational "Multiplicative group" multiplicativeGroupLaws
+    , laws @NatRatio "Multiplicative group" multiplicativeGroupLaws
     , laws @Integer "IntegralDomain" integralDomainLaws
-    -- laws @Rational "IntegralDomain" integralDomainLaws
+    , laws @Rational "IntegralDomain" integralDomainLaws
     ]
   where
     testMinimum :: QuickCheckTests

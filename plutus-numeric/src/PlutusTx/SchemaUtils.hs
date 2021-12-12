@@ -3,13 +3,10 @@
 module PlutusTx.SchemaUtils (
   RatioFields ((:%:)),
   ratioDeclareNamedSchema,
-  ratioFixFormArgument,
-  ratioFormSchema,
   ratioTypeName,
   jsonFieldSym,
 ) where
 
-import Data.Functor.Foldable (Fix (Fix))
 import Data.OpenApi qualified as OpenApi
 import Data.OpenApi.Declare (type Declare)
 import Data.Proxy (Proxy (Proxy))
@@ -17,12 +14,6 @@ import Data.Text (Text, pack)
 import Data.Text qualified as Text
 import GHC.Exts
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
-import Schema (
-  FormArgumentF (FormObjectF),
-  FormSchema (FormSchemaObject),
-  toArgument,
-  toSchema,
- )
 import Prelude
 
 {- | Type-level data representing the "direction" that a ratio converts to or from.
@@ -55,35 +46,6 @@ ratioDeclareNamedSchema name = do
               , (Text.pack $ symbolVal (Proxy @denominator), integerSchema)
               ]
         }
-
--- | @since 2.3
-ratioFixFormArgument ::
-  forall (numerator :: Symbol) (denominator :: Symbol).
-  ( KnownSymbol numerator
-  , KnownSymbol denominator
-  ) =>
-  Integer ->
-  Integer ->
-  Fix FormArgumentF
-ratioFixFormArgument num denom =
-  Fix $
-    FormObjectF
-      [ (symbolVal (Proxy @numerator), toArgument num)
-      , (symbolVal (Proxy @denominator), toArgument denom)
-      ]
-
--- | @since 2.3
-ratioFormSchema ::
-  forall (numerator :: Symbol) (denominator :: Symbol).
-  ( KnownSymbol numerator
-  , KnownSymbol denominator
-  ) =>
-  FormSchema
-ratioFormSchema =
-  FormSchemaObject
-    [ (symbolVal (Proxy @numerator), toSchema @Integer)
-    , (symbolVal (Proxy @denominator), toSchema @Integer)
-    ]
 
 ratioTypeName ::
   forall (numerator :: Symbol) (denominator :: Symbol).

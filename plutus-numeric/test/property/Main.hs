@@ -1,7 +1,5 @@
 module Main (main) where
 
--- ensures compilation on-chain gets tested
-import Compilation ()
 import Suites.Consistency qualified as Consistency
 import Suites.NatRatio qualified as NatRatio
 import Suites.Natural qualified as Natural

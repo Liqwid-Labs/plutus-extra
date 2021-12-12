@@ -42,7 +42,7 @@ module PlutusTx.NatRatio (
 import PlutusTx.NatRatio.Internal qualified as Internal
 import PlutusTx.NatRatio.QQ qualified as QQ
 import PlutusTx.Numeric.Extra (addExtend)
-import PlutusTx.Ratio qualified as Ratio
+import PlutusTx.Rational qualified as Ratio
 
 {- | The same as 'addExtend', but specialized for the 'Internal.NatRatio' to
  'Ratio.Rational' case.

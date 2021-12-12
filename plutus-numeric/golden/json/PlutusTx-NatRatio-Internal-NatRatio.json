@@ -1,85 +1,85 @@
 {
     "seed": 123456,
     "data": [
-        [
-            29,
-            47
-        ],
-        [
-            17,
-            5
-        ],
-        [
-            26,
-            75
-        ],
-        [
-            8,
-            25
-        ],
-        [
-            34,
-            25
-        ],
-        [
-            84,
-            55
-        ],
-        [
-            11,
-            31
-        ],
-        [
-            18,
-            47
-        ],
-        [
-            91,
-            87
-        ],
-        [
-            89,
-            17
-        ],
-        [
-            67,
-            3
-        ],
-        [
-            1,
-            1
-        ],
-        [
-            81,
-            37
-        ],
-        [
-            96,
-            67
-        ],
-        [
-            27,
-            7
-        ],
-        [
-            19,
-            37
-        ],
-        [
-            57,
-            100
-        ],
-        [
-            7,
-            26
-        ],
-        [
-            55,
-            46
-        ],
-        [
-            7,
-            11
-        ]
+        {
+            "numerator": 29,
+            "denominator": 47
+        },
+        {
+            "numerator": 17,
+            "denominator": 5
+        },
+        {
+            "numerator": 26,
+            "denominator": 75
+        },
+        {
+            "numerator": 8,
+            "denominator": 25
+        },
+        {
+            "numerator": 34,
+            "denominator": 25
+        },
+        {
+            "numerator": 84,
+            "denominator": 55
+        },
+        {
+            "numerator": 11,
+            "denominator": 31
+        },
+        {
+            "numerator": 18,
+            "denominator": 47
+        },
+        {
+            "numerator": 91,
+            "denominator": 87
+        },
+        {
+            "numerator": 89,
+            "denominator": 17
+        },
+        {
+            "numerator": 67,
+            "denominator": 3
+        },
+        {
+            "numerator": 1,
+            "denominator": 1
+        },
+        {
+            "numerator": 81,
+            "denominator": 37
+        },
+        {
+            "numerator": 96,
+            "denominator": 67
+        },
+        {
+            "numerator": 27,
+            "denominator": 7
+        },
+        {
+            "numerator": 19,
+            "denominator": 37
+        },
+        {
+            "numerator": 57,
+            "denominator": 100
+        },
+        {
+            "numerator": 7,
+            "denominator": 26
+        },
+        {
+            "numerator": 55,
+            "denominator": 46
+        },
+        {
+            "numerator": 7,
+            "denominator": 11
+        }
     ]
 }

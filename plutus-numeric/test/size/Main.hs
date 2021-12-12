@@ -26,7 +26,7 @@ import PlutusTx.Numeric.Extra (
  )
 import PlutusTx.Prelude (BuiltinData)
 import PlutusTx.Prelude qualified as PTx
-import PlutusTx.Ratio (Rational)
+import PlutusTx.Rational (Rational)
 import PlutusTx.TH (compile)
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.Plutus.Size (fitsOnChain)
