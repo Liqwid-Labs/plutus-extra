@@ -149,3 +149,16 @@ test-suite rational-compare-size
     , plutus-tx-plugin
 
   hs-source-dirs: test/rational-compare-size
+
+test-suite sizing-proof
+  import:         test-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  other-modules:  Functions
+  build-depends:
+    , plutus-ledger-api
+    , plutus-size-check  ^>=1.1
+    , plutus-tx
+    , plutus-tx-plugin
+
+  hs-source-dirs: test/sizing-proof
