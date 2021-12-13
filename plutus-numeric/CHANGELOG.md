@@ -16,6 +16,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * `RatioSchema` is now exported from `PlutusTx.Rational`.
 * `IntegralDomain` instance for `NatRatio` now 'extends into'
   `PlutusTx.Rational`'s `Rational`.
+* `NatRatio` is now based on the new `Rational` type.
 
 ### Removed
 
