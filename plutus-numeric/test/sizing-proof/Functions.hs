@@ -1,4 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 module Functions (
   round1,
@@ -8,7 +9,6 @@ module Functions (
   ) where
 
 import PlutusTx.Prelude
-import PlutusTx.Ratio (Rational, round)
 
 {-# INLINEABLE round1 #-}
 round1 :: [Rational] -> [Integer]
