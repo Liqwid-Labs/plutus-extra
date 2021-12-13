@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## Unreleased
+
+### Added
+
+- PlutusTx.Data.Extra: `toDatumHash` to converts an arbitrary value to a `Datum`
+  and evaluate it's hash
+
 ## 3.1 -- 2021-12-13
 
 ### Added

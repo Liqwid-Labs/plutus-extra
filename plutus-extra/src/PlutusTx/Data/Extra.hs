@@ -3,6 +3,7 @@
 
 module PlutusTx.Data.Extra (
   toDatum,
+  toDatumHash,
   toRedeemer,
   fromDatum,
   fromRedeemer,
@@ -28,6 +29,18 @@ toDatum ::
   Scripts.DatumType script ->
   Ledger.Datum
 toDatum = Ledger.Datum . Ledger.toBuiltinData
+
+{- | Converts an arbitrary value to a `Datum`and evaluates it's hash
+
+ @since 3.2
+-}
+{-# INLINEABLE toDatumHash #-}
+toDatumHash ::
+  forall (datum :: Type).
+  (Ledger.ToData datum) =>
+  datum ->
+  Ledger.DatumHash
+toDatumHash = datumHash . toDatum @datum
 
 -- | Converts an arbitrary value to a `Redeemer`
 {-# INLINEABLE toRedeemer #-}
