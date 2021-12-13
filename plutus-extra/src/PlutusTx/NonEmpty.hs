@@ -77,11 +77,9 @@ data NonEmpty (a :: Type) = a :| [a]
       Prelude.Eq
     , -- | @since 3.1
       Prelude.Ord
+    , -- | @since 3.1
+      Prelude.Show
     )
-
-instance Prelude.Show a => Prelude.Show (NonEmpty a) where
-  {-# INLINEABLE show #-}
-  show xs = "NonEmpty " ++ Prelude.show (toList xs)
 
 instance Eq a => Eq (NonEmpty a) where
   {-# INLINEABLE (==) #-}
@@ -203,7 +201,7 @@ Nothing
 
 Non-empty list case:
 >>> nonEmpty (1 : 2 : 3 : [])
-Just NonEmpty [1,2,3]
+Just (1 :| [2,3])
 -}
 nonEmpty :: forall (a :: Type). [a] -> Maybe (NonEmpty a)
 nonEmpty [] = Nothing
@@ -216,7 +214,7 @@ nonEmpty (a : as) = Just (a :| as)
 ==== __Examples__
 
 >>> singleton True
-NonEmpty [True]
+True :| []
 -}
 singleton :: forall (a :: Type). a -> NonEmpty a
 singleton a = a :| []
@@ -230,7 +228,7 @@ infixr 5 <|
 ==== __Examples__
 
 >>> 1 <| (2 :| 3 : [])
-NonEmpty [1,2,3]
+1 :| [2,3]
 -}
 (<|) :: forall (a :: Type). a -> NonEmpty a -> NonEmpty a
 a <| ~(b :| bs) = a :| b : bs
@@ -242,7 +240,7 @@ a <| ~(b :| bs) = a :| b : bs
 ==== __Examples__
 
 >>> cons 1  (2 :| 3 : [])
-NonEmpty [1,2,3]
+1 :| [2,3]
 -}
 cons :: forall (a :: Type). a -> NonEmpty a -> NonEmpty a
 cons = (<|)
@@ -258,7 +256,7 @@ cons = (<|)
 (1,Nothing)
 
 >>> uncons (1 :| 2 : [])
-(1,Just NonEmpty [2])
+(1,Just (2 :| []))
 -}
 uncons :: forall (a :: Type). NonEmpty a -> (a, Maybe (NonEmpty a))
 uncons ~(a :| as) = (a, nonEmpty as)
@@ -296,11 +294,11 @@ tail ~(_ :| as) = as
 
 ==== __Examples__
 
->>> tail (1 :| [])
-[]
+>>> init (1 :| [])
+[1]
 
->>> tail (1 :| 2 : 3 : [])
-[2,3]
+>>> init (1 :| 2 : 3 : [])
+[1,2]
 -}
 init :: forall (a :: Type). NonEmpty a -> [a]
 init ~(a :| as) = go a as
@@ -367,7 +365,7 @@ supply their own inequality test.
 ==== __Examples__
 
 >>> nub (1 :| [2,3,3,2,4]) :: NonEmpty Integer
-NonEmpty [1,2,3,4]
+1 :| [2,3,4]
 -}
 nub :: forall (a :: Type). Eq a => NonEmpty a -> NonEmpty a
 nub = nubBy (==)
@@ -381,10 +379,10 @@ nub = nubBy (==)
 ==== __Examples__
 
 >>> nubBy (==) (1 :| [2,3,3,2,4]) :: NonEmpty Integer
-NonEmpty [1,2,3,4]
+1 :| [2,3,4]
 
 >>> nubBy (<) (2 :| [1,3,3,4,1]) :: NonEmpty Integer
-NonEmpty [2,1,1]
+2 :| [1,1]
 -}
 nubBy :: forall (a :: Type). (a -> a -> Bool) -> NonEmpty a -> NonEmpty a
 nubBy eq (x :| xs) = x :| rest
@@ -400,7 +398,7 @@ nubBy eq (x :| xs) = x :| rest
 ==== __Examples__
 
 >>> zip (1 :| [2,3]) (True :| [False]) :: NonEmpty (Integer, Bool)
-NonEmpty [(1,True),(2,False)]
+(1,True) :| [(2,False)]
 -}
 zip ::
   forall (a :: Type) (b :: Type).
@@ -416,7 +414,7 @@ zip ~(x :| xs) ~(y :| ys) = (x, y) :| PlutusTx.zip xs ys
 ==== __Examples__
 
 >>> zip3 (1 :| [2,3]) (True :| [False]) ('a' :| ['b', 'c', 'd']) :: NonEmpty (Integer, Bool, P.Char)
-NonEmpty [(1,True,'a'),(2,False,'b')]
+(1,True,'a') :| [(2,False,'b')]
 -}
 zip3 ::
   forall (a :: Type) (b :: Type) (c :: Type).
@@ -433,7 +431,7 @@ zip3 ~(x :| xs) ~(y :| ys) ~(z :| zs) = (x, y, z) :| PlutusTx.zip3 xs ys zs
 ==== __Examples__
 
 >>> unzip ((1, True) :| (2, False) : [])
-(NonEmpty [1,2],NonEmpty [True,False])
+(1 :| [2], True :| [False])
 -}
 unzip ::
   forall (a :: Type) (b :: Type).
@@ -449,7 +447,7 @@ streams, analogous to 'unzip'.
 ==== __Examples__
 
 >>> unzip3 ((1, True, 'a') :| (2, False, 'b') : [])
-(NonEmpty [1,2],NonEmpty [True,False],NonEmpty "ab")
+(1 :| [2], True :| [False], 'a' :| "b")
 -}
 unzip3 ::
   forall (a :: Type) (b :: Type) (c :: Type).
@@ -466,10 +464,10 @@ unzip3 ~((x, y, z) :| lst) =
 ==== __Examples__
 
 >>> reverse (1 :| [])
-NonEmpty [1]
+1 :| []
 
 >>> reverse (1 :| [2,3])
-NonEmpty [3,2,1]
+3 :| [2,1]
 -}
 reverse :: forall (a :: Type). NonEmpty a -> NonEmpty a
 reverse (x :| xs) = case PlutusTx.reverse xs of
