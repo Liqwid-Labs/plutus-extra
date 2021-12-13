@@ -2,6 +2,27 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 4.0 -- 2021-12-10
+
+### Added
+
+* New and improved `Rational` type, which is more efficient than the one
+  provided by Plutus.
+* Laws for the numerical hierarchy extensions, suitable for use with
+  `plutus-laws`.
+
+### Changed
+
+* `RatioSchema` is now exported from `PlutusTx.Rational`.
+* `IntegralDomain` instance for `NatRatio` now 'extends into'
+  `PlutusTx.Rational`'s `Rational`.
+* `NatRatio` is now based on the new `Rational` type.
+
+### Removed
+
+* `PlutusTx.Ratio.Extra` module.
+* `ToSchema` and `ToArgument` instances from Plutus.
+
 ## 3.0 -- 2021-12-04
 
 ### Removed

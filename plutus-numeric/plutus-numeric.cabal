@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-numeric
-version:            3.0
+version:            4.0
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -58,7 +58,8 @@ library
     PlutusTx.Natural
     PlutusTx.Numeric.Extra
     PlutusTx.Numeric.Gen
-    PlutusTx.Ratio.Extra
+    PlutusTx.Numeric.Laws
+    PlutusTx.Rational
     PlutusTx.SchemaUtils
 
   other-modules:
@@ -66,12 +67,15 @@ library
     PlutusTx.NatRatio.QQ
     PlutusTx.Natural.Internal
     PlutusTx.Natural.QQ
+    PlutusTx.Rational.Internal
+    PlutusTx.Rational.QQ
 
   build-depends:
     , aeson              ^>=1.5.6.0
     , hedgehog           ^>=1.0.5
     , openapi3           ^>=3.1.0
     , playground-common
+    , plutus-laws        ^>=2.3
     , plutus-tx
     , pretty-show        ^>=1.10
     , QuickCheck         ^>=2.14.2
@@ -86,16 +90,16 @@ test-suite property
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
-    Compilation
     Helpers
     Suites.Consistency
     Suites.NatRatio
     Suites.Natural
-    Suites.Numeric
+    Suites.Rational
 
   build-depends:
     , plutus-tx
     , plutus-tx-plugin
+    , pretty-show
     , QuickCheck        ^>=2.14.2
     , tasty-hunit       ^>=0.10.0.3
     , tasty-quickcheck  ^>=0.10.1.2
@@ -133,3 +137,15 @@ test-suite size
     , plutus-tx-plugin
 
   hs-source-dirs: test/size
+
+test-suite rational-compare-size
+  import:         test-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-ledger-api
+    , plutus-size-check  ^>=1.1
+    , plutus-tx
+    , plutus-tx-plugin
+
+  hs-source-dirs: test/rational-compare-size
