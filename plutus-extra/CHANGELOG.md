@@ -2,6 +2,17 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.1 -- 2021-12-13
+
+### Added
+
+- Instances of `Eq`, `Ord`, `Arbitrary`, `CoArbitrary`
+  and `Function` for `NonEmpty`
+
+### Changed
+
+- `NonEmpty` `Show` instance is derived
+
 ## 3.0 -- 2021-11-11
 
 ### Changed

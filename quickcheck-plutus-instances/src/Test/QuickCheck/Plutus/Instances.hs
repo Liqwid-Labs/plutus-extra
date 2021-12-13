@@ -76,6 +76,7 @@ import PlutusTx.Builtins.Internal (
   BuiltinString (BuiltinString),
  )
 import PlutusTx.Prelude qualified as PTx
+import PlutusTx.Ratio qualified as Ratio
 import Test.QuickCheck.Arbitrary (
   Arbitrary (arbitrary, shrink),
   Arbitrary1 (liftArbitrary, liftShrink),
@@ -646,6 +647,22 @@ instance Function BuiltinString where
     where
       into :: BuiltinString -> Text
       into (BuiltinString t) = t
+
+-- | @since 1.4
+instance Arbitrary Ratio.Rational where
+  arbitrary = Ratio.fromGHC <$> arbitrary
+  shrink = fmap Ratio.fromGHC . shrink . Ratio.toGHC
+
+-- | @since 1.4
+instance CoArbitrary Ratio.Rational where
+  coarbitrary r gen = do
+    let num = Ratio.numerator r
+    let den = Ratio.denominator r
+    coarbitrary num . coarbitrary den $ gen
+
+-- | @since 1.4
+instance Function Ratio.Rational where
+  function = functionMap Ratio.toGHC Ratio.fromGHC
 
 -- Helpers
 

@@ -4,6 +4,13 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 1.4 -- 
+
+### Added
+
+* Instances of `Arbitrary`, `CoArbitrary` and `Function` for
+  `PlutusTx.Ratio.Rational`
+
 ## 1.3 -- 2021-12-09
 
 ### Added
