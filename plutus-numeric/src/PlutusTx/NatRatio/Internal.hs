@@ -26,6 +26,7 @@ import Data.Aeson (
   (.:),
  )
 import Data.Aeson.Types (Parser)
+import Data.Coerce (coerce)
 import Data.OpenApi (ToSchema (declareNamedSchema))
 import GHC.Generics (Generic)
 import GHC.TypeLits (KnownSymbol, Symbol)
@@ -43,8 +44,11 @@ import PlutusTx.SchemaUtils (
   RatioFields ((:%:)),
   jsonFieldSym,
   ratioDeclareNamedSchema,
+  ratioFixFormArgument,
+  ratioFormSchema,
   ratioTypeName,
  )
+import Schema qualified as PlutusSchema
 import Test.QuickCheck.Arbitrary (
   Arbitrary (arbitrary, shrink),
   CoArbitrary (coarbitrary),
@@ -90,6 +94,10 @@ newtype NatRatio = NatRatio Ratio.Rational
   deriving
     ( -- | @since 1.2
       ToSchema
+    , -- | @since 1.2
+      PlutusSchema.ToSchema
+    , -- | @since 1.2
+      PlutusSchema.ToArgument
     )
     via (NatRatioSchema ("numerator" ':%: "denominator"))
 
@@ -312,5 +320,32 @@ instance
   where
   declareNamedSchema _ =
     ratioDeclareNamedSchema @numerator @denominator "NatRatioSchema"
+
+-- | @since 2.3
+instance
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
+  ) =>
+  PlutusSchema.ToSchema (NatRatioSchema (numerator ':%: denominator))
+  where
+  toSchema :: PlutusSchema.FormSchema
+  toSchema = ratioFormSchema @numerator @denominator
+
+-- | @since 2.3
+instance
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
+  ) =>
+  PlutusSchema.ToArgument (NatRatioSchema (numerator ':%: denominator))
+  where
+  toArgument (NatRatioSchema ratio) =
+    ratioFixFormArgument @numerator @denominator num denom
+    where
+      num :: Integer
+      num = coerce . numerator $ ratio
+      denom :: Integer
+      denom = coerce . denominator $ ratio
 
 makeLift ''NatRatio

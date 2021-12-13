@@ -43,8 +43,11 @@ import PlutusTx.SchemaUtils (
   RatioFields ((:%:)),
   jsonFieldSym,
   ratioDeclareNamedSchema,
+  ratioFixFormArgument,
+  ratioFormSchema,
   ratioTypeName,
  )
+import Schema qualified as PlutusSchema
 import Test.QuickCheck.Arbitrary (
   Arbitrary (arbitrary, shrink),
   CoArbitrary (coarbitrary),
@@ -68,6 +71,10 @@ data Rational = Rational Integer Integer
   deriving
     ( -- | @since 4.0
       ToSchema
+    , -- | @since 4.0
+      PlutusSchema.ToSchema
+    , -- | @since 4.0
+      PlutusSchema.ToArgument
     )
     via (RatioSchema ("numerator" ':%: "denominator"))
 
@@ -318,6 +325,33 @@ instance
   where
   declareNamedSchema _ =
     ratioDeclareNamedSchema @numerator @denominator "RatioSchema"
+
+-- | @since 2.3
+instance
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
+  ) =>
+  PlutusSchema.ToSchema (RatioSchema (numerator ':%: denominator))
+  where
+  toSchema :: PlutusSchema.FormSchema
+  toSchema = ratioFormSchema @numerator @denominator
+
+-- | @since 2.3
+instance
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
+  ) =>
+  PlutusSchema.ToArgument (RatioSchema (numerator ':%: denominator))
+  where
+  toArgument (RatioSchema r) =
+    ratioFixFormArgument @numerator @denominator num denom
+    where
+      num :: Integer
+      num = numerator r
+      denom :: Integer
+      denom = denominator r
 
 -- Helpers
 

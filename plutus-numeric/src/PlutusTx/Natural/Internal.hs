@@ -21,6 +21,7 @@ import PlutusTx.IsData (
  )
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude hiding (even)
+import Schema qualified as PlutusSchema
 import Test.QuickCheck.Arbitrary (
   Arbitrary (arbitrary, shrink),
   CoArbitrary,
@@ -59,6 +60,10 @@ newtype Natural = Natural Integer
       ToSchema
     , -- | @since 2.2
       CoArbitrary
+    , -- | @since 1.0
+      PlutusSchema.ToSchema
+    , -- | @since 1.0
+      PlutusSchema.ToArgument
     )
     via Integer
   deriving stock
