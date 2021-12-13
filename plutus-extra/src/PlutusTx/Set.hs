@@ -30,10 +30,10 @@ import Prelude qualified
 
 import Data.Aeson (FromJSON (parseJSON), ToJSON)
 import Data.Kind (Type)
+import Data.OpenApi.Internal.Schema qualified as OpenApi
 
 --------------------------------------------------------------------------------
 
---------------------------------------------------------------------------------
 import PlutusTx qualified (makeLift)
 import PlutusTx.IsData.Class (
   FromData (fromBuiltinData),
@@ -52,6 +52,9 @@ newtype Set (a :: Type) = Set {unSet :: [a]}
 
 deriving newtype instance Eq a => Eq (Set a)
 deriving newtype instance Ord a => Ord (Set a)
+
+-- | @since 4.1
+deriving newtype instance OpenApi.ToSchema a => OpenApi.ToSchema (Set a)
 
 instance Ord a => Semigroup (Set a) where
   {-# INLINEABLE (<>) #-}
@@ -81,6 +84,7 @@ instance (Ord a, FromData a) => FromData (Set a) where
 instance (Ord a, UnsafeFromData a) => UnsafeFromData (Set a) where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = fromList . unsafeFromBuiltinData
+
 
 {-# INLINEABLE empty #-}
 

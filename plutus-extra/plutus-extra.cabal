@@ -39,9 +39,10 @@ common lang
 
   build-depends:
     , base                     ^>=4.14
+    , openapi3                 ^>=3.1
     , record-dot-preprocessor  ^>=0.2.11
     , record-hasfield          ^>=1.0
-    , QuickCheck         ^>=2.14.2
+    , QuickCheck               ^>=2.14.2
 
   ghc-options:
     -Wall -Wcompat -Wincomplete-uni-patterns -Wredundant-constraints
