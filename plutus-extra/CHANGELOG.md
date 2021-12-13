@@ -6,8 +6,13 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Added
 
-- PlutusTx.Data.Extra: `toDatumHash` to converts an arbitrary value to a `Datum`
-  and evaluate it's hash
+- PlutusTx.Data.Extra: `toDatumHash` to get `DatumHash`
+
+### Changed
+
+- PlutusTx.Data.Extra:
+  - `toDatum`, `toRedeemer`, `fromDatum` and `fromRedeemer`
+    use _Datum_ and _Redeemer_ types instead of _ValidatorTypes_
 
 ## 3.1 -- 2021-12-13
 
