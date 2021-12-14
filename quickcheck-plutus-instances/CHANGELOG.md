@@ -4,21 +4,14 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
-## 1.5 --  2021-12-14
+## 1.5 -- 2021-12-14
 
-### CHANGED
-
-* Instance `Abritrary` (implementation of `shrink`) for `BuiltinByteString`
-  and all wrappers around it:
-  `CurrencySymbol`, `TokenName`, `LedgerBytes`, `Signature`, `BuiltinByteString`,
-  `TxId`, `ValidatorHash`, `PubKeyHash`, 
-
-### Fixed
+### Changed
 
 * Instance `Arbitrary` for `Value`:
   prevented from generating currency with _0_ quantity
 
-## 1.4 --  2021-12-10
+## 1.4 -- 2021-12-10
 
 ### Added
 

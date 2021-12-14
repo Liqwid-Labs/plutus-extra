@@ -675,7 +675,7 @@ genByteString64 = sized go
 -- Corresponding shrinker for genByteString64
 shrinkByteString64 :: ByteString -> [ByteString]
 shrinkByteString64 bs = do
-  xs' <- shrinkLst . GHC.toList $ bs
+  xs' <- shrink . GHC.toList $ bs
   pure . GHC.fromList $ xs'
 
 -- Corresponding coarbitrary for genByteString64
@@ -685,24 +685,6 @@ coarbitraryByteString64 ::
   Gen b ->
   Gen b
 coarbitraryByteString64 bs = coarbitrary (GHC.toList bs)
-
-{- | A stripped-down way to shrink a list that only discards the elements
-  but doesn't try to shrink each of the elements
--}
-shrinkLst :: forall (a :: Type). [a] -> [[a]]
-shrinkLst lst =
-  concat [removes k len lst | k <- takeWhile (> 0) (iterate (`div` 2) len)]
-  where
-    len :: Int
-    len = length lst
-    removes :: Int -> Int -> [a] -> [[a]]
-    removes k n xs
-      | k > n = []
-      | null xs2 = [[]]
-      | otherwise = xs2 : map (xs1 ++) (removes k (n - k) xs2)
-      where
-        xs1 = take k xs
-        xs2 = drop k xs
 
 -- Generates 0 or above.
 genNonNegative :: Gen Integer
