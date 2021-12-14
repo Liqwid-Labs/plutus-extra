@@ -691,15 +691,15 @@ coarbitraryByteString64 bs = coarbitrary (GHC.toList bs)
 -}
 shrinkLst :: forall (a :: Type). [a] -> [[a]]
 shrinkLst lst =
-  concat [ removes k len lst | k <- takeWhile (>0) (iterate (`div`2) len) ]
-    where
+  concat [removes k len lst | k <- takeWhile (> 0) (iterate (`div` 2) len)]
+  where
     len :: Int
     len = length lst
     removes :: Int -> Int -> [a] -> [[a]]
     removes k n xs
-      | k > n     = []
-      | null xs2  = [[]]
-      | otherwise = xs2 : map (xs1 ++) (removes k (n-k) xs2)
+      | k > n = []
+      | null xs2 = [[]]
+      | otherwise = xs2 : map (xs1 ++) (removes k (n - k) xs2)
       where
         xs1 = take k xs
         xs2 = drop k xs
