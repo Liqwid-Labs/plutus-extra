@@ -29,7 +29,7 @@ import PlutusTx.Prelude (Maybe, (.))
 
 {- | Construct Datum using ToData instance
 
- @since 4.1
+ @since 4.0
 -}
 {-# INLINEABLE toDatum #-}
 toDatum ::
@@ -43,7 +43,7 @@ toDatum = Datum . toBuiltinData
 
  **Note**: not intended to be used on-chain
 
- @since 4.1
+ @since 4.0
 -}
 {-# INLINEABLE toDatumHash #-}
 toDatumHash ::
@@ -55,7 +55,7 @@ toDatumHash = datumHash . toDatum @datum
 
 {- | Construct Redeemer using ToData instance
 
- @since 4.1
+ @since 4.0
 -}
 {-# INLINEABLE toRedeemer #-}
 toRedeemer ::
@@ -67,7 +67,7 @@ toRedeemer = Redeemer . toBuiltinData
 
 {- | Parse Datum using FromData instance
 
- @since 4.1
+ @since 4.0
 -}
 {-# INLINEABLE fromDatum #-}
 fromDatum ::
@@ -79,7 +79,7 @@ fromDatum (Datum d) = fromBuiltinData d
 
 {- | Parse Redeemer using FromData instance
 
- @since 4.1
+ @since 4.0
 -}
 {-# INLINEABLE fromRedeemer #-}
 fromRedeemer ::

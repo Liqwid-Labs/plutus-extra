@@ -59,7 +59,7 @@ newtype Set (a :: Type) = Set {unSet :: [a]}
 deriving newtype instance Eq a => Eq (Set a)
 deriving newtype instance Ord a => Ord (Set a)
 
--- | @since 4.1
+-- | @since 4.0
 deriving newtype instance OpenApi.ToSchema a => OpenApi.ToSchema (Set a)
 
 instance Ord a => Semigroup (Set a) where
@@ -91,16 +91,16 @@ instance (Ord a, UnsafeFromData a) => UnsafeFromData (Set a) where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = fromList . unsafeFromBuiltinData
 
--- | @since 4.1
+-- | @since 4.0
 instance (Arbitrary a, Ord a) => Arbitrary (Set a) where
   arbitrary = Prelude.fmap fromList arbitrary
   shrink = fmap fromList . shrink . toList
 
--- | @since 4.1
+-- | @since 4.0
 instance (CoArbitrary a) => CoArbitrary (Set a) where
   coarbitrary = coarbitrary . toList
 
--- | @since 4.1
+-- | @since 4.0
 instance (Function a, Ord a) => Function (Set a) where
   function = functionMap toList fromList
 
