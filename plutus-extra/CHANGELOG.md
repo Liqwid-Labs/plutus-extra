@@ -2,6 +2,13 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 3.2 -- 2021-12-14
+
+### Added
+
+- Added `addressValueOptions` to make construction of
+  emulator traces involving data easier.
+
 ## 3.1 -- 2021-12-13
 
 ### Added
