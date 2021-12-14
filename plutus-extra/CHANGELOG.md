@@ -2,21 +2,25 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## Unreleased
-
-## 4.1 -- 2021-12-14
+## Unreleased 4.0
 
 ### Added
 
 - PlutusTx.Data.Extra: `toDatumHash` to get `DatumHash` of a value
 - `OpenApi.ToSchema`, `Arbitrary`, `CoArbitrary`, `Function` instances
   for `PlutusTx.Set`
+- PlutusTx.UniqueMap:
+  - `Inclusion`describing the relationship between two arbitrary maps
+    regarding inclusion
+  - `inclusion` to check the inclusion status of two maps
+  - `Arbitrary`, `CoArbitrary` and `Function` instances for `UniqueMap`
 
 ### Changed
 
 - PlutusTx.Data.Extra:
   - `toDatum`, `toRedeemer`, `fromDatum` and `fromRedeemer`
     use _Datum_ and _Redeemer_ types instead of _ValidatorTypes_
+- PlutusTx.UniqueMap: `Map` renamed to `UniqueMap`
 
 ## 3.1 -- 2021-12-13
 
