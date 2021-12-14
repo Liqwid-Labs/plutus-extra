@@ -186,13 +186,13 @@ instance Function Data where
         Right (Right (Left keyVals)) -> Map keyVals
         Right (Right (Right (ix, ds))) -> Constr ix ds
 
--- | @since 1.6
+-- | @since 1.5
 deriving via Integer instance Arbitrary DiffMilliSeconds
 
--- | @since 1.6
+-- | @since 1.5
 deriving via Integer instance CoArbitrary DiffMilliSeconds
 
--- | @since 1.6
+-- | @since 1.5
 instance Function DiffMilliSeconds where
   function = functionMap into DiffMilliSeconds
     where
