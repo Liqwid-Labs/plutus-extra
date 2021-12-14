@@ -62,6 +62,8 @@ import Plutus.V1.Ledger.Value (
   CurrencySymbol (CurrencySymbol),
   TokenName (TokenName),
   Value (Value),
+  flattenValue,
+  singleton,
  )
 import PlutusTx (
   Data (B, Constr, I, List, Map),
@@ -90,13 +92,14 @@ import Test.QuickCheck.Gen (
   oneof,
   scale,
   sized,
+  suchThat,
   variant,
   vectorOf,
  )
 import Test.QuickCheck.Instances.Text ()
 import Test.QuickCheck.Modifiers (NonNegative (NonNegative))
 import Test.QuickCheck.Plutus.Modifiers (
-  UniqueKeys (UniqueKeys, unUniqueKeys),
+  UniqueKeys (UniqueKeys),
   UniqueList (UniqueList),
   uniqueListOf,
  )
@@ -463,16 +466,10 @@ instance Arbitrary Value where
     UniqueList css <- uniqueListOf num
     lst <- forM css $ \cs -> do
       UniqueList tns <- uniqueListOf num
-      lst' <- forM tns $ \tn -> (tn,) <$> arbitrary
+      lst' <- forM tns $ \tn -> (tn,) <$> arbitrary `suchThat` (PTx./= PTx.zero)
       pure (cs, AssocMap.fromList lst')
     pure . Value . AssocMap.fromList $ lst
-  shrink (Value mp) =
-    fmap (Value . unUniqueKeys) . liftShrink shrinkAsUniqueKeys . UniqueKeys $ mp
-    where
-      shrinkAsUniqueKeys ::
-        AssocMap.Map TokenName Integer ->
-        [AssocMap.Map TokenName Integer]
-      shrinkAsUniqueKeys = fmap unUniqueKeys . shrink . UniqueKeys
+  shrink = map (foldMap (\(cs, tn, i) -> singleton cs tn i)) . shrink . flattenValue
 
 -- | @since 1.1
 deriving via
