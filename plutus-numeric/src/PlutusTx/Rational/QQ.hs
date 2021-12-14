@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module PlutusTx.NatRatio.QQ (
+module PlutusTx.Rational.QQ (
   dec,
   frac,
 ) where
@@ -10,38 +10,37 @@ import Data.Ratio (denominator, numerator)
 import Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter))
 import Language.Haskell.TH.Syntax (
   Dec,
-  Exp (AppE, ConE, LitE, UInfixE, VarE),
+  Exp (LitE, UInfixE, VarE),
   Lit (IntegerL),
   Pat,
   Q,
   Type,
  )
-import PlutusTx.NatRatio.Internal (NatRatio (NatRatio))
 import PlutusTx.Rational.Internal ((%))
 import Text.Read (readMaybe)
 import Text.Read.Lex (Lexeme (Number), numberToRational)
 import Prelude
 
-{- | Quasi-quoter for 'NatRatio' literals, which parses a decimal
+{- | Quasi-quoter for 'Rational' literals, which parses a decimal
  representation.
 
  Used as follows:
 
  > [dec| 12.06 |]
 
- @since 1.0
+ @since 4.0
 -}
 dec :: QuasiQuoter
 dec = QuasiQuoter decExp errorDecPat errorDecType errorDecDeclaration
 
-{- | Quasi-quoter for 'NatRatio' literals, which parses a fractional
+{- | Quasi-quoter for 'Rational' literals, which parses a fractional
  representation.
 
  Used as follows:
 
  > [frac| (10, 100) |]
 
- @since 1.0
+ @since 4.0
 -}
 frac :: QuasiQuoter
 frac = QuasiQuoter fracExp errorFracPat errorFracType errorFracDeclaration
@@ -54,11 +53,10 @@ decExp s = case parseDecRatioExp s of
     fail $ "Input should be of the form '^[0-9]+(.[0-9]+)?(e-?[0-9]+)?$', but got: " <> s
   Just (n, m) ->
     pure $
-      AppE (ConE 'NatRatio) $
-        UInfixE
-          (LitE $ IntegerL n)
-          (VarE '(%))
-          (LitE $ IntegerL m)
+      UInfixE
+        (LitE $ IntegerL n)
+        (VarE '(%))
+        (LitE $ IntegerL m)
 
 parseDecRatioExp :: String -> Maybe (Integer, Integer)
 parseDecRatioExp s = readMaybe @Lexeme s >>= toRat
@@ -86,11 +84,10 @@ fracExp s = case readMaybe @(Integer, Integer) s of
       (-1) -> fail "Cannot use a negative literal for a NatRatio numerator."
       _ ->
         pure $
-          AppE (ConE 'NatRatio) $
-            UInfixE
-              (LitE $ IntegerL n)
-              (VarE '(%))
-              (LitE $ IntegerL m)
+          UInfixE
+            (LitE $ IntegerL n)
+            (VarE '(%))
+            (LitE $ IntegerL m)
 
 errorFracPat :: String -> Q Pat
 errorFracPat _ = fail "Cannot use 'frac' in a pattern context."

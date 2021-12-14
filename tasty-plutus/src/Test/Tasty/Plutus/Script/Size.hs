@@ -52,7 +52,7 @@ import PlutusTx.Natural (Natural, nat)
 import PlutusTx.Numeric.Extra (addExtend, divMod)
 import PlutusTx.Prelude qualified as PTx
 import Test.Tasty (TestTree)
-import Test.Tasty.Plutus.Internal (ourStyle)
+import Test.Tasty.Plutus.Internal.Feedback (ourStyle)
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
   singleTest,

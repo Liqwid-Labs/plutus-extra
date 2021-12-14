@@ -1,0 +1,11 @@
+{
+    "properties": {
+        "numerator": {
+            "type": "integer"
+        },
+        "denominator": {
+            "type": "integer"
+        }
+    },
+    "type": "object"
+}
