@@ -9,7 +9,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ### Added
 
 - PlutusTx.Data.Extra: `toDatumHash` to get `DatumHash` of a value
-- PlutusTx.Set: `Data.OpenApi.Internal.Schema.ToSchema` instance for `Set`
+- `OpenApi.ToSchema`, `Arbitrary`, `CoArbitrary`, `Function` instances
+  for `PlutusTx.Set`
 
 ### Changed
 

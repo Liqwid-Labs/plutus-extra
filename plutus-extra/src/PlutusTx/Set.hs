@@ -31,6 +31,12 @@ import Prelude qualified
 import Data.Aeson (FromJSON (parseJSON), ToJSON)
 import Data.Kind (Type)
 import Data.OpenApi.Internal.Schema qualified as OpenApi
+import Test.QuickCheck (
+  Arbitrary (arbitrary, shrink),
+  CoArbitrary (coarbitrary),
+  Function (function),
+  functionMap,
+ )
 
 --------------------------------------------------------------------------------
 
@@ -85,6 +91,18 @@ instance (Ord a, UnsafeFromData a) => UnsafeFromData (Set a) where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData = fromList . unsafeFromBuiltinData
 
+-- | @since 4.1
+instance (Arbitrary a, Ord a) => Arbitrary (Set a) where
+  arbitrary = Prelude.fmap fromList arbitrary
+  shrink = fmap fromList . shrink . toList
+
+-- | @since 4.1
+instance (CoArbitrary a) => CoArbitrary (Set a) where
+  coarbitrary = coarbitrary . toList
+
+-- | @since 4.1
+instance (Function a, Ord a) => Function (Set a) where
+  function = functionMap toList fromList
 
 {-# INLINEABLE empty #-}
 
