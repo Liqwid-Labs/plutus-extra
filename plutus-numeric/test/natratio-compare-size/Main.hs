@@ -4,6 +4,11 @@ module Main (main) where
 
 import Plutus.V1.Ledger.Scripts (fromCompiledCode)
 import PlutusTx.Code (CompiledCode)
+import PlutusTx.IsData.Class (
+  fromBuiltinData,
+  toBuiltinData,
+  unsafeFromBuiltinData,
+ )
 import PlutusTx.NatRatio (NatRatio)
 import PlutusTx.NatRatio qualified as NatRatio
 import PlutusTx.Natural (Natural)
@@ -56,6 +61,21 @@ main =
         , fitsUnder "/" (fromCompiledCode nrDiv) (fromCompiledCode rDiv)
         , fitsUnder "reciprocal" (fromCompiledCode nrRecip) (fromCompiledCode rRecip)
         , fitsUnder "powInteger" (fromCompiledCode nrPowInteger) (fromCompiledCode rPowInteger)
+        ]
+    , testGroup
+        "Serialization"
+        [ fitsUnder
+            "toBuiltinData"
+            (fromCompiledCode nrToBuiltinData)
+            (fromCompiledCode rToBuiltinData)
+        , expectFailBecause "extra checks are required"
+            . fitsUnder "fromBuiltinData" (fromCompiledCode nrFromBuiltinData)
+            . fromCompiledCode
+            $ rFromBuiltinData
+        , fitsUnder
+            "unsafeFromBuiltinData"
+            (fromCompiledCode nrUnsafeFromBuiltinData)
+            (fromCompiledCode rUnsafeFromBuiltinData)
         ]
     , testGroup
         "Other"
@@ -157,6 +177,15 @@ nrTruncate = $$(compile [||NatRatio.truncate||])
 nrProperFraction :: CompiledCode (NatRatio -> (Natural, NatRatio))
 nrProperFraction = $$(compile [||NatRatio.properFraction||])
 
+nrToBuiltinData :: CompiledCode (NatRatio -> Plutus.BuiltinData)
+nrToBuiltinData = $$(compile [||toBuiltinData||])
+
+nrFromBuiltinData :: CompiledCode (Plutus.BuiltinData -> Plutus.Maybe NatRatio)
+nrFromBuiltinData = $$(compile [||fromBuiltinData||])
+
+nrUnsafeFromBuiltinData :: CompiledCode (Plutus.BuiltinData -> NatRatio)
+nrUnsafeFromBuiltinData = $$(compile [||unsafeFromBuiltinData||])
+
 rEq :: CompiledCode (Rational -> Rational -> Plutus.Bool)
 rEq = $$(compile [||(Plutus.==)||])
 
@@ -225,3 +254,12 @@ rTruncate = $$(compile [||Rational.truncate||])
 
 rProperFraction :: CompiledCode (Rational -> (Integer, Rational))
 rProperFraction = $$(compile [||Rational.properFraction||])
+
+rToBuiltinData :: CompiledCode (Rational -> Plutus.BuiltinData)
+rToBuiltinData = $$(compile [||toBuiltinData||])
+
+rFromBuiltinData :: CompiledCode (Plutus.BuiltinData -> Plutus.Maybe Rational)
+rFromBuiltinData = $$(compile [||fromBuiltinData||])
+
+rUnsafeFromBuiltinData :: CompiledCode (Plutus.BuiltinData -> Rational)
+rUnsafeFromBuiltinData = $$(compile [||unsafeFromBuiltinData||])

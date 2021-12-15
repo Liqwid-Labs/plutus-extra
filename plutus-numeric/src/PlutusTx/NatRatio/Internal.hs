@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-specialize #-}
 
 module PlutusTx.NatRatio.Internal (
   NatRatio (..),
@@ -34,7 +35,7 @@ import GHC.Generics (Generic)
 import GHC.TypeLits (KnownSymbol, Symbol)
 import PlutusTx.IsData.Class (
   FromData (fromBuiltinData),
-  ToData,
+  ToData (toBuiltinData),
   UnsafeFromData (unsafeFromBuiltinData),
  )
 import PlutusTx.Lift (makeLift)
@@ -92,8 +93,6 @@ newtype NatRatio = NatRatio Ratio.Rational
     , -- | @since 1.0
       MultiplicativeMonoid
     , -- | @since 1.0
-      ToData
-    , -- | @since 1.0
       ToJSON
     )
     via Ratio.Rational
@@ -123,23 +122,25 @@ instance FromJSON NatRatio where
     Prelude.pure . NatRatio $ r
 
 -- | @since 1.0
+instance ToData NatRatio where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (NatRatio (Rational n d)) = toBuiltinData (n, d)
+
+-- | @since 1.0
 instance FromData NatRatio where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData dat = case fromBuiltinData dat of
-    Nothing -> Nothing
-    Just r ->
-      if Ratio.abs r == r
-        then Just (NatRatio r)
-        else Nothing
+    Just (n, d) ->
+      if d == zero || n < zero
+        then Nothing
+        else Just . NatRatio $ n % d
+    _ -> Nothing
 
 -- | @since 1.0
 instance UnsafeFromData NatRatio where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let r = unsafeFromBuiltinData dat
-     in if Ratio.abs r == r
-          then NatRatio r
-          else error . trace "Negative fractions cannot be NatRatio" $ ()
+  unsafeFromBuiltinData dat = case unsafeFromBuiltinData dat of
+    (n, d) -> NatRatio (n % d)
 
 -- | @since 1.0
 instance Arbitrary NatRatio where

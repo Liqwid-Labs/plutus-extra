@@ -191,7 +191,7 @@ instance FromData Rational where
 instance UnsafeFromData Rational where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData dat = case unsafeFromBuiltinData dat of
-    (n, d) -> if d == zero then error () else n % d
+    (n, d) -> n % d
 
 -- | @since 4.0
 instance ToJSON Rational where
