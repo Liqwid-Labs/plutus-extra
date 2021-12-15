@@ -33,6 +33,7 @@ module Test.Tasty.Plutus.Script.Unit (
 import Control.Arrow ((>>>))
 import Control.Monad.Reader (Reader, asks, runReader)
 import Control.Monad.Writer (tell)
+import Data.Kind (Type)
 import Data.Proxy (Proxy (Proxy))
 import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
@@ -204,19 +205,21 @@ shouldn'tValidateTracing name f td cb = case td of
 
 data ScriptTest (p :: Purpose) where
   Spender ::
+    forall (d :: Type) (r :: Type).
     Outcome ->
     Maybe (Vector Text -> Bool) ->
-    TestData 'ForSpending ->
-    ContextBuilder 'ForSpending ->
+    TestData ( 'ForSpending d r) ->
+    ContextBuilder ( 'ForSpending d r) ->
     Validator ->
-    ScriptTest 'ForSpending
+    ScriptTest ( 'ForSpending d r)
   Minter ::
+    forall (r :: Type).
     Outcome ->
     Maybe (Vector Text -> Bool) ->
-    TestData 'ForMinting ->
-    ContextBuilder 'ForMinting ->
+    TestData ( 'ForMinting r) ->
+    ContextBuilder ( 'ForMinting r) ->
     MintingPolicy ->
-    ScriptTest 'ForMinting
+    ScriptTest ( 'ForMinting r)
 
 data UnitEnv (p :: Purpose) = UnitEnv
   { envOpts :: OptionSet
