@@ -12,6 +12,7 @@ module Plutus.Contract.Test.Extra (
   dataAtComputedAddressWithState,
   valueAtComputedAddressWithState,
   utxoAtComputedAddressWithState,
+  addressValueOptions,
 ) where
 
 --------------------------------------------------------------------------------
@@ -27,6 +28,7 @@ import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error)
 import Control.Monad.Freer.Reader (ask)
 import Control.Monad.Freer.Writer (Writer, tell)
+import Data.Default.Class (Default (def))
 import Data.Foldable (fold)
 import Data.Kind (Type)
 import Data.List (foldl')
@@ -53,10 +55,11 @@ import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
+import Ledger.Scripts qualified as Scripts
 import Plutus.Contract.Test (TracePredicate)
 import Plutus.Contract.Trace (InitialDistribution, Wallet)
 import Plutus.Contract.Types (IsContract (toContract))
-import Plutus.Trace.Emulator (ContractInstanceTag)
+import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorConfig (EmulatorConfig))
 import PlutusTx (FromData (fromBuiltinData))
 import PlutusTx.Prelude qualified as P
 import Wallet.Emulator.Chain (ChainEvent (..))
@@ -451,3 +454,54 @@ getTxOutDatum ::
 getTxOutDatum _ (Ledger.TxOutTx _ (Ledger.TxOut _ _ Nothing)) = Nothing
 getTxOutDatum _ (Ledger.TxOutTx tx' (Ledger.TxOut _ _ (Just datumHash))) =
   Ledger.lookupDatum tx' datumHash >>= (Ledger.getDatum >>> fromBuiltinData @datum)
+
+{- | Setting up a emulator config with values at wallets/pubKeyHashes
+     and values and datums at validators.
+
+     Example Usage:
+
+     > emuConfig :: EmulatorConfig
+     > emuConfig =
+     >   let val = lovelaceValueOf 100_000_000
+     >    in addressValueOptions
+     >         [ (ownerPkh, v)
+     >         , (user1Pkh, v)
+     >         , (user2Pkh, v)
+     >         ]
+     >         [ (valHash, validatorVal1, datum1)
+     >         , (valHash, validatorVal2, datum2)
+     >         ]
+     >
+     > validatorVal1 :: Value
+     > validatorVal1 = Value.singleton "abcd" "State Token 1" 1
+     >
+     > validatorVal2 :: Value
+     > validatorVal2 = Value.singleton "abcd" "State Token 2" 1
+     >
+     > test1 :: TestTree
+     > test1 = checkPredicateOptions
+     >   (defaultCheckOptions & emulatorConfig .~ emuConfig)
+     >   "State Token Test"
+     >   (assertDone contract1 (walletInstanceTag ownerWallet) (const True) "Test #1")
+     >   trace1
+
+     Would start trace1 with 100 Ada at the owner's wallet and the
+     wallets of the two users, and also have state tokens 1 and 2
+     locked at the validator with datum1 and datum2 respectively.
+
+     @since 3.2
+-}
+addressValueOptions :: [(Ledger.PubKeyHash, Ledger.Value)] -> [(Scripts.ValidatorHash, Ledger.Value, Ledger.Datum)] -> EmulatorConfig
+addressValueOptions walletAllocs validatorAllocs = EmulatorConfig (Right [tx]) def def
+  where
+    tx :: Ledger.Tx
+    tx =
+      mempty
+        { Ledger.txOutputs =
+            fmap (\(pkh, val) -> Ledger.TxOut (Ledger.pubKeyHashAddress pkh) val Nothing) walletAllocs
+              <> fmap (\(vh, val, d) -> Ledger.TxOut (Ledger.scriptHashAddress vh) val $ Just $ Scripts.datumHash d) validatorAllocs
+        , Ledger.txData =
+            Map.fromList $
+              (\(_, _, d) -> (Scripts.datumHash d, d)) <$> validatorAllocs
+        , Ledger.txMint = foldMap snd walletAllocs <> foldMap (\(_, v, _) -> v) validatorAllocs
+        }

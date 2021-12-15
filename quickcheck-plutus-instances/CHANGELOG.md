@@ -11,6 +11,11 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * Instance `Arbitrary` for `Value`:
   prevented from generating currency with _0_ quantity
 
+### Added
+
+* Instances of `Arbitrary`, `CoArbitrary` and `Function` for
+  `DiffMilliSeconds`
+
 ## 1.4 -- 2021-12-10
 
 ### Added

@@ -51,7 +51,10 @@ import Plutus.V1.Ledger.Scripts (
   DatumHash (DatumHash),
   ValidatorHash (ValidatorHash),
  )
-import Plutus.V1.Ledger.Time (POSIXTime (POSIXTime))
+import Plutus.V1.Ledger.Time (
+  DiffMilliSeconds (DiffMilliSeconds),
+  POSIXTime (POSIXTime),
+ )
 import Plutus.V1.Ledger.Tx (
   TxOut (TxOut),
   TxOutRef (TxOutRef),
@@ -185,6 +188,19 @@ instance Function Data where
         Right (Left ds) -> List ds
         Right (Right (Left keyVals)) -> Map keyVals
         Right (Right (Right (ix, ds))) -> Constr ix ds
+
+-- | @since 1.5
+deriving via Integer instance Arbitrary DiffMilliSeconds
+
+-- | @since 1.5
+deriving via Integer instance CoArbitrary DiffMilliSeconds
+
+-- | @since 1.5
+instance Function DiffMilliSeconds where
+  function = functionMap into DiffMilliSeconds
+    where
+      into :: DiffMilliSeconds -> Integer
+      into (DiffMilliSeconds i) = i
 
 -- | @since 1.0
 deriving via BuiltinByteString instance Arbitrary LedgerBytes
