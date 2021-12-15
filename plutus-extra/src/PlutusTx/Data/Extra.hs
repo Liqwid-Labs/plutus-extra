@@ -3,6 +3,7 @@
 
 module PlutusTx.Data.Extra (
   toDatum,
+  toDatumHash,
   toRedeemer,
   fromDatum,
   fromRedeemer,
@@ -14,44 +15,76 @@ import Data.Kind (Type)
 
 --------------------------------------------------------------------------------
 
-import Ledger.Typed.Scripts qualified as Scripts
-import Plutus.V1.Ledger.Api qualified as Ledger (Datum (..), FromData (..), Redeemer (..), ToData (..))
+import Ledger.Scripts (datumHash)
+import Plutus.V1.Ledger.Api (
+  Datum (Datum),
+  DatumHash,
+  FromData (fromBuiltinData),
+  Redeemer (Redeemer),
+  ToData (toBuiltinData),
+ )
 import PlutusTx.Prelude (Maybe, (.))
 
 --------------------------------------------------------------------------------
 
--- | Converts an arbitrary value to a `Datum`
+{- | Construct Datum using ToData instance
+
+ @since 4.0
+-}
 {-# INLINEABLE toDatum #-}
 toDatum ::
-  forall (script :: Type).
-  (Ledger.ToData (Scripts.DatumType script)) =>
-  Scripts.DatumType script ->
-  Ledger.Datum
-toDatum = Ledger.Datum . Ledger.toBuiltinData
+  forall (datum :: Type).
+  (ToData datum) =>
+  datum ->
+  Datum
+toDatum = Datum . toBuiltinData
 
--- | Converts an arbitrary value to a `Redeemer`
+{- | Get DatumHash using ToData instance
+
+ **Note**: not intended to be used on-chain
+
+ @since 4.0
+-}
+{-# INLINEABLE toDatumHash #-}
+toDatumHash ::
+  forall (datum :: Type).
+  (ToData datum) =>
+  datum ->
+  DatumHash
+toDatumHash = datumHash . toDatum @datum
+
+{- | Construct Redeemer using ToData instance
+
+ @since 4.0
+-}
 {-# INLINEABLE toRedeemer #-}
 toRedeemer ::
-  forall (script :: Type).
-  (Ledger.ToData (Scripts.RedeemerType script)) =>
-  Scripts.RedeemerType script ->
-  Ledger.Redeemer
-toRedeemer = Ledger.Redeemer . Ledger.toBuiltinData
+  forall (redeemer :: Type).
+  (ToData redeemer) =>
+  redeemer ->
+  Redeemer
+toRedeemer = Redeemer . toBuiltinData
 
--- | Convert a `Datum` back to an ordinary Haskell value of the correct type
+{- | Parse Datum using FromData instance
+
+ @since 4.0
+-}
 {-# INLINEABLE fromDatum #-}
 fromDatum ::
-  forall (script :: Type).
-  (Ledger.FromData (Scripts.DatumType script)) =>
-  Ledger.Datum ->
-  Maybe (Scripts.DatumType script)
-fromDatum (Ledger.Datum d) = Ledger.fromBuiltinData d
+  forall (datum :: Type).
+  (FromData datum) =>
+  Datum ->
+  Maybe datum
+fromDatum (Datum d) = fromBuiltinData d
 
--- | Convert a `Redeemer` back to an ordinary Haskell value of the correct type
+{- | Parse Redeemer using FromData instance
+
+ @since 4.0
+-}
 {-# INLINEABLE fromRedeemer #-}
 fromRedeemer ::
-  forall (script :: Type).
-  (Ledger.FromData (Scripts.RedeemerType script)) =>
-  Ledger.Redeemer ->
-  Maybe (Scripts.RedeemerType script)
-fromRedeemer (Ledger.Redeemer d) = Ledger.fromBuiltinData d
+  forall (redeemer :: Type).
+  (FromData redeemer) =>
+  Redeemer ->
+  Maybe redeemer
+fromRedeemer (Redeemer d) = fromBuiltinData d
