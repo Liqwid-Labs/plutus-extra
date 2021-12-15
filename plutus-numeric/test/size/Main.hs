@@ -26,8 +26,8 @@ import PlutusTx.Numeric.Extra (
  )
 import PlutusTx.Prelude (BuiltinData)
 import PlutusTx.Prelude qualified as PTx
-import PlutusTx.Rational (Rational)
 import PlutusTx.TH (compile)
+import Rational qualified
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.Plutus.Size (fitsOnChain)
 import Prelude hiding (Rational, abs, divMod, signum, (/))
@@ -76,17 +76,7 @@ main =
         , fitsOnChain "restrictMay" . fromCompiledCode $ integerRestrictMay
         , fitsOnChain "signum" . fromCompiledCode $ integerSignum
         ]
-    , testGroup
-        "Rational"
-        [ fitsOnChain "/" . fromCompiledCode $ rationalDivide
-        , fitsOnChain "reciprocal" . fromCompiledCode $ rationalReciprocal
-        , fitsOnChain "powInteger" . fromCompiledCode $ rationalPowInteger
-        , fitsOnChain "abs" . fromCompiledCode $ rationalAbs
-        , fitsOnChain "projectAbs" . fromCompiledCode $ rationalProjectAbs
-        , fitsOnChain "addExtend" . fromCompiledCode $ rationalAddExtend
-        , fitsOnChain "restrictMay" . fromCompiledCode $ rationalRestrictMay
-        , fitsOnChain "signum" . fromCompiledCode $ rationalSignum
-        ]
+    , testGroup "Rational" Rational.tests
     ]
 
 -- Compiled definitions
@@ -194,29 +184,3 @@ integerRestrictMay = $$(compile [||restrictMay||])
 
 integerSignum :: CompiledCode (Integer -> Integer)
 integerSignum = $$(compile [||signum||])
-
--- Rational
-
-rationalDivide :: CompiledCode (Rational -> Rational -> Rational)
-rationalDivide = $$(compile [||(/)||])
-
-rationalReciprocal :: CompiledCode (Rational -> Rational)
-rationalReciprocal = $$(compile [||reciprocal||])
-
-rationalPowInteger :: CompiledCode (Rational -> Integer -> Rational)
-rationalPowInteger = $$(compile [||powInteger||])
-
-rationalAbs :: CompiledCode (Rational -> Rational)
-rationalAbs = $$(compile [||abs||])
-
-rationalProjectAbs :: CompiledCode (Rational -> NatRatio)
-rationalProjectAbs = $$(compile [||projectAbs||])
-
-rationalAddExtend :: CompiledCode (NatRatio -> Rational)
-rationalAddExtend = $$(compile [||addExtend||])
-
-rationalRestrictMay :: CompiledCode (Rational -> Maybe NatRatio)
-rationalRestrictMay = $$(compile [||restrictMay||])
-
-rationalSignum :: CompiledCode (Rational -> Rational)
-rationalSignum = $$(compile [||signum||])
