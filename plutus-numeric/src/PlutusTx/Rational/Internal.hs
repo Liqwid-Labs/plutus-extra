@@ -9,6 +9,9 @@ module PlutusTx.Rational.Internal (
   toGHC,
   numerator,
   denominator,
+  euclid,
+  rDiv,
+  rPowInteger,
 ) where
 
 import Control.Monad (guard)
@@ -353,7 +356,49 @@ instance
       denom :: Integer
       denom = denominator r
 
+-- Euclid's algorithm
+{-# INLINEABLE euclid #-}
+euclid :: Integer -> Integer -> Integer
+euclid x y
+  | y == zero = x
+  | otherwise = euclid y (x `modulo` y)
+
+-- Helper for division
+{-# INLINEABLE rDiv #-}
+rDiv :: Rational -> Rational -> Rational
+rDiv (Rational n d) (Rational n' d')
+  | n' == zero = error ()
+  | otherwise =
+    let newNum = n * d'
+        newDen = d * n'
+        gcd = euclid newNum newDen
+     in Rational (newNum `quotient` gcd) (newDen `quotient` gcd)
+
+-- Helper for powInteger
+{-# INLINEABLE rPowInteger #-}
+rPowInteger :: Rational -> Integer -> Rational
+rPowInteger (Rational n d) i
+  | i < zero && n == zero = error ()
+  | i == zero = one
+  | otherwise =
+    let (i', num, den) =
+          if i < zero
+            then (Plutus.negate i, d, n)
+            else (i, n, d)
+        newNum = expBySquaring num i'
+        newDen = expBySquaring den i'
+        gcd = euclid newNum newDen
+     in Rational (newNum `quotient` gcd) (newDen `quotient` gcd)
+
 -- Helpers
+
+-- We secretly know the exponent is positive
+{-# INLINEABLE expBySquaring #-}
+expBySquaring :: Integer -> Integer -> Integer
+expBySquaring acc i
+  | i == one = acc
+  | even i = expBySquaring (acc * acc) $ i `divide` 2
+  | otherwise = (acc *) . expBySquaring acc $ i - 1
 
 mkRatioSchema ::
   forall (numerator :: Symbol) (denominator :: Symbol).
@@ -361,12 +406,5 @@ mkRatioSchema ::
   Integer ->
   RatioSchema (numerator ':%: denominator)
 mkRatioSchema num denom = RatioSchema (num % denom)
-
--- Euclid's algorithm
-{-# INLINEABLE euclid #-}
-euclid :: Integer -> Integer -> Integer
-euclid x y
-  | y == zero = x
-  | otherwise = euclid y (x `modulo` y)
 
 $(makeLift ''Rational)

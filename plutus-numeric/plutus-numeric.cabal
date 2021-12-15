@@ -149,3 +149,16 @@ test-suite rational-compare-size
     , plutus-tx-plugin
 
   hs-source-dirs: test/rational-compare-size
+
+test-suite natratio-compare-size
+  import:         test-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-ledger-api
+    , plutus-size-check
+    , plutus-tx
+    , plutus-tx-plugin
+    , tasty-expected-failure  ^>=0.12.3
+
+  hs-source-dirs: test/natratio-compare-size

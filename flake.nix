@@ -86,6 +86,7 @@
               ps.quickcheck-dynamic
               ps.Win32-network
               ps.word-array
+              ps.tasty-expected-failure
             ];
           };
           sha256map = {
@@ -123,6 +124,8 @@
               = "Hesb5GXSx0IwKSIi42ofisVELcQNX6lwHcoZcbaDiqc=";
             "https://github.com/input-output-hk/goblins"."cde90a2b27f79187ca8310b6549331e59595e7ba"
               = "z9ut0y6umDIjJIRjz9KSvKgotuw06/S8QDwOtVdGiJ0=";
+            "https://github.com/nomeata/tasty-expected-failure.git"."33b71e694b954e35c05859fff3ca886d8cfe5bfe"
+              = "C/IWktTILklfPEAht/RE4IC8to6MrvrLmmbqgWsJlIM=";
           };
         };
     in

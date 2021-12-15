@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module PlutusTx.NatRatio.Internal (
@@ -14,6 +15,7 @@ module PlutusTx.NatRatio.Internal (
   recip,
   toRational,
   NatRatioSchema (NatRatioSchema),
+  nrMonus,
 ) where
 
 import Control.Monad (guard)
@@ -39,7 +41,11 @@ import PlutusTx.Lift (makeLift)
 import PlutusTx.Natural.Internal (Natural (Natural))
 import PlutusTx.Prelude hiding (Rational, (%))
 import PlutusTx.Rational qualified as Ratio
-import PlutusTx.Rational.Internal ((%))
+import PlutusTx.Rational.Internal (
+  Rational (Rational),
+  euclid,
+  (%),
+ )
 import PlutusTx.SchemaUtils (
   RatioFields ((:%:)),
   jsonFieldSym,
@@ -181,7 +187,7 @@ natRatio (Natural n) (Natural m) =
 -}
 {-# INLINEABLE fromNatural #-}
 fromNatural :: Natural -> NatRatio
-fromNatural (Natural n) = NatRatio $ n % 1
+fromNatural (Natural n) = NatRatio . Rational n $ one
 
 {- | Retrieve the numerator of a 'NatRatio'.
 
@@ -206,7 +212,7 @@ denominator (NatRatio r) = Natural . Ratio.denominator $ r
 -}
 {-# INLINEABLE truncate #-}
 truncate :: NatRatio -> Natural
-truncate (NatRatio r) = Natural . Ratio.truncate $ r
+truncate (NatRatio (Rational n d)) = Natural $ n `quotient` d
 
 {- | Round the 'NatRatio' arithmetically.
 
@@ -214,7 +220,14 @@ truncate (NatRatio r) = Natural . Ratio.truncate $ r
 -}
 {-# INLINEABLE round #-}
 round :: NatRatio -> Natural
-round (NatRatio r) = Natural . Ratio.round $ r
+round (NatRatio (Rational n d)) =
+  let (w, p) = (n `quotient` d, Rational (n `remainder` d) d)
+      m = Natural (w + one)
+      flag = p - Ratio.half
+   in if
+          | flag < zero -> Natural w
+          | flag == zero -> if even w then Natural w else m
+          | otherwise -> m
 
 {- | Take the reciprocal of the 'NatRatio'.
 
@@ -243,9 +256,21 @@ ceiling x =
 -}
 {-# INLINEABLE properFraction #-}
 properFraction :: NatRatio -> (Natural, NatRatio)
-properFraction (NatRatio r) =
-  let (n, r') = Ratio.properFraction r
-   in (Natural n, NatRatio r')
+properFraction (NatRatio (Rational n d)) =
+  (Natural (n `quotient` d), NatRatio . Rational (n `remainder` d) $ d)
+
+-- Helper function for monus definition in Numeric.Extra
+{-# INLINEABLE nrMonus #-}
+nrMonus :: NatRatio -> NatRatio -> NatRatio
+nrMonus (NatRatio (Rational n d)) (NatRatio (Rational n' d')) =
+  let newNum = max zero ((n * d') - (n' * d))
+      newDen = d * d'
+      gcd = euclid newNum newDen
+   in NatRatio
+        ( Rational
+            (newNum `quotient` gcd)
+            (newDen `quotient` gcd)
+        )
 
 {- | Convert a 'NatRatio' to the underlying 'Rational'.
 
