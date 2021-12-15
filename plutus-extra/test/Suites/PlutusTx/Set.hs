@@ -10,14 +10,9 @@ import Prelude
 
 --------------------------------------------------------------------------------
 
+import Test.QuickCheck
 import Test.Tasty
 import Test.Tasty.QuickCheck
-
-import Test.QuickCheck
-
---------------------------------------------------------------------------------
-
-import PlutusTx.Ord qualified as PlutusTx
 
 --------------------------------------------------------------------------------
 
@@ -30,10 +25,6 @@ import PlutusTx.Set (Set)
 import PlutusTx.Set qualified as Set
 
 --------------------------------------------------------------------------------
-
-instance (PlutusTx.Ord a, Arbitrary a) => Arbitrary (Set a) where
-  arbitrary =
-    Set.fromList <$> arbitrary @[a]
 
 prop_InsertionEmpty x = Set.insert x Set.empty == Set.singleton x
 
