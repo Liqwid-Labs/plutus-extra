@@ -38,8 +38,10 @@ module PlutusTx.Numeric.Extra (
 import Data.Kind (Type)
 import PlutusTx.NatRatio.Internal (NatRatio (NatRatio))
 import PlutusTx.Natural.Internal (Natural (Natural))
-import PlutusTx.Prelude hiding (divMod, even)
+import PlutusTx.Prelude hiding (divMod, even, (%))
 import PlutusTx.Ratio qualified as Ratio
+import PlutusTx.Rational qualified as Rational
+import PlutusTx.Rational.Internal ((%))
 import Prelude ()
 
 {- | Raise by a 'Natural' power.
@@ -224,13 +226,13 @@ class (MultiplicativeMonoid a) => MultiplicativeGroup a where
 infixr 8 `powInteger`
 
 -- | @since 1.0
-instance MultiplicativeGroup Rational where
+instance MultiplicativeGroup Rational.Rational where
   {-# INLINEABLE (/) #-}
   x / y = x * reciprocal y
   {-# INLINEABLE reciprocal #-}
   reciprocal x =
-    let n = Ratio.numerator x
-        m = Ratio.denominator x
+    let n = Rational.numerator x
+        m = Rational.denominator x
      in m % n
 
 -- | @since 1.0
@@ -262,23 +264,21 @@ type Hemifield a = (AdditiveHemigroup a, MultiplicativeGroup a)
  For 'abs', the following laws apply:
 
  1. @'abs' x '>=' 'zero'@
- 2. @'abs' 'zero' = 'zero'@
+ 2. @x '<=' 'abs' x@
  3. @'abs' (x '*' y) = 'abs' x '*' 'abs' y@
- 4. @'abs' (x '+' y) '<=' 'abs' x '+' 'abs' y@
 
  Additionally, if you define 'signum', the following law applies:
 
- 5. @'abs' x '*' 'signum' x = x@
+ 4. @'abs' x '*' 'signum' x = x@
 
- For the methods relating to the additive restriction, the following laws
- apply:
+ For the methods relating to the additive restriction, the following law
+ applies:
 
- 1. @'projectAbs' '.' 'addExtend' = 'id'@
- 2. If @'abs' x = x@, then @'addExtend' '.' 'projectAbs' '$' x = x@
+ 1. @'addExtend' '.' 'projectAbs' '$' x = 'abs' x@
 
  Additionally, if you define 'restrictMay', the following law applies:
 
- 3. @restrictMay x = Just y@ if and only if @abs x = x@.
+ 2. @restrictMay x = Just y@ if and only if @abs x = x@.
 
  @since 1.0
 -}
@@ -310,11 +310,11 @@ instance IntegralDomain Integer Natural where
   addExtend (Natural i) = i
 
 -- | @since 1.0
-instance IntegralDomain Rational NatRatio where
+instance IntegralDomain Rational.Rational NatRatio where
   {-# INLINEABLE abs #-}
-  abs = Ratio.abs
+  abs = Rational.abs
   {-# INLINEABLE projectAbs #-}
-  projectAbs = NatRatio . Ratio.abs
+  projectAbs = NatRatio . Rational.abs
   {-# INLINEABLE restrictMay #-}
   restrictMay x
     | x < zero = Nothing

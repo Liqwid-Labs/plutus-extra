@@ -6,23 +6,23 @@
             "denominator": 47
         },
         {
-            "numerator": 17,
+            "numerator": -17,
             "denominator": 5
         },
         {
-            "numerator": 26,
+            "numerator": -26,
             "denominator": 75
         },
         {
-            "numerator": 8,
+            "numerator": -8,
             "denominator": 25
         },
         {
-            "numerator": 34,
+            "numerator": -34,
             "denominator": 25
         },
         {
-            "numerator": 84,
+            "numerator": -84,
             "denominator": 55
         },
         {
@@ -38,11 +38,11 @@
             "denominator": 87
         },
         {
-            "numerator": 89,
+            "numerator": -89,
             "denominator": 17
         },
         {
-            "numerator": 67,
+            "numerator": -67,
             "denominator": 3
         },
         {
@@ -54,19 +54,19 @@
             "denominator": 37
         },
         {
-            "numerator": 96,
+            "numerator": -96,
             "denominator": 67
         },
         {
-            "numerator": 27,
+            "numerator": -27,
             "denominator": 7
         },
         {
-            "numerator": 19,
+            "numerator": -19,
             "denominator": 37
         },
         {
-            "numerator": 57,
+            "numerator": -57,
             "denominator": 100
         },
         {
@@ -78,7 +78,7 @@
             "denominator": 46
         },
         {
-            "numerator": 7,
+            "numerator": -7,
             "denominator": 11
         }
     ]

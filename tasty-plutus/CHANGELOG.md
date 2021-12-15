@@ -2,22 +2,66 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## Unreleased
+## 5.0 -- 2021-12-10
 
-## 4.2 -- 2021-12-01
+### Added
+
+* `passIf` combinator for creating `Outcome` from a condition.
+* `TestItems (p :: Purpose)` type represens the data set for script checking
+* `scriptPropertyFail` to test the conditions under which a script should always succeed
+* `scriptPropertyPass` to test the conditions under which a script should always fail
+* Property based testing example (test/Properties/Main.hs)
+
+### Changed
+
+* Rename `Example` to `Outcome` and its two constructors `Good` and `Bad` to
+  `Pass` and `Fail` respectively, unifying with the internal type used in unit
+  tests.
+* Changed API for property based testing:
+  * Changed type and implementation for `scriptProperty`
+* `Generator (p :: Purpose)` replaced with `Generator (a :: Type) (p :: Purpose)`,
+    changed types for data constructors `GenForSpending` and `GenForMinting`
+* Property based testing coverage check changed from 0.5% to 45%
+
+## 4.2 -- 2021-11-26
+
+### Added
 
 * Added `outputsToInputs` to perform transformations on the context.
 
 ## 4.1 -- 2021-11-18
 
-* Added `makeIncompleteContexts` to ease building of contexts that are missing
+### Added
+
+* `Tokens` type representing tokens being minted by the policy, with
+  a `token` function for creating a single token.
+* `makeIncompleteContexts` to ease building of contexts that are missing
   a single portion of the context.
+
+### Changed
+
+* Changed API for testing minting policies:
+  * Replaced `OwnMint` and `OtherMint` constructors to `Minting` with single 
+    `Mint` constructor representing mints of currencies other than that of 
+    the policy being tested.
+  * Added a `Tokens` field to `MintingTest`, and a parameter to `GenForMinting` 
+    and `fromArbitraryMinting`.
+* Rename `paysSelf` and `paysOther` into `paysToSelf` and `paysToOther` for
+  consistency.
+* Rename `ValidatorTest` to `ScriptTest`.
+
+### Removed
+
+* Various re-exports from `Test.Tasty.Plutus.Script.Unit`.
+
+* `mintsWithSelf` - not part of the context in the new minting API.
 
 ## 4.0 -- 2021-11-11
 
-- Plutus upgraded
-  - `plutus` pinned to `3f089ccf0ca746b399c99afe51e063b0640af547`
-  - `plutus-apps` pinned to `404af7ac3e27ebcb218c05f79d9a70ca966407c9`
+### Changed
+
+* Plutus upgrade: `plutus` pinned to `3f089ccf0ca746b399c99afe51e063b0640af547`,
+  `plutus-apps` pinned to `404af7ac3e27ebcb218c05f79d9a70ca966407c9`
 
 ## 3.4 -- 2021-11-03
 

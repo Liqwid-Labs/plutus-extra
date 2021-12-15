@@ -12,7 +12,7 @@ module PlutusTx.Natural.Internal (
 
 import Control.Monad (guard)
 import Data.Aeson (FromJSON (parseJSON), ToJSON)
-import Data.OpenApi.Schema qualified as OpenApi
+import Data.OpenApi.Schema (ToSchema)
 import PlutusTx.Builtins (matchData, unsafeDataAsI)
 import PlutusTx.IsData (
   FromData (fromBuiltinData),
@@ -21,7 +21,7 @@ import PlutusTx.IsData (
  )
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude hiding (even)
-import Schema (ToArgument, ToSchema)
+import Schema qualified as PlutusSchema
 import Test.QuickCheck.Arbitrary (
   Arbitrary (arbitrary, shrink),
   CoArbitrary,
@@ -53,17 +53,17 @@ newtype Natural = Natural Integer
     , -- | @since 1.0
       ToJSON
     , -- | @since 1.0
-      ToSchema
-    , -- | @since 1.0
-      ToArgument
-    , -- | @since 1.0
       Prelude.Eq
     , -- | @since 1.1
       Prelude.Ord
     , -- | @since 1.0
-      OpenApi.ToSchema
+      ToSchema
     , -- | @since 2.2
       CoArbitrary
+    , -- | @since 1.0
+      PlutusSchema.ToSchema
+    , -- | @since 1.0
+      PlutusSchema.ToArgument
     )
     via Integer
   deriving stock
