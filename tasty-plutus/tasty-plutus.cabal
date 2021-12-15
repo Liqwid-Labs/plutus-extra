@@ -96,12 +96,12 @@ test-suite properties
   build-depends:
     , base                         ^>=4.14
     , plutus-contract
-    , plutus-extra                 ^>=3.1
+    , plutus-extra                 ^>=4.0
     , plutus-ledger
     , plutus-ledger-api
     , plutus-tx
     , plutus-tx-plugin
-    , quickcheck-plutus-instances  ^>=1.4
+    , quickcheck-plutus-instances  ^>=1.5
     , tasty                        ^>=1.4.1
     , tasty-plutus                 ^>=5.0
     , tasty-quickcheck             ^>=0.10.1.2

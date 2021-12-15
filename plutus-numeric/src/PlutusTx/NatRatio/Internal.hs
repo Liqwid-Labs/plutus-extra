@@ -1,5 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-specialize #-}
 
 module PlutusTx.NatRatio.Internal (
   NatRatio (..),
@@ -14,6 +16,7 @@ module PlutusTx.NatRatio.Internal (
   recip,
   toRational,
   NatRatioSchema (NatRatioSchema),
+  nrMonus,
 ) where
 
 import Control.Monad (guard)
@@ -32,14 +35,18 @@ import GHC.Generics (Generic)
 import GHC.TypeLits (KnownSymbol, Symbol)
 import PlutusTx.IsData.Class (
   FromData (fromBuiltinData),
-  ToData,
+  ToData (toBuiltinData),
   UnsafeFromData (unsafeFromBuiltinData),
  )
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Natural.Internal (Natural (Natural))
 import PlutusTx.Prelude hiding (Rational, (%))
 import PlutusTx.Rational qualified as Ratio
-import PlutusTx.Rational.Internal ((%))
+import PlutusTx.Rational.Internal (
+  Rational (Rational),
+  euclid,
+  (%),
+ )
 import PlutusTx.SchemaUtils (
   RatioFields ((:%:)),
   jsonFieldSym,
@@ -86,8 +93,6 @@ newtype NatRatio = NatRatio Ratio.Rational
     , -- | @since 1.0
       MultiplicativeMonoid
     , -- | @since 1.0
-      ToData
-    , -- | @since 1.0
       ToJSON
     )
     via Ratio.Rational
@@ -117,23 +122,25 @@ instance FromJSON NatRatio where
     Prelude.pure . NatRatio $ r
 
 -- | @since 1.0
+instance ToData NatRatio where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (NatRatio (Rational n d)) = toBuiltinData (n, d)
+
+-- | @since 1.0
 instance FromData NatRatio where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData dat = case fromBuiltinData dat of
-    Nothing -> Nothing
-    Just r ->
-      if Ratio.abs r == r
-        then Just (NatRatio r)
-        else Nothing
+    Just (n, d) ->
+      if d == zero || n < zero
+        then Nothing
+        else Just . NatRatio $ n % d
+    _ -> Nothing
 
 -- | @since 1.0
 instance UnsafeFromData NatRatio where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let r = unsafeFromBuiltinData dat
-     in if Ratio.abs r == r
-          then NatRatio r
-          else error . trace "Negative fractions cannot be NatRatio" $ ()
+  unsafeFromBuiltinData dat = case unsafeFromBuiltinData dat of
+    (n, d) -> NatRatio (n % d)
 
 -- | @since 1.0
 instance Arbitrary NatRatio where
@@ -181,7 +188,7 @@ natRatio (Natural n) (Natural m) =
 -}
 {-# INLINEABLE fromNatural #-}
 fromNatural :: Natural -> NatRatio
-fromNatural (Natural n) = NatRatio $ n % 1
+fromNatural (Natural n) = NatRatio . Rational n $ one
 
 {- | Retrieve the numerator of a 'NatRatio'.
 
@@ -206,7 +213,7 @@ denominator (NatRatio r) = Natural . Ratio.denominator $ r
 -}
 {-# INLINEABLE truncate #-}
 truncate :: NatRatio -> Natural
-truncate (NatRatio r) = Natural . Ratio.truncate $ r
+truncate (NatRatio (Rational n d)) = Natural $ n `quotient` d
 
 {- | Round the 'NatRatio' arithmetically.
 
@@ -214,7 +221,14 @@ truncate (NatRatio r) = Natural . Ratio.truncate $ r
 -}
 {-# INLINEABLE round #-}
 round :: NatRatio -> Natural
-round (NatRatio r) = Natural . Ratio.round $ r
+round (NatRatio (Rational n d)) =
+  let (w, p) = (n `quotient` d, Rational (n `remainder` d) d)
+      m = Natural (w + one)
+      flag = p - Ratio.half
+   in if
+          | flag < zero -> Natural w
+          | flag == zero -> if even w then Natural w else m
+          | otherwise -> m
 
 {- | Take the reciprocal of the 'NatRatio'.
 
@@ -243,9 +257,21 @@ ceiling x =
 -}
 {-# INLINEABLE properFraction #-}
 properFraction :: NatRatio -> (Natural, NatRatio)
-properFraction (NatRatio r) =
-  let (n, r') = Ratio.properFraction r
-   in (Natural n, NatRatio r')
+properFraction (NatRatio (Rational n d)) =
+  (Natural (n `quotient` d), NatRatio . Rational (n `remainder` d) $ d)
+
+-- Helper function for monus definition in Numeric.Extra
+{-# INLINEABLE nrMonus #-}
+nrMonus :: NatRatio -> NatRatio -> NatRatio
+nrMonus (NatRatio (Rational n d)) (NatRatio (Rational n' d')) =
+  let newNum = max zero ((n * d') - (n' * d))
+      newDen = d * d'
+      gcd = euclid newNum newDen
+   in NatRatio
+        ( Rational
+            (newNum `quotient` gcd)
+            (newDen `quotient` gcd)
+        )
 
 {- | Convert a 'NatRatio' to the underlying 'Rational'.
 

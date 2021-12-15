@@ -36,12 +36,16 @@ module PlutusTx.Numeric.Extra (
 ) where
 
 import Data.Kind (Type)
-import PlutusTx.NatRatio.Internal (NatRatio (NatRatio))
+import PlutusTx.NatRatio.Internal (NatRatio (NatRatio), nrMonus)
 import PlutusTx.Natural.Internal (Natural (Natural))
 import PlutusTx.Prelude hiding (divMod, even, (%))
 import PlutusTx.Ratio qualified as Ratio
 import PlutusTx.Rational qualified as Rational
-import PlutusTx.Rational.Internal ((%))
+import PlutusTx.Rational.Internal (
+  Rational (Rational),
+  rDiv,
+  rPowInteger,
+ )
 import Prelude ()
 
 {- | Raise by a 'Natural' power.
@@ -120,9 +124,13 @@ instance AdditiveHemigroup Natural where
 -}
 instance AdditiveHemigroup NatRatio where
   {-# INLINEABLE (^-) #-}
+  nr ^- nr' = nrMonus nr nr'
+
+{-
   NatRatio r1 ^- NatRatio r2
     | r1 < r2 = zero
     | otherwise = NatRatio $ r1 - r2
+-}
 
 {- | We define the combination of an 'AdditiveHemigroup' and a
  'MultiplicativeMonoid' as a \'hemiring\'. This is designed to be symmetric
@@ -228,12 +236,11 @@ infixr 8 `powInteger`
 -- | @since 1.0
 instance MultiplicativeGroup Rational.Rational where
   {-# INLINEABLE (/) #-}
-  x / y = x * reciprocal y
+  (/) = rDiv
   {-# INLINEABLE reciprocal #-}
-  reciprocal x =
-    let n = Rational.numerator x
-        m = Rational.denominator x
-     in m % n
+  reciprocal = Rational.recip
+  {-# INLINEABLE powInteger #-}
+  powInteger = rPowInteger
 
 -- | @since 1.0
 instance MultiplicativeGroup NatRatio where
@@ -241,6 +248,8 @@ instance MultiplicativeGroup NatRatio where
   NatRatio r / NatRatio r' = NatRatio (r / r')
   {-# INLINEABLE reciprocal #-}
   reciprocal (NatRatio r) = NatRatio . reciprocal $ r
+  {-# INLINEABLE powInteger #-}
+  powInteger (NatRatio r) = NatRatio . powInteger r
 
 -- | @since 1.0
 type Field a = (AdditiveGroup a, MultiplicativeGroup a)
@@ -321,6 +330,11 @@ instance IntegralDomain Rational.Rational NatRatio where
     | otherwise = Just . NatRatio $ x
   {-# INLINEABLE addExtend #-}
   addExtend (NatRatio r) = r
+  {-# INLINEABLE signum #-}
+  signum (Rational n _)
+    | n < zero = Rational (negate one) one
+    | n == zero = zero
+    | otherwise = one
 
 {- | Non-operator version of '^-'.
 
