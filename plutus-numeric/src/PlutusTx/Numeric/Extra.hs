@@ -41,7 +41,11 @@ import PlutusTx.Natural.Internal (Natural (Natural))
 import PlutusTx.Prelude hiding (divMod, even, (%))
 import PlutusTx.Ratio qualified as Ratio
 import PlutusTx.Rational qualified as Rational
-import PlutusTx.Rational.Internal (rDiv, rPowInteger)
+import PlutusTx.Rational.Internal (
+  Rational (Rational),
+  rDiv,
+  rPowInteger,
+ )
 import Prelude ()
 
 {- | Raise by a 'Natural' power.
@@ -326,6 +330,11 @@ instance IntegralDomain Rational.Rational NatRatio where
     | otherwise = Just . NatRatio $ x
   {-# INLINEABLE addExtend #-}
   addExtend (NatRatio r) = r
+  {-# INLINEABLE signum #-}
+  signum (Rational n _)
+    | n < zero = Rational (negate one) one
+    | n == zero = zero
+    | otherwise = one
 
 {- | Non-operator version of '^-'.
 

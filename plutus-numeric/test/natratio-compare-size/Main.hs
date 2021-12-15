@@ -14,6 +14,7 @@ import PlutusTx.NatRatio qualified as NatRatio
 import PlutusTx.Natural (Natural)
 import PlutusTx.Numeric.Extra (
   powInteger,
+  powNat,
   reciprocal,
   (/),
   (^-),
@@ -60,6 +61,7 @@ main =
         , fitsUnder "one" (fromCompiledCode nrOne) (fromCompiledCode rOne)
         , fitsUnder "/" (fromCompiledCode nrDiv) (fromCompiledCode rDiv)
         , fitsUnder "reciprocal" (fromCompiledCode nrRecip) (fromCompiledCode rRecip)
+        , fitsUnder "powNat" (fromCompiledCode nrPowNat) (fromCompiledCode rPowNat)
         , fitsUnder "powInteger" (fromCompiledCode nrPowInteger) (fromCompiledCode rPowInteger)
         ]
     , testGroup
@@ -186,6 +188,9 @@ nrFromBuiltinData = $$(compile [||fromBuiltinData||])
 nrUnsafeFromBuiltinData :: CompiledCode (Plutus.BuiltinData -> NatRatio)
 nrUnsafeFromBuiltinData = $$(compile [||unsafeFromBuiltinData||])
 
+nrPowNat :: CompiledCode (NatRatio -> Natural -> NatRatio)
+nrPowNat = $$(compile [||powNat||])
+
 rEq :: CompiledCode (Rational -> Rational -> Plutus.Bool)
 rEq = $$(compile [||(Plutus.==)||])
 
@@ -263,3 +268,6 @@ rFromBuiltinData = $$(compile [||fromBuiltinData||])
 
 rUnsafeFromBuiltinData :: CompiledCode (Plutus.BuiltinData -> Rational)
 rUnsafeFromBuiltinData = $$(compile [||unsafeFromBuiltinData||])
+
+rPowNat :: CompiledCode (Rational -> Natural -> Rational)
+rPowNat = $$(compile [||powNat||])

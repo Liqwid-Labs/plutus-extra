@@ -11,10 +11,12 @@ import PlutusTx.IsData.Class (
   unsafeFromBuiltinData,
  )
 import PlutusTx.NatRatio (NatRatio)
+import PlutusTx.Natural (Natural)
 import PlutusTx.Numeric.Extra (
   abs,
   addExtend,
   powInteger,
+  powNat,
   projectAbs,
   reciprocal,
   restrictMay,
@@ -59,6 +61,7 @@ tests =
       , fitsInto "one" [bytes| 24 |] . fromCompiledCode $ rOne
       , fitsInto "/" [bytes| 144 |] . fromCompiledCode $ rDiv
       , fitsInto "reciprocal" [bytes| 92 |] . fromCompiledCode $ rRecip
+      , fitsInto "powNat" [bytes| 343 |] . fromCompiledCode $ rPowNat
       , fitsInto "powInteger" [bytes| 357 |] . fromCompiledCode $ rPowInteger
       ]
   , testGroup
@@ -67,7 +70,7 @@ tests =
       , fitsInto "projectAbs" [bytes| 69 |] . fromCompiledCode $ rProjectAbs
       , fitsInto "addExtend" [bytes| 19 |] . fromCompiledCode $ rAddExtend
       , fitsInto "restrictMay" [bytes| 95 |] . fromCompiledCode $ rRestrictMay
-      , fitsInto "signum" [bytes| 238 |] . fromCompiledCode $ rSignum
+      , fitsInto "signum" [bytes| 97 |] . fromCompiledCode $ rSignum
       ]
   , testGroup
       "Serialization"
@@ -183,3 +186,6 @@ rRestrictMay = $$(compile [||restrictMay||])
 
 rSignum :: CompiledCode (Rational -> Rational)
 rSignum = $$(compile [||signum||])
+
+rPowNat :: CompiledCode (Rational -> Natural -> Rational)
+rPowNat = $$(compile [||powNat||])
