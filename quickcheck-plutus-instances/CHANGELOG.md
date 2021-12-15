@@ -6,12 +6,17 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## 1.5 -- 2021-12-14
 
+### Changed
+
+* Instance `Arbitrary` for `Value`:
+  prevented from generating currency with _0_ quantity
+
 ### Added
 
 * Instances of `Arbitrary`, `CoArbitrary` and `Function` for
   `DiffMilliSeconds`
 
-## 1.4 -- 
+## 1.4 -- 2021-12-10
 
 ### Added
 
@@ -26,7 +31,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Changed
 
-* Instance Arbitrary for `Value` limited by number of AssetClasses.
+* Instance `Arbitrary` for `Value` limited by number of AssetClasses.
   Now the number equals to `(log2 testSize)^2`
 
 ## 1.2 -- 2021-11-23
