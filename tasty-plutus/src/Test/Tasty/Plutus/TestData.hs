@@ -64,7 +64,7 @@ data TestData (p :: Purpose) where
     --
     -- @since 3.0
     Value ->
-    TestData 'ForSpending
+    TestData ( 'ForSpending datum redeemer)
   MintingTest ::
     (ToData redeemer, FromData redeemer, Show redeemer) =>
     -- | The input redeemer.
@@ -75,7 +75,7 @@ data TestData (p :: Purpose) where
     --
     -- @since 4.1
     Tokens ->
-    TestData 'ForMinting
+    TestData ( 'ForMinting redeemer)
 
 {- | Describes whether a case, comprised of a script and a test data for the
  script, should pass or fail. Used to classify generated outputs for
@@ -146,23 +146,25 @@ static x = Methodology (pure x) (const [])
 data Generator (a :: Type) (p :: Purpose) where
   -- | @since 5.0
   GenForSpending ::
+    forall (a :: Type) (d :: Type) (r :: Type).
     (Show a) =>
     -- | 'Methodology' for seed
     -- @since 5.0
     Methodology a ->
     -- | Function for producing 'TestItems' from the seed
     -- @since 5.0
-    (a -> TestItems 'ForSpending) ->
-    Generator a 'ForSpending
+    (a -> TestItems ( 'ForSpending d r)) ->
+    Generator a ( 'ForSpending d r)
   GenForMinting ::
+    forall (a :: Type) (r :: Type).
     (Show a) =>
     -- | 'Methodology' for seed
     -- @since 5.0
     Methodology a ->
     -- | Function for producing 'TestItems' from the seed
     -- @since 5.0
-    (a -> TestItems 'ForMinting) ->
-    Generator a 'ForMinting
+    (a -> TestItems ( 'ForMinting r)) ->
+    Generator a ( 'ForMinting r)
 
 {- | Сontains the necessary data set for script checking.
  This dataset does not cover any set of tests or conditions.
@@ -192,12 +194,12 @@ data TestItems (p :: Purpose) where
       spendValue :: Value
     , -- | ContextBuilder used for creating ScriptContext
       -- @since 5.0
-      spendCB :: ContextBuilder 'ForSpending
+      spendCB :: ContextBuilder ( 'ForSpending datum redeemer)
     , -- | Result expected from calling the Validator
       -- | @since 5.0
       spendOutcome :: Outcome
     } ->
-    TestItems 'ForSpending
+    TestItems ( 'ForSpending datum redeemer)
   -- | @since 5.0
   ItemsForMinting ::
     forall (redeemer :: Type).
@@ -213,9 +215,9 @@ data TestItems (p :: Purpose) where
       mintTokens :: Tokens
     , -- | ContextBuilder used for creating ScriptContext
       -- @since 5.0
-      mintCB :: ContextBuilder 'ForMinting
+      mintCB :: ContextBuilder ( 'ForMinting redeemer)
     , -- | Result expected from calling the MintingPolicy
       -- | @since 5.0
       mintOutcome :: Outcome
     } ->
-    TestItems 'ForMinting
+    TestItems ( 'ForMinting redeemer)

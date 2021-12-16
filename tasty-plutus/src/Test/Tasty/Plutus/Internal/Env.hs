@@ -51,11 +51,13 @@ import Test.Tasty.Plutus.TestData (TestData (MintingTest, SpendingTest))
 
 data SomeScript (p :: Purpose) where
   SomeSpender ::
+    forall (d :: Type) (r :: Type).
     Validator ->
-    SomeScript 'ForSpending
+    SomeScript ( 'ForSpending d r)
   SomeMinter ::
+    forall (r :: Type).
     MintingPolicy ->
-    SomeScript 'ForMinting
+    SomeScript ( 'ForMinting r)
 
 prepareConf ::
   forall (a :: Type).
