@@ -29,31 +29,33 @@ import Test.Tasty.Providers (TestTree)
 -}
 data WithScript (p :: Purpose) (a :: Type) where
   WithSpending ::
+    forall (a :: Type) (d :: Type) (r :: Type).
     RWS Validator (Seq TestTree) () a ->
-    WithScript 'ForSpending a
+    WithScript ( 'ForSpending d r) a
   WithMinting ::
+    forall (a :: Type) (r :: Type).
     RWS MintingPolicy (Seq TestTree) () a ->
-    WithScript 'ForMinting a
+    WithScript ( 'ForMinting r) a
 
 -- | @since 1.0
 deriving stock instance Functor (WithScript p)
 
 -- | @since 1.0
-instance Applicative (WithScript 'ForSpending) where
+instance Applicative (WithScript ( 'ForSpending d r)) where
   {-# INLINEABLE pure #-}
   pure = WithSpending . pure
   {-# INLINEABLE (<*>) #-}
   WithSpending fs <*> WithSpending xs = WithSpending (fs <*> xs)
 
 -- | @since 1.0
-instance Applicative (WithScript 'ForMinting) where
+instance Applicative (WithScript ( 'ForMinting r)) where
   {-# INLINEABLE pure #-}
   pure = WithMinting . pure
   {-# INLINEABLE (<*>) #-}
   WithMinting fs <*> WithMinting xs = WithMinting (fs <*> xs)
 
 -- | @since 1.0
-instance Monad (WithScript 'ForSpending) where
+instance Monad (WithScript ( 'ForSpending d r)) where
   {-# INLINEABLE (>>=) #-}
   WithSpending xs >>= f = WithSpending $ do
     x <- xs
@@ -61,7 +63,7 @@ instance Monad (WithScript 'ForSpending) where
     ys
 
 -- | @since 1.0
-instance Monad (WithScript 'ForMinting) where
+instance Monad (WithScript ( 'ForMinting r)) where
   {-# INLINEABLE (>>=) #-}
   WithMinting xs >>= f = WithMinting $ do
     x <- xs
@@ -69,14 +71,14 @@ instance Monad (WithScript 'ForMinting) where
     ys
 
 -- | @since 3.0
-instance MonadReader Validator (WithScript 'ForSpending) where
+instance MonadReader Validator (WithScript ( 'ForSpending d r)) where
   {-# INLINEABLE ask #-}
   ask = WithSpending ask
   {-# INLINEABLE local #-}
   local f (WithSpending comp) = WithSpending . local f $ comp
 
 -- | @since 3.0
-instance MonadReader MintingPolicy (WithScript 'ForMinting) where
+instance MonadReader MintingPolicy (WithScript ( 'ForMinting r)) where
   {-# INLINEABLE ask #-}
   ask = WithMinting ask
   {-# INLINEABLE local #-}

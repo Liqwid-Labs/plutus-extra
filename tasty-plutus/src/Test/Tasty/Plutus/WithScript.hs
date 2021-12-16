@@ -22,8 +22,9 @@ module Test.Tasty.Plutus.WithScript (
 import Control.Monad.RWS.Strict (evalRWS)
 import Data.Kind (Type)
 import GHC.Exts (toList)
+import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, validatorScript)
 import Plutus.V1.Ledger.Contexts (ScriptContext)
-import Plutus.V1.Ledger.Scripts (MintingPolicy, Validator)
+import Plutus.V1.Ledger.Scripts (MintingPolicy)
 import PlutusTx.Builtins (BuiltinData, BuiltinString, appendString, trace)
 import PlutusTx.IsData.Class (FromData (fromBuiltinData))
 import Test.Tasty (TestTree, testGroup)
@@ -59,12 +60,13 @@ import Prelude
  @since 3.0
 -}
 withValidator ::
+  forall (s :: Type).
   String ->
-  Validator ->
-  WithScript 'ForSpending () ->
+  TypedValidator s ->
+  WithScript ( 'ForSpending (DatumType s) (RedeemerType s)) () ->
   TestTree
 withValidator name val (WithSpending comp) =
-  case evalRWS comp val () of
+  case evalRWS comp (validatorScript val) () of
     ((), tests) -> testGroup name . toList $ tests
 
 {- | Given the name for the tests, a 'MintingPolicy', and a collection of
@@ -89,9 +91,10 @@ withValidator name val (WithSpending comp) =
  @since 3.0
 -}
 withMintingPolicy ::
+  forall (r :: Type).
   String ->
   MintingPolicy ->
-  WithScript 'ForMinting () ->
+  WithScript ( 'ForMinting r) () ->
   TestTree
 withMintingPolicy name mp (WithMinting comp) =
   case evalRWS comp mp () of

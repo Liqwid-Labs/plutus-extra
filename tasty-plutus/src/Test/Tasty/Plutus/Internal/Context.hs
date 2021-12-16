@@ -68,17 +68,27 @@ import Prelude hiding (length)
 
  @since 1.0
 -}
-data Purpose
-  = -- | Corresponds to 'Plutus.V1.Ledger.Contexts.Minting'. This tag applies
-    -- to minting-policy-related structures and functions.
-    --
-    -- @since 1.0
-    ForMinting
-  | -- | Corresponds to 'Plutus.V1.Ledger.Contexts.Spending'. This tag applies
-    -- to validator-related structures and functions.
-    --
-    -- @since 1.0
-    ForSpending
+data Purpose where
+  -- | Corresponds to 'Plutus.V1.Ledger.Contexts.Minting'. This tag applies
+  -- to minting-policy-related structures and functions.
+  --
+  -- @since 1.0
+  ForMinting ::
+    forall redeemer.
+    -- | @since 5.1
+    redeemer ->
+    Purpose
+  -- | Corresponds to 'Plutus.V1.Ledger.Contexts.Spending'. This tag applies
+  -- to validator-related structures and functions.
+  --
+  -- @since 1.0
+  ForSpending ::
+    forall datum redeemer.
+    -- | @since 5.1
+    datum ->
+    -- | @since 5.1
+    redeemer ->
+    Purpose
 
 {- | \'Marker type\' for input and output metadata.
 
@@ -180,10 +190,10 @@ instance Monoid (ContextBuilder p) where
   mempty = ContextBuilder mempty mempty mempty mempty mempty
 
 compileSpending ::
-  forall (datum :: Type).
+  forall (datum :: Type) (redeemer :: Type).
   (ToData datum) =>
   TransactionConfig ->
-  ContextBuilder 'ForSpending ->
+  ContextBuilder ( 'ForSpending datum redeemer) ->
   datum ->
   Value ->
   ScriptContext
@@ -207,8 +217,9 @@ compileSpending conf cb d val =
             }
 
 compileMinting ::
+  forall (r :: Type).
   TransactionConfig ->
-  ContextBuilder 'ForMinting ->
+  ContextBuilder ( 'ForMinting r) ->
   Tokens ->
   ScriptContext
 compileMinting conf cb (Tokens toks) =
