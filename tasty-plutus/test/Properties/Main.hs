@@ -1,5 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Main (main) where
 
@@ -8,6 +9,12 @@ module Main (main) where
 import Prelude hiding (($), (&&), (*), (+), (==))
 
 import Ledger.Crypto (PubKeyHash)
+import Ledger.Typed.Scripts (
+  TypedValidator,
+  ValidatorTypes (type DatumType, type RedeemerType),
+  WrappedValidatorType,
+  mkTypedValidator,
+ )
 import Plutus.V1.Ledger.Value (Value)
 import Test.QuickCheck.Plutus.Instances ()
 import Test.Tasty (TestTree, defaultMain, localOption)
@@ -42,11 +49,6 @@ import Test.Tasty.QuickCheck (
 --------------------------------------------------------------------------------
 
 import Plutus.V1.Ledger.Contexts (ScriptContext)
-import Plutus.V1.Ledger.Scripts (
-  Validator,
-  mkValidatorScript,
- )
-import PlutusTx (BuiltinData, applyCode)
 import PlutusTx.Prelude (traceIfFalse, ($), (&&), (*), (+), (==))
 import PlutusTx.TH (compile)
 import Wallet.Emulator.Types (WalletNumber (WalletNumber))
@@ -61,7 +63,7 @@ tests :: TestTree
 tests =
   localOption [maxSize| 20 |] $
     localOption [testCount| 100 |] $
-      withValidator "Property based testing" testSimpleValidator $ do
+      withValidator "Property based testing" typedSimpleValidator $ do
         scriptProperty "Validator checks the sum of the inputs" $
           GenForSpending gen1 transform1
         scriptProperty "Validator checks the product of the inputs" $
@@ -79,7 +81,7 @@ gen1 = Methodology gen' genericShrink
       pure (i1, i2, iSum, iProd, val)
 
 -- | Creates TestItems with an arbitrary sum used in Redeemer
-transform1 :: (Integer, Integer, Integer, Integer, Value) -> TestItems 'ForSpending
+transform1 :: (Integer, Integer, Integer, Integer, Value) -> TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer))
 transform1 (i1, i2, iSum, _, val) =
   ItemsForSpending
     { spendDatum = (i1, i2)
@@ -89,13 +91,13 @@ transform1 (i1, i2, iSum, _, val) =
     , spendOutcome = out
     }
   where
-    cb :: ContextBuilder 'ForSpending
+    cb :: ContextBuilder ( 'ForSpending (Integer, Integer) (Integer, Integer))
     cb = paysToPubKey userPKHash val
     out :: Outcome
     out = if iSum == i1 + i2 then Pass else Fail
 
 -- | Creates TestItems with an arbitrary product used in Redeemer
-transform2 :: (Integer, Integer, Integer, Integer, Value) -> TestItems 'ForSpending
+transform2 :: (Integer, Integer, Integer, Integer, Value) -> TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer))
 transform2 (i1, i2, _, iProd, val) =
   ItemsForSpending
     { spendDatum = (i1, i2)
@@ -105,13 +107,13 @@ transform2 (i1, i2, _, iProd, val) =
     , spendOutcome = out
     }
   where
-    cb :: ContextBuilder 'ForSpending
+    cb :: ContextBuilder ( 'ForSpending (Integer, Integer) (Integer, Integer))
     cb = paysToPubKey userPKHash val
     out :: Outcome
     out = if iProd == i1 * i2 then Pass else Fail
 
 -- | Always creates TestItems with correct sum and product
-transform3 :: (Integer, Integer, Integer, Integer, Value) -> TestItems 'ForSpending
+transform3 :: (Integer, Integer, Integer, Integer, Value) -> TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer))
 transform3 (i1, i2, _, _, val) =
   ItemsForSpending
     { spendDatum = (i1, i2)
@@ -121,7 +123,7 @@ transform3 (i1, i2, _, _, val) =
     , spendOutcome = out
     }
   where
-    cb :: ContextBuilder 'ForSpending
+    cb :: ContextBuilder ( 'ForSpending (Integer, Integer) (Integer, Integer))
     cb = paysToPubKey userPKHash val
     out :: Outcome
     out = Pass
@@ -146,15 +148,25 @@ simpleValidator (i1, i2) (iSum, iProd) _ = correctSum && correctProduct
       traceIfFalse "The product is wrong" $
         iProd == i1 * i2
 
-testSimpleValidator :: Validator
-testSimpleValidator =
-  mkValidatorScript $
+data TestScript
+
+instance ValidatorTypes TestScript where
+  type RedeemerType TestScript = (Integer, Integer)
+  type DatumType TestScript = (Integer, Integer)
+
+typedSimpleValidator :: TypedValidator TestScript
+typedSimpleValidator =
+  mkTypedValidator @TestScript
+    $$(compile [||simpleValidator||])
     $$(compile [||wrap||])
-      `applyCode` $$(compile [||simpleValidator||])
   where
     wrap ::
-      ((Integer, Integer) -> (Integer, Integer) -> ScriptContext -> Bool) ->
-      (BuiltinData -> BuiltinData -> BuiltinData -> ())
+      ( (Integer, Integer) ->
+        (Integer, Integer) ->
+        ScriptContext ->
+        Bool
+      ) ->
+      WrappedValidatorType
     wrap = toTestValidator
 
 userPKHash :: PubKeyHash

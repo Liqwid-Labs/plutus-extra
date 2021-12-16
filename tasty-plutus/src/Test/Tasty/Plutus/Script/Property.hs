@@ -164,7 +164,7 @@ and a function to create 'TestItems' from the seed, check that:
 -}
 scriptProperty ::
   forall (a :: Type) (p :: Purpose).
-  (Typeable a) =>
+  (Typeable a, Typeable p) =>
   -- | Property name
   String ->
   -- | Data generator
@@ -183,7 +183,7 @@ and a function to create 'TestItems' from the seed, check that:
 -}
 scriptPropertyFail ::
   forall (a :: Type) (p :: Purpose).
-  (Typeable a) =>
+  (Typeable a, Typeable p) =>
   -- | Property name
   String ->
   -- | Data generator
@@ -202,7 +202,7 @@ and a function to create 'TestItems' from the seed, check that:
 -}
 scriptPropertyPass ::
   forall (a :: Type) (p :: Purpose).
-  (Typeable a) =>
+  (Typeable a, Typeable p) =>
   -- | Property name
   String ->
   -- | Data generator
@@ -214,7 +214,7 @@ scriptPropertyPass = mkScriptPropertyWith OutcomeAlwaysPass
 
 mkScriptPropertyWith ::
   forall (a :: Type) (p :: Purpose).
-  (Typeable a) =>
+  (Typeable a, Typeable p) =>
   OutcomeKind ->
   -- | Property name
   String ->
@@ -239,19 +239,23 @@ mkScriptPropertyWith outKind name generator = case generator of
 
 data PropertyTest (a :: Type) (p :: Purpose) where
   Spender ::
+    forall (a :: Type) (d :: Type) (r :: Type).
+    Typeable a =>
     Validator ->
     Gen a ->
     (a -> [a]) ->
-    (a -> TestItems 'ForSpending) ->
+    (a -> TestItems ( 'ForSpending d r)) ->
     OutcomeKind ->
-    PropertyTest a 'ForSpending
+    PropertyTest a ( 'ForSpending d r)
   Minter ::
+    forall (a :: Type) (r :: Type).
+    Typeable a =>
     MintingPolicy ->
     Gen a ->
     (a -> [a]) ->
-    (a -> TestItems 'ForMinting) ->
+    (a -> TestItems ( 'ForMinting r)) ->
     OutcomeKind ->
-    PropertyTest a 'ForMinting
+    PropertyTest a ( 'ForMinting r)
 
 data OutcomeKind
   = OutcomeAlwaysFail
@@ -330,10 +334,10 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
       ]
 
 spenderProperty ::
-  forall (a :: Type).
+  forall (a :: Type) (d :: Type) (r :: Type).
   OptionSet ->
   Validator ->
-  (a -> TestItems 'ForSpending) ->
+  (a -> TestItems ( 'ForSpending d r)) ->
   OutcomeKind ->
   a ->
   Property
@@ -362,9 +366,9 @@ spenderProperty opts val f outKind seed = case f seed of
             $ getScriptResult envScript envTestData (getContext getSC) env
 
 prettySpender ::
-  forall (a :: Type).
+  forall (a :: Type) (d :: Type) (r :: Type).
   (Show a) =>
-  (a -> TestItems 'ForSpending) ->
+  (a -> TestItems ( 'ForSpending d r)) ->
   OutcomeKind ->
   a ->
   String
@@ -396,10 +400,10 @@ prettySpender f outKind seed = case f seed of
               $+$ hang "Inputs" 4 dumpInputs
 
 minterProperty ::
-  forall (a :: Type).
+  forall (a :: Type) (r :: Type).
   OptionSet ->
   MintingPolicy ->
-  (a -> TestItems 'ForMinting) ->
+  (a -> TestItems ( 'ForMinting r)) ->
   OutcomeKind ->
   a ->
   Property
@@ -427,9 +431,9 @@ minterProperty opts mp f outKind seed = case f seed of
             $ getScriptResult envScript envTestData (getContext getSC) env
 
 prettyMinter ::
-  forall (a :: Type).
+  forall (a :: Type) (r :: Type).
   (Show a) =>
-  (a -> TestItems 'ForMinting) ->
+  (a -> TestItems ( 'ForMinting r)) ->
   OutcomeKind ->
   a ->
   String
