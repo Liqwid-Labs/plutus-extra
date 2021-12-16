@@ -4,6 +4,12 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 2.1 -- 2021-12-17
+
+### Changed
+
+* Default size passed to the generator changed from 100 t0 30
+
 ## 2.0 -- 2021-11-11
 
 ### Changed

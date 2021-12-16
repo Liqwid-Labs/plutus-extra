@@ -89,4 +89,4 @@ genToGenerator ::
   (a, SMGen)
 genToGenerator (MkGen f) rng =
   let (used, passed) = splitSMGen rng
-   in (f (QCGen used) 100, passed) -- QuickCheck default size
+   in (f (QCGen used) 30, passed) -- QuickCheck default size
