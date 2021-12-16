@@ -179,13 +179,8 @@ class (Ord a, Semiring a) => EuclideanClosed a where
 -- | @since 1.0
 instance EuclideanClosed Natural where
   {-# INLINEABLE divMod #-}
-  divMod n@(Natural x) (Natural y)
-    | y == zero = (zero, n)
-    | y == one = (n, zero)
-    | otherwise =
-      ( Natural . divide x $ y
-      , Natural . modulo x $ y
-      )
+  divMod (Natural x) (Natural y) = case x `divMod` y of 
+    (d, r) -> (Natural d, Natural r)
 
 -- | @since 1.0
 instance EuclideanClosed Integer where

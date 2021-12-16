@@ -10,10 +10,11 @@ module PlutusTx.Natural.Internal (
   parity,
 ) where
 
+import Data.Kind (Type)
 import Control.Monad (guard)
 import Data.Aeson (FromJSON (parseJSON), ToJSON)
 import Data.OpenApi.Schema (ToSchema)
-import PlutusTx.Builtins (matchData, unsafeDataAsI)
+import PlutusTx.Builtins (matchData)
 import PlutusTx.IsData (
   FromData (fromBuiltinData),
   ToData,
@@ -89,28 +90,22 @@ instance FromJSON Natural where
 -- | @since 1.0
 instance FromData Natural where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData dat =
-    matchData
-      dat
-      (\_ -> const Nothing)
-      (const Nothing)
-      (const Nothing)
-      go
-      (const Nothing)
+  fromBuiltinData dat = 
+    matchData dat
+              (const go)
+              go
+              go
+              (\i -> if i < zero then Nothing else Just . Natural $ i)
+              go
     where
-      go :: Integer -> Maybe Natural
-      go x
-        | x < zero = Nothing
-        | otherwise = Just . Natural $ x
+      go :: forall (a :: Type) . a -> Maybe Natural
+      go = const Nothing
 
 -- | @since 1.0
 instance UnsafeFromData Natural where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let asI = unsafeDataAsI dat
-     in if asI >= 0
-          then Natural asI
-          else error . trace "Cannot decode a negative value to Natural" $ ()
+  unsafeFromBuiltinData dat = let i = unsafeFromBuiltinData dat in
+    if i < zero then error () else Natural i
 
 {- | This is partial all over the place, but so is 'Enum' for most things.
 
