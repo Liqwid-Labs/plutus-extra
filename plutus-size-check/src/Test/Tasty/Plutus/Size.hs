@@ -298,7 +298,7 @@ renderSize i = case i `quotRem` 1024 of
          )
 
 renderPercentDiff :: Int -> Int -> Doc
-renderPercentDiff size1 size2 = "\n~" <> go
+renderPercentDiff size1 size2 = "\n" <> go
   where
     go :: Doc
     go =
@@ -306,5 +306,6 @@ renderPercentDiff size1 size2 = "\n~" <> go
           ratio :: Double = fromIntegral diff / fromIntegral size2
           result :: Int = round (ratio * 100.0)
        in case signum result of
-            (-1) -> dumpDoc (abs result) <> "% bigger"
-            _ -> dumpDoc result <> "% smaller"
+            0 -> "Same size"
+            (-1) -> "~" <> dumpDoc (abs result) <> "% bigger"
+            _ -> "~" <> dumpDoc result <> "% smaller"
