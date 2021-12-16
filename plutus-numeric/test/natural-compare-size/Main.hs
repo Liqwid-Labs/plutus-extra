@@ -2,7 +2,6 @@
 
 module Main (main) where
 
-import Test.Tasty.ExpectedFailure (expectFailBecause)
 import Plutus.V1.Ledger.Scripts (fromCompiledCode)
 import PlutusTx.Code (CompiledCode)
 import PlutusTx.IsData.Class (
@@ -12,15 +11,16 @@ import PlutusTx.IsData.Class (
  )
 import PlutusTx.Natural (Natural)
 import PlutusTx.Numeric.Extra (
+  divMod,
   powNat,
   (^-),
-  divMod,
  )
 import PlutusTx.Prelude qualified as Plutus
 import PlutusTx.TH (compile)
 import Test.Tasty (defaultMain, testGroup)
+import Test.Tasty.ExpectedFailure (expectFailBecause)
 import Test.Tasty.Plutus.Size (fitsUnder)
-import Prelude hiding (Rational, (/), divMod)
+import Prelude hiding (Rational, divMod, (/))
 
 main :: IO ()
 main =
@@ -44,9 +44,10 @@ main =
         "Additive"
         [ fitsUnder "+" (fromCompiledCode natPlus) (fromCompiledCode iPlus)
         , fitsUnder "zero" (fromCompiledCode natZero) (fromCompiledCode iZero)
-        , expectFailBecause "monus requires more checks" . 
-            fitsUnder "^- vs -" (fromCompiledCode natMonus) . 
-            fromCompiledCode $ iMinus
+        , expectFailBecause "monus requires more checks"
+            . fitsUnder "^- vs -" (fromCompiledCode natMonus)
+            . fromCompiledCode
+            $ iMinus
         ]
     , testGroup
         "Multiplicative"
@@ -55,7 +56,7 @@ main =
         , fitsUnder "powNat" (fromCompiledCode natPowNat) (fromCompiledCode iPowNat)
         ]
     , testGroup
-        "IntegralDomain"
+        "EuclideanClosed"
         [ fitsUnder "divMod" (fromCompiledCode natDivMod) (fromCompiledCode iDivMod)
         ]
     , testGroup
@@ -64,12 +65,14 @@ main =
             "toBuiltinData"
             (fromCompiledCode natToBuiltinData)
             (fromCompiledCode iToBuiltinData)
-        , expectFailBecause "Natural requires more checks" . 
-            fitsUnder "fromBuiltinData" (fromCompiledCode natFromBuiltinData) .
-            fromCompiledCode $ iFromBuiltinData
-        , expectFailBecause "Natural requires more checks" . 
-            fitsUnder "unsafeFromBuiltinData" (fromCompiledCode natUnsafeFromBuiltinData) .
-            fromCompiledCode $ iUnsafeFromBuiltinData
+        , expectFailBecause "Natural requires more checks"
+            . fitsUnder "fromBuiltinData" (fromCompiledCode natFromBuiltinData)
+            . fromCompiledCode
+            $ iFromBuiltinData
+        , expectFailBecause "Natural requires more checks"
+            . fitsUnder "unsafeFromBuiltinData" (fromCompiledCode natUnsafeFromBuiltinData)
+            . fromCompiledCode
+            $ iUnsafeFromBuiltinData
         ]
     ]
 

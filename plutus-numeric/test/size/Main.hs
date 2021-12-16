@@ -1,122 +1,16 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Main (main) where
 
+import Integer qualified
 import NatRatio qualified
-import Plutus.V1.Ledger.Scripts (fromCompiledCode)
-import PlutusTx.Code (CompiledCode)
-import PlutusTx.IsData.Class (
-  fromBuiltinData,
-  toBuiltinData,
-  unsafeFromBuiltinData,
- )
-import PlutusTx.Natural (Natural)
-import PlutusTx.Numeric.Extra (
-  abs,
-  addExtend,
-  divMod,
-  monus,
-  powNat,
-  projectAbs,
-  restrictMay,
-  signum,
- )
-import PlutusTx.Prelude (BuiltinData)
-import PlutusTx.Prelude qualified as PTx
-import PlutusTx.TH (compile)
+import Natural qualified
 import Rational qualified
 import Test.Tasty (defaultMain, testGroup)
-import Test.Tasty.Plutus.Size (fitsOnChain)
-import Prelude hiding (Rational, abs, divMod, signum, (/))
 
 main :: IO ()
 main =
   defaultMain . testGroup "Size checks" $
-    [ testGroup
-        "Natural"
-        [ fitsOnChain "==" . fromCompiledCode $ naturalEq
-        , fitsOnChain "compare" . fromCompiledCode $ naturalCompare
-        , fitsOnChain "+" . fromCompiledCode $ naturalPlus
-        , fitsOnChain "zero" . fromCompiledCode $ naturalZero
-        , fitsOnChain "*" . fromCompiledCode $ naturalTimes
-        , fitsOnChain "one" . fromCompiledCode $ naturalOne
-        , fitsOnChain "fromBuiltinData" . fromCompiledCode $ naturalFromBuiltinData
-        , fitsOnChain "toBuiltinData" . fromCompiledCode $ naturalToBuiltinData
-        , fitsOnChain "unsafeFromBuiltinData" . fromCompiledCode $ naturalUnsafeFromBuiltinData
-        , fitsOnChain "powNat" . fromCompiledCode $ naturalPowNat
-        , fitsOnChain "monus" . fromCompiledCode $ naturalMonus
-        , fitsOnChain "divMod" . fromCompiledCode $ naturalDivMod
-        ]
-    , testGroup
-        "Integer"
-        [ fitsOnChain "divMod" . fromCompiledCode $ integerDivMod
-        , fitsOnChain "abs" . fromCompiledCode $ integerAbs
-        , fitsOnChain "projectAbs" . fromCompiledCode $ integerProjectAbs
-        , fitsOnChain "addExtend" . fromCompiledCode $ integerAddExtend
-        , fitsOnChain "restrictMay" . fromCompiledCode $ integerRestrictMay
-        , fitsOnChain "signum" . fromCompiledCode $ integerSignum
-        ]
+    [ testGroup "Natural" Natural.tests
+    , testGroup "Integer" Integer.tests
     , testGroup "Rational" Rational.tests
     , testGroup "NatRatio" NatRatio.tests
     ]
-
--- Compiled definitions
-
--- Natural
-
-naturalEq :: CompiledCode (Natural -> Natural -> Bool)
-naturalEq = $$(compile [||(PTx.==)||])
-
-naturalCompare :: CompiledCode (Natural -> Natural -> Ordering)
-naturalCompare = $$(compile [||PTx.compare||])
-
-naturalPlus :: CompiledCode (Natural -> Natural -> Natural)
-naturalPlus = $$(compile [||(PTx.+)||])
-
-naturalZero :: CompiledCode Natural
-naturalZero = $$(compile [||PTx.zero||])
-
-naturalTimes :: CompiledCode (Natural -> Natural -> Natural)
-naturalTimes = $$(compile [||(PTx.*)||])
-
-naturalOne :: CompiledCode Natural
-naturalOne = $$(compile [||PTx.one||])
-
-naturalFromBuiltinData :: CompiledCode (BuiltinData -> Maybe Natural)
-naturalFromBuiltinData = $$(compile [||fromBuiltinData||])
-
-naturalToBuiltinData :: CompiledCode (Natural -> BuiltinData)
-naturalToBuiltinData = $$(compile [||toBuiltinData||])
-
-naturalUnsafeFromBuiltinData :: CompiledCode (BuiltinData -> Natural)
-naturalUnsafeFromBuiltinData =
-  $$(compile [||unsafeFromBuiltinData||])
-
-naturalPowNat :: CompiledCode (Natural -> Natural -> Natural)
-naturalPowNat = $$(compile [||powNat||])
-
-naturalMonus :: CompiledCode (Natural -> Natural -> Natural)
-naturalMonus = $$(compile [||monus||])
-
-naturalDivMod :: CompiledCode (Natural -> Natural -> (Natural, Natural))
-naturalDivMod = $$(compile [||divMod||])
-
--- Integer
-
-integerDivMod :: CompiledCode (Integer -> Integer -> (Integer, Integer))
-integerDivMod = $$(compile [||divMod||])
-
-integerAbs :: CompiledCode (Integer -> Integer)
-integerAbs = $$(compile [||abs||])
-
-integerProjectAbs :: CompiledCode (Integer -> Natural)
-integerProjectAbs = $$(compile [||projectAbs||])
-
-integerAddExtend :: CompiledCode (Natural -> Integer)
-integerAddExtend = $$(compile [||addExtend||])
-
-integerRestrictMay :: CompiledCode (Integer -> Maybe Natural)
-integerRestrictMay = $$(compile [||restrictMay||])
-
-integerSignum :: CompiledCode (Integer -> Integer)
-integerSignum = $$(compile [||signum||])

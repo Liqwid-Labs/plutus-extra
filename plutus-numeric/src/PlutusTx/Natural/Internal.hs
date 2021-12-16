@@ -10,9 +10,9 @@ module PlutusTx.Natural.Internal (
   parity,
 ) where
 
-import Data.Kind (Type)
 import Control.Monad (guard)
 import Data.Aeson (FromJSON (parseJSON), ToJSON)
+import Data.Kind (Type)
 import Data.OpenApi.Schema (ToSchema)
 import PlutusTx.Builtins (matchData)
 import PlutusTx.IsData (
@@ -90,22 +90,24 @@ instance FromJSON Natural where
 -- | @since 1.0
 instance FromData Natural where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData dat = 
-    matchData dat
-              (const go)
-              go
-              go
-              (\i -> if i < zero then Nothing else Just . Natural $ i)
-              go
+  fromBuiltinData dat =
+    matchData
+      dat
+      (const go)
+      go
+      go
+      (\i -> if i < zero then Nothing else Just . Natural $ i)
+      go
     where
-      go :: forall (a :: Type) . a -> Maybe Natural
+      go :: forall (a :: Type). a -> Maybe Natural
       go = const Nothing
 
 -- | @since 1.0
 instance UnsafeFromData Natural where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat = let i = unsafeFromBuiltinData dat in
-    if i < zero then error () else Natural i
+  unsafeFromBuiltinData dat =
+    let i = unsafeFromBuiltinData dat
+     in if i < zero then error () else Natural i
 
 {- | This is partial all over the place, but so is 'Enum' for most things.
 

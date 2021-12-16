@@ -131,7 +131,9 @@ test-suite size
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
+    Integer
     NatRatio
+    Natural
     Rational
 
   build-depends:
