@@ -39,7 +39,6 @@ import Data.Kind (Type)
 import PlutusTx.NatRatio.Internal (NatRatio (NatRatio), nrMonus)
 import PlutusTx.Natural.Internal (Natural (Natural))
 import PlutusTx.Prelude hiding (divMod, even, (%))
-import PlutusTx.Ratio qualified as Ratio
 import PlutusTx.Rational qualified as Rational
 import PlutusTx.Rational.Internal (
   Rational (Rational),
@@ -126,12 +125,6 @@ instance AdditiveHemigroup NatRatio where
   {-# INLINEABLE (^-) #-}
   nr ^- nr' = nrMonus nr nr'
 
-{-
-  NatRatio r1 ^- NatRatio r2
-    | r1 < r2 = zero
-    | otherwise = NatRatio $ r1 - r2
--}
-
 {- | We define the combination of an 'AdditiveHemigroup' and a
  'MultiplicativeMonoid' as a \'hemiring\'. This is designed to be symmetric
  with \'ring\' (much as \'hemigroup\' is symmetric with \'group\').
@@ -179,13 +172,8 @@ class (Ord a, Semiring a) => EuclideanClosed a where
 -- | @since 1.0
 instance EuclideanClosed Natural where
   {-# INLINEABLE divMod #-}
-  divMod n@(Natural x) (Natural y)
-    | y == zero = (zero, n)
-    | y == one = (n, zero)
-    | otherwise =
-      ( Natural . divide x $ y
-      , Natural . modulo x $ y
-      )
+  divMod (Natural x) (Natural y) = case x `divMod` y of
+    (d, r) -> (Natural d, Natural r)
 
 -- | @since 1.0
 instance EuclideanClosed Integer where
@@ -228,7 +216,7 @@ class (MultiplicativeMonoid a) => MultiplicativeGroup a where
   powInteger x i
     | i == zero = one
     | i == one = x
-    | i < zero = reciprocal . expBySquaring x . Ratio.abs $ i
+    | i < zero = reciprocal . expBySquaring x . abs $ i
     | otherwise = expBySquaring x i
 
 infixr 8 `powInteger`
@@ -308,9 +296,11 @@ class (Ord a, Ring a) => IntegralDomain a r | a -> r, r -> a where
 -- | @since 1.0
 instance IntegralDomain Integer Natural where
   {-# INLINEABLE abs #-}
-  abs = Ratio.abs
+  abs x
+    | x < zero = negate x
+    | otherwise = x
   {-# INLINEABLE projectAbs #-}
-  projectAbs = Natural . Ratio.abs
+  projectAbs = Natural . abs
   {-# INLINEABLE restrictMay #-}
   restrictMay x
     | x < zero = Nothing

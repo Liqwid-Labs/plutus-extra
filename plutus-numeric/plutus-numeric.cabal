@@ -131,7 +131,9 @@ test-suite size
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
+    Integer
     NatRatio
+    Natural
     Rational
 
   build-depends:
@@ -166,3 +168,16 @@ test-suite natratio-compare-size
     , tasty-expected-failure  ^>=0.12.3
 
   hs-source-dirs: test/natratio-compare-size
+
+test-suite natural-compare-size
+  import:         test-lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  build-depends:
+    , plutus-ledger-api
+    , plutus-size-check
+    , plutus-tx
+    , plutus-tx-plugin
+    , tasty-expected-failure
+
+  hs-source-dirs: test/natural-compare-size
