@@ -69,7 +69,7 @@ tests =
       [ fitsInto "fromNatural" [bytes| 24 |] . fromCompiledCode $ nrFromNatural
       , fitsInto "numerator" [bytes| 26 |] . fromCompiledCode $ nrNumerator
       , fitsInto "denominator" [bytes| 26 |] . fromCompiledCode $ nrNumerator
-      , fitsInto "round" [bytes| 342 |] . fromCompiledCode $ nrRound
+      , fitsInto "round" [bytes| 282 |] . fromCompiledCode $ nrRound
       , fitsInto "truncate" [bytes| 30 |] . fromCompiledCode $ nrTruncate
       , fitsInto "properFraction" [bytes| 57 |] . fromCompiledCode $ nrProperFraction
       ]
