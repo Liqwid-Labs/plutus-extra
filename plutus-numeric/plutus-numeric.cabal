@@ -111,7 +111,7 @@ test-suite golden
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   build-depends:
-    , plutus-golden  ^>=2.0
+    , plutus-golden  ^>=2.1
     , plutus-tx
 
   hs-source-dirs: test/golden

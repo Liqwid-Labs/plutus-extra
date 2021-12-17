@@ -28,6 +28,9 @@ module PlutusTx.Rational (
   fromGHC,
   Internal.toGHC,
 
+  -- ** RatioSchema
+  Internal.RatioSchema (RatioSchema),
+
   -- * Other functionality
   negate,
   Internal.numerator,

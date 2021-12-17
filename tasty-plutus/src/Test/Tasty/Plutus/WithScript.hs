@@ -105,11 +105,24 @@ withMintingPolicy name mp (WithMinting comp) =
 
  = Usage
 
- > testValidator :: Validator
- > testValidator = mkValidatorScript $
- >    $$(compile [|| go ||]) `applyCode` $$(compile [|| myValidator ||])
- >   where
- >    go = toTestValidator
+ > data TestScript
+
+ > instance ValidatorTypes TestScript where
+ >   type RedeemerType TestScript = SomeType
+ >   type DatumType TestScript = SomeOtherType
+
+typedSimpleValidator :: TypedValidator TestScript
+
+ > testValidator :: TypedValidator TestScript
+ > testValidator =
+ >  mkTypedValidator @TestScript
+ >    $$(compile [||myValidator||])
+ >    $$(compile [||wrap||])
+ >    where
+ >      wrap ::
+ >        ( SomeType -> SomeOtherType -> ScriptContext -> Bool) ->
+ >        WrappedValidatorType
+ >      wrap = toTestValidator
 
  = Important note
 
@@ -117,12 +130,19 @@ withMintingPolicy name mp (WithMinting comp) =
  'liftCode' and 'applyCode', rather than as literal arguments inside of
  'compile':
 
- > testValidatorWithArg :: Validator
- > testValidatorWithArg = mkValidatorScript $
- >    $$(compile [|| go ||]) `applyCode` ( $$(compile [|| myValidator ||])
- >                                          `applyCode`
- >                                         liftCode arg1
- >                                       )
+ > testValidatorWithArg :: ArgumentType -> Validator
+ > testValidatorWithArg arg =
+ >  mkTypedValidator @TestScript
+ >    ( $$(compile [||myValidator||])
+ >          `applyCode`
+ >          liftCode arg
+ >    )
+ >    $$(compile [||wrap||])
+ >    where
+ >      wrap ::
+ >        ( SomeType -> SomeOtherType -> ScriptContext -> Bool) ->
+ >        WrappedValidatorType
+ >      wrap = toTestValidator
 
  @since 3.0
 -}
