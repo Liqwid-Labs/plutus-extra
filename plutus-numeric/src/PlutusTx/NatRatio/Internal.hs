@@ -1,5 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-specialize #-}
 
 module PlutusTx.NatRatio.Internal (
   NatRatio (..),
@@ -14,6 +16,7 @@ module PlutusTx.NatRatio.Internal (
   recip,
   toRational,
   NatRatioSchema (NatRatioSchema),
+  nrMonus,
 ) where
 
 import Control.Monad (guard)
@@ -27,18 +30,23 @@ import Data.Aeson (
  )
 import Data.Aeson.Types (Parser)
 import Data.Coerce (coerce)
-import Data.OpenApi qualified as OpenApi
+import Data.OpenApi (ToSchema (declareNamedSchema))
 import GHC.Generics (Generic)
 import GHC.TypeLits (KnownSymbol, Symbol)
 import PlutusTx.IsData.Class (
   FromData (fromBuiltinData),
-  ToData,
+  ToData (toBuiltinData),
   UnsafeFromData (unsafeFromBuiltinData),
  )
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Natural.Internal (Natural (Natural))
-import PlutusTx.Prelude
-import PlutusTx.Ratio qualified as Ratio
+import PlutusTx.Prelude hiding (Rational, (%))
+import PlutusTx.Rational qualified as Ratio
+import PlutusTx.Rational.Internal (
+  Rational (Rational),
+  euclid,
+  (%),
+ )
 import PlutusTx.SchemaUtils (
   RatioFields ((:%:)),
   jsonFieldSym,
@@ -47,11 +55,7 @@ import PlutusTx.SchemaUtils (
   ratioFormSchema,
   ratioTypeName,
  )
-import Schema (
-  FormSchema,
-  ToArgument (toArgument),
-  ToSchema (toSchema),
- )
+import Schema qualified as PlutusSchema
 import Test.QuickCheck.Arbitrary (
   Arbitrary (arbitrary, shrink),
   CoArbitrary (coarbitrary),
@@ -66,7 +70,7 @@ import Prelude qualified
 
  @since 1.0
 -}
-newtype NatRatio = NatRatio Rational
+newtype NatRatio = NatRatio Ratio.Rational
   deriving stock
     ( -- | @since 1.0
       Prelude.Show
@@ -89,20 +93,18 @@ newtype NatRatio = NatRatio Rational
     , -- | @since 1.0
       MultiplicativeMonoid
     , -- | @since 1.0
-      ToData
-    , -- | @since 1.0
       ToJSON
-    , -- | @since 1.0
-      ToArgument
     )
-    via Rational
+    via Ratio.Rational
   deriving
-    ( -- | @since @1.2
+    ( -- | @since 1.2
       ToSchema
-    , -- | @since @1.2
-      OpenApi.ToSchema
+    , -- | @since 1.2
+      PlutusSchema.ToSchema
+    , -- | @since 1.2
+      PlutusSchema.ToArgument
     )
-    via (NatRatioSchema ("denominator" ':%: "numerator"))
+    via (NatRatioSchema ("numerator" ':%: "denominator"))
 
 {- | Represents this like a positive-only ratio.
 
@@ -120,36 +122,38 @@ instance FromJSON NatRatio where
     Prelude.pure . NatRatio $ r
 
 -- | @since 1.0
+instance ToData NatRatio where
+  {-# INLINEABLE toBuiltinData #-}
+  toBuiltinData (NatRatio (Rational n d)) = toBuiltinData (n, d)
+
+-- | @since 1.0
 instance FromData NatRatio where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData dat = case fromBuiltinData dat of
-    Nothing -> Nothing
-    Just r ->
-      if Ratio.abs r == r
-        then Just (NatRatio r)
-        else Nothing
+    Just (n, d) ->
+      if d == zero || n < zero
+        then Nothing
+        else Just . NatRatio $ n % d
+    _ -> Nothing
 
 -- | @since 1.0
 instance UnsafeFromData NatRatio where
   {-# INLINEABLE unsafeFromBuiltinData #-}
-  unsafeFromBuiltinData dat =
-    let r = unsafeFromBuiltinData dat
-     in if Ratio.abs r == r
-          then NatRatio r
-          else error . trace "Negative fractions cannot be NatRatio" $ ()
+  unsafeFromBuiltinData dat = case unsafeFromBuiltinData dat of
+    (n, d) -> NatRatio (n % d)
 
 -- | @since 1.0
 instance Arbitrary NatRatio where
   arbitrary = do
     Natural num <- arbitrary
     Natural den <- suchThat arbitrary (> zero)
-    Prelude.pure . NatRatio $ num Ratio.% den
+    Prelude.pure . NatRatio $ num % den
   shrink nr = do
     let Natural num = numerator nr
     let Natural den = denominator nr
     num' <- Prelude.filter (> 0) . shrink $ num
     den' <- Prelude.filter (> 0) . shrink $ den
-    Prelude.pure . NatRatio $ num' Ratio.% den'
+    Prelude.pure . NatRatio $ num' % den'
 
 -- | @since 2.2
 instance CoArbitrary NatRatio where
@@ -165,7 +169,7 @@ instance Function NatRatio where
       into :: NatRatio -> (Natural, Natural)
       into nr = (numerator nr, denominator nr)
       outOf :: (Natural, Natural) -> NatRatio
-      outOf (Natural num, Natural den) = NatRatio $ num Ratio.% den
+      outOf (Natural num, Natural den) = NatRatio $ num % den
 
 {- | Safely construct a 'NatRatio'. Checks for a zero denominator.
 
@@ -176,7 +180,7 @@ natRatio :: Natural -> Natural -> Maybe NatRatio
 natRatio (Natural n) (Natural m) =
   if m == 0
     then Nothing
-    else Just . NatRatio $ n Ratio.% m
+    else Just . NatRatio $ n % m
 
 {- | Convert a 'Natural' into a 'NatRatio' with the same value.
 
@@ -184,7 +188,7 @@ natRatio (Natural n) (Natural m) =
 -}
 {-# INLINEABLE fromNatural #-}
 fromNatural :: Natural -> NatRatio
-fromNatural (Natural n) = NatRatio $ n % 1
+fromNatural (Natural n) = NatRatio . Rational n $ one
 
 {- | Retrieve the numerator of a 'NatRatio'.
 
@@ -209,7 +213,7 @@ denominator (NatRatio r) = Natural . Ratio.denominator $ r
 -}
 {-# INLINEABLE truncate #-}
 truncate :: NatRatio -> Natural
-truncate (NatRatio r) = Natural . Ratio.truncate $ r
+truncate (NatRatio (Rational n d)) = Natural $ n `quotient` d
 
 {- | Round the 'NatRatio' arithmetically.
 
@@ -217,7 +221,14 @@ truncate (NatRatio r) = Natural . Ratio.truncate $ r
 -}
 {-# INLINEABLE round #-}
 round :: NatRatio -> Natural
-round (NatRatio r) = Natural . Ratio.round $ r
+round (NatRatio (Rational n d)) =
+  let (w, p) = (n `quotient` d, Rational (n `remainder` d) d)
+      m = Natural (w + one)
+      flag = p - Ratio.half
+   in if
+          | flag < zero -> Natural w
+          | flag == zero -> if even w then Natural w else m
+          | otherwise -> m
 
 {- | Take the reciprocal of the 'NatRatio'.
 
@@ -246,27 +257,39 @@ ceiling x =
 -}
 {-# INLINEABLE properFraction #-}
 properFraction :: NatRatio -> (Natural, NatRatio)
-properFraction (NatRatio r) =
-  let (n, r') = Ratio.properFraction r
-   in (Natural n, NatRatio r')
+properFraction (NatRatio (Rational n d)) =
+  (Natural (n `quotient` d), NatRatio . Rational (n `remainder` d) $ d)
+
+-- Helper function for monus definition in Numeric.Extra
+{-# INLINEABLE nrMonus #-}
+nrMonus :: NatRatio -> NatRatio -> NatRatio
+nrMonus (NatRatio (Rational n d)) (NatRatio (Rational n' d')) =
+  let newNum = max zero ((n * d') - (n' * d))
+      newDen = d * d'
+      gcd = euclid newNum newDen
+   in NatRatio
+        ( Rational
+            (newNum `quotient` gcd)
+            (newDen `quotient` gcd)
+        )
 
 {- | Convert a 'NatRatio' to the underlying 'Rational'.
 
  @since 1.0
 -}
-toRational :: NatRatio -> Rational
+toRational :: NatRatio -> Ratio.Rational
 toRational (NatRatio r) = r
 
-{- | Newtype for deriving
-'ToSchema', 'ToArgument', 'OpenApi.ToSchema', 'ToJSON' and 'FromJSON' instances
-for newtypes over NatRatio with the specified field names for the numerator and denominator.
+{- | Newtype for deriving 'ToSchema', 'ToJSON' and 'FromJSON' instances
+ for newtypes over 'NatRatio' with the specified field names for the numerator
+ and denominator.
 
 = Example
 
 @
 newtype ExchangeRatio = ExchangeRatio NatRatio
   deriving
-    (ToJSON, FromJSON, OpenApi.ToSchema)
+    (ToJSON, FromJSON, ToSchema)
     via (NatRatioSchema ("Bitcoin" ':%: "USD"))
 @
 
@@ -321,7 +344,18 @@ instance
   ) =>
   ToSchema (NatRatioSchema (numerator ':%: denominator))
   where
-  toSchema :: FormSchema
+  declareNamedSchema _ =
+    ratioDeclareNamedSchema @numerator @denominator "NatRatioSchema"
+
+-- | @since 2.3
+instance
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
+  ) =>
+  PlutusSchema.ToSchema (NatRatioSchema (numerator ':%: denominator))
+  where
+  toSchema :: PlutusSchema.FormSchema
   toSchema = ratioFormSchema @numerator @denominator
 
 -- | @since 2.3
@@ -330,7 +364,7 @@ instance
   ( KnownSymbol numerator
   , KnownSymbol denominator
   ) =>
-  ToArgument (NatRatioSchema (numerator ':%: denominator))
+  PlutusSchema.ToArgument (NatRatioSchema (numerator ':%: denominator))
   where
   toArgument (NatRatioSchema ratio) =
     ratioFixFormArgument @numerator @denominator num denom
@@ -339,16 +373,5 @@ instance
       num = coerce . numerator $ ratio
       denom :: Integer
       denom = coerce . denominator $ ratio
-
--- | @since 2.3
-instance
-  forall (numerator :: Symbol) (denominator :: Symbol).
-  ( KnownSymbol numerator
-  , KnownSymbol denominator
-  ) =>
-  OpenApi.ToSchema (NatRatioSchema (numerator ':%: denominator))
-  where
-  declareNamedSchema _ =
-    ratioDeclareNamedSchema @numerator @denominator "NatRatioSchema"
 
 makeLift ''NatRatio

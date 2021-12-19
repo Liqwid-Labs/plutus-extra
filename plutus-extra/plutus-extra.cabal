@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-extra
-version:            3.0
+version:            4.0
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -39,8 +39,11 @@ common lang
 
   build-depends:
     , base                     ^>=4.14
+    , openapi3                 ^>=3.1
     , record-dot-preprocessor  ^>=0.2.11
     , record-hasfield          ^>=1.0
+    , QuickCheck               ^>=2.14.2
+    , vector                   ^>=0.12.3
 
   ghc-options:
     -Wall -Wcompat -Wincomplete-uni-patterns -Wredundant-constraints
@@ -79,11 +82,15 @@ library
     PlutusTx.Tuple.Extra
     PlutusTx.UniqueMap
 
+  other-modules:
+    PlutusTx.UniqueMap.Internal
+
   build-depends:
     , aeson              ^>=1.5.6.0
     , ansi-terminal      ^>=0.11
     , deepseq            ^>=1.4.4.0
     , containers         ^>=0.6.2
+    , data-default-class ^>=0.1.2
     , foldl              ^>=1.4.12
     , freer-simple       ^>=1.2.1.1
     , lens               ^>=4.19.2
@@ -116,7 +123,6 @@ test-suite plutus-extra-test
     , plutus-ledger
     , plutus-ledger-api
     , plutus-tx
-    , QuickCheck         ^>=2.14.2
     , tasty              ^>=1.4.1
     , tasty-quickcheck   ^>=0.10.1.2
 

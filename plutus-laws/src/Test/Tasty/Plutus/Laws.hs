@@ -69,12 +69,25 @@ module Test.Tasty.Plutus.Laws (
   multiplicativeMonoidLaws,
   semiringConsistencyLaws,
   semiringConsistencyLawsWith,
+
+  -- ** Your own laws
+
+  -- *** Type and operations
+  Laws,
+  law,
+
+  -- *** Testing
+  laws,
+  lawsWith,
 ) where
 
 import Data.Aeson (FromJSON, ToJSON (toJSON), decode, encode)
 import Data.Aeson.Encode.Pretty (encodePretty)
 import Data.ByteString.Lazy qualified as Lazy
+import Data.Functor.Invariant (Invariant (invmap))
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty ((:|)))
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Text qualified as T
 import Data.Text.Encoding (decodeUtf8)
 import PlutusTx.IsData.Class (
@@ -89,10 +102,12 @@ import Test.QuickCheck (
   Property,
   checkCoverage,
   cover,
+  elements,
   forAllShrinkShow,
   property,
   (.||.),
   (===),
+  (==>),
  )
 import Test.QuickCheck.Arbitrary (
   Arbitrary (arbitrary, shrink),
@@ -123,6 +138,75 @@ import Text.PrettyPrint (
  )
 import Text.Show.Pretty (ppDoc, ppShow)
 import Type.Reflection (Typeable, tyConName, typeRep, typeRepTyCon)
+
+{- | An opaque newtype describing a collection of laws. You can construct 'Laws'
+ in two ways:
+
+ * Using 'law' to describe a single law; and
+ * Using the '<>' operator to combine 'Laws' together.
+
+ @since 2.3
+-}
+newtype Laws (a :: Type) = Laws (Gen a -> (a -> [a]) -> NonEmpty (String, Property))
+
+-- | @since 2.3
+instance Invariant Laws where
+  invmap f g (Laws h) = Laws $ \gen shr -> h (g <$> gen) (fmap g . shr . f)
+
+-- | @since 2.3
+instance Semigroup (Laws a) where
+  Laws f <> Laws g = Laws (f <> g)
+
+{- | Given a description, and a way of constructing a 'Property' from a
+ generator and shrinker, define a 'Laws' consisting of just the given law.
+
+ This allows libraries to provide their own 'Laws' without having to depend on
+ 'plutus-laws' directly: you can provide functions of type @'Gen' a -> (a ->
+ [a]) -> 'Property'@, which can be wrapped using 'law' for anyone who needs
+ them.
+
+ = Note
+
+ If your 'Property' may be subject to coverage problems, it is your
+ responsibility to check these. In particular, any property whose form is
+ similar to "if P(x), then check1 else check2" could be subject to coverage
+ issues if P(x) is unlikely on a randomly-generated @a@.
+
+ @since 2.3
+-}
+law :: forall (a :: Type). String -> (Gen a -> (a -> [a]) -> Property) -> Laws a
+law description f = Laws (fmap (fmap ((:| []) . (description,))) f)
+
+{- | Given a description of what kind of laws are being tested, and a 'Laws'
+ containing the individual laws to test, check those laws.
+
+ @since 2.3
+-}
+laws ::
+  forall (a :: Type).
+  (Typeable a, Arbitrary a) =>
+  String ->
+  Laws a ->
+  TestTree
+laws lawsName = lawsWith lawsName arbitrary shrink
+
+{- | As 'laws', but with explicit generator and shrinker.
+
+ @since 2.3
+-}
+lawsWith ::
+  forall (a :: Type).
+  (Typeable a) =>
+  String ->
+  Gen a ->
+  (a -> [a]) ->
+  Laws a ->
+  TestTree
+lawsWith lawsName gen shr (Laws f) =
+  testProperties (lawsName <> " laws for " <> typeName @a)
+    . NonEmpty.toList
+    . f gen
+    $ shr
 
 {- | Checks that 'ToJSON' and 'FromJSON' for @a@ form a partial isomorphism.
 
@@ -543,32 +627,125 @@ plutusOrdLawsWith gen shr =
       , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propAntiSymm
       )
     ,
+      ( "x <= x"
+      , forAllShrinkShow gen shr ppShow propRefl
+      )
+    ,
       ( "if x <= y and y <= z, then x <= z"
-      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propTrans
+      , forAllShrinkShow sortedTripleGen (liftShrink shr) ppShow propTrans
+      )
+    ,
+      ( "x >= y if and only if y <= x"
+      , forAllShrinkShow pairGen (liftShrink shr) ppShow propGteLte
+      )
+    ,
+      ( "x < y if and only if x <= y and x /= y"
+      , forAllShrinkShow pairGen (liftShrink shr) ppShow propLtLte
+      )
+    ,
+      ( "x > y if and only if y < x"
+      , forAllShrinkShow pairGen (liftShrink shr) ppShow propGtLt
+      )
+    ,
+      ( "compare x y == LT if and only if x < y"
+      , forAllShrinkShow pairGen (liftShrink shr) ppShow propCompareLt
+      )
+    ,
+      ( "compare x y == GT if and only if x > y"
+      , forAllShrinkShow pairGen (liftShrink shr) ppShow propCompareGt
+      )
+    ,
+      ( "compare x y == EQ if and only if x == y"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propCompareEq
+      )
+    ,
+      ( "min x y == if x <= y then x else y"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propMin
+      )
+    ,
+      ( "max x y == if x >= y then x else y"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propMax
       )
     ]
   where
     propTotal :: Pair a -> Property
-    propTotal (Pair x y) =
-      ((x PlutusTx.<= y) PlutusTx.== True)
-        .||. ((y PlutusTx.<= x) PlutusTx.== True)
+    propTotal (Pair x y) = (x PlutusTx.<= y) .||. (y PlutusTx.<= x)
     propAntiSymm :: Entangled a -> Property
-    propAntiSymm ent = checkCoverage
-      . cover 50.0 (knownEntangled ent) "precondition known satisfied"
-      $ case ent of
-        Entangled x y ->
-          ((x PlutusTx.<= y) && (y PlutusTx.<= x)) === (x PlutusTx.== y)
-        Disentangled x y ->
-          ((x PlutusTx.<= y) && (y PlutusTx.<= x)) === (x PlutusTx.== y)
+    propAntiSymm ent =
+      checkCoverage
+        . cover 50.0 (knownEntangled ent) "precondition known satisfied"
+        $ case ent of
+          Entangled x y ->
+            ((x PlutusTx.<= y) && (y PlutusTx.<= x)) === (x PlutusTx.== y)
+          Disentangled x y ->
+            ((x PlutusTx.<= y) && (y PlutusTx.<= x)) === (x PlutusTx.== y)
+    propRefl :: a -> Property
+    propRefl x = (x PlutusTx.<= x) === True
     propTrans :: Triple a -> Property
-    propTrans (Triple x y z) = checkCoverage
-      . cover 33.3 (go x y z) "x-to-y and y-to-z implies x-to-z"
-      $ case (x PlutusTx.<= y, y PlutusTx.<= z) of
-        (True, True) -> (x PlutusTx.<= z) === True
-        (False, False) -> (x PlutusTx.<= z) === False
-        _ -> property True -- any outcome is acceptable
-    go :: a -> a -> a -> Bool
-    go x y z = (x PlutusTx.<= y) == (y PlutusTx.<= z)
+    propTrans (Triple x y z) =
+      x PlutusTx.<= y && y PlutusTx.<= z ==> x PlutusTx.<= z
+    propGteLte :: Pair a -> Property
+    propGteLte (Pair x y) =
+      checkCoverage
+        . cover 50.0 (y PlutusTx.<= x) "precondition (y <= x) satisfied"
+        $ (x PlutusTx.>= y) === (y PlutusTx.<= x)
+    propLtLte :: Pair a -> Property
+    propLtLte (Pair x y) =
+      checkCoverage
+        . cover 40.0 (go x y) "precondition (x <= y and x /= y) satisfied"
+        $ (x PlutusTx.< y) === (x PlutusTx.<= y && x PlutusTx./= y)
+    propGtLt :: Pair a -> Property
+    propGtLt (Pair x y) =
+      checkCoverage
+        . cover 40.0 (y PlutusTx.< x) "precondition (y < x) satisfied"
+        $ (x PlutusTx.> y) === (y PlutusTx.< x)
+    propCompareLt :: Pair a -> Property
+    propCompareLt (Pair x y) =
+      checkCoverage
+        . cover 40.0 (x PlutusTx.< y) "precondition (x < y) satisfied"
+        $ (PlutusTx.compare x y == LT) === (x PlutusTx.< y)
+    propCompareGt :: Pair a -> Property
+    propCompareGt (Pair x y) =
+      checkCoverage
+        . cover 40.0 (x PlutusTx.> y) "precondition (x > y) satisfied"
+        $ (PlutusTx.compare x y == GT) === (x PlutusTx.> y)
+    propCompareEq :: Entangled a -> Property
+    propCompareEq ent =
+      checkCoverage
+        . cover 50.0 (knownEntangled ent) "precondition known satisfied"
+        $ case ent of
+          Entangled x y ->
+            PlutusTx.compare x y === EQ
+          Disentangled x y ->
+            (PlutusTx.compare x y == EQ) === (x PlutusTx.== y)
+    propMin :: Pair a -> Property
+    propMin (Pair x y) =
+      checkCoverage
+        . cover 50.0 (x PlutusTx.<= y) "precondition (x <= y) satisfied"
+        $ PlutusTx.min x y PlutusTx.== if x PlutusTx.<= y then x else y
+    propMax :: Pair a -> Property
+    propMax (Pair x y) =
+      checkCoverage
+        . cover 50.0 (x PlutusTx.>= y) "precondition (x >= y) satisfied"
+        $ PlutusTx.max x y PlutusTx.== if x PlutusTx.>= y then x else y
+    go :: a -> a -> Bool
+    go x y = x PlutusTx.<= y && x PlutusTx./= y
+    sortedTripleGen :: Gen (Triple a)
+    sortedTripleGen = do
+      Pair a b <- liftArbitrary gen
+      c <- gen
+      sortTriple
+        <$> elements
+          [ Triple a a a
+          , Triple a a b
+          , Triple a b c
+          ]
+    pairGen :: Gen (Pair a)
+    pairGen = do
+      Pair a b <- liftArbitrary gen
+      let le = PlutusTx.min a b
+          gt = PlutusTx.max a b
+      elements [Pair le gt, Pair gt le]
 
 {- | Checks that the 'PlutusTx.Ord' instance for @a@ is a total order.
 
@@ -627,29 +804,95 @@ plutusOrdLawsDirectWith gen shr =
       , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propAntiSymm
       )
     ,
+      ( "x <= x"
+      , forAllShrinkShow gen shr ppShow propRefl
+      )
+    ,
       ( "if x <= y and y <= z, then x <= z"
       , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propTrans
+      )
+    ,
+      ( "x >= y if and only if y <= x"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propGteLte
+      )
+    ,
+      ( "x < y if and only if x <= y and x /= y"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propLtLte
+      )
+    ,
+      ( "x > y if and only if y < x"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propGtLt
+      )
+    ,
+      ( "compare x y == LT if and only if x < y"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propCompareLt
+      )
+    ,
+      ( "compare x y == GT if and only if x > y"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propCompareGt
+      )
+    ,
+      ( "compare x y == EQ if and only if x == y"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propCompareEq
+      )
+    ,
+      ( "min x y == if x <= y then x else y"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propMin
+      )
+    ,
+      ( "max x y == if x >= y then x else y"
+      , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propMax
       )
     ]
   where
     propTotal :: Pair a -> Property
-    propTotal (Pair x y) =
-      ((x PlutusTx.<= y) PlutusTx.== True)
-        .||. ((y PlutusTx.<= x) PlutusTx.== True)
+    propTotal (Pair x y) = (x PlutusTx.<= y) .||. (y PlutusTx.<= x)
     propAntiSymm :: Pair a -> Property
     propAntiSymm (Pair x y) =
-      cover 50.0 (go x y) "precondition known satisfied" $
+      cover 50.0 (go x y) "precondition (x <= y and y <= x) satisfied" $
         ((x PlutusTx.<= y) && (y PlutusTx.<= x)) === (x PlutusTx.== y)
+    propRefl :: a -> Property
+    propRefl x = (x PlutusTx.<= x) === True
     propTrans :: Triple a -> Property
-    propTrans (Triple x y z) = cover 33.3 (go2 x y z) "precondition known satisfied" $
-      case (x PlutusTx.<= y, y PlutusTx.<= z) of
-        (True, True) -> (x PlutusTx.<= z) === True
-        (False, False) -> (x PlutusTx.<= z) === False
-        _ -> property True -- any outcome is acceptable
+    propTrans triple =
+      let Triple x y z = sortTriple triple
+       in x PlutusTx.<= y && y PlutusTx.<= z ==> x PlutusTx.<= z
+    propGteLte :: Pair a -> Property
+    propGteLte (Pair x y) =
+      cover 50.0 (y PlutusTx.<= x) "precondition (y <= x) satisfied" $
+        (x PlutusTx.>= y) === (y PlutusTx.<= x)
+    propLtLte :: Pair a -> Property
+    propLtLte (Pair x y) =
+      cover 40.0 (go2 x y) "precondition (x <= y and x /= y) satisfied" $
+        (x PlutusTx.< y) === (x PlutusTx.<= y && x PlutusTx./= y)
+    propGtLt :: Pair a -> Property
+    propGtLt (Pair x y) =
+      cover 40.0 (y PlutusTx.< x) "precondition (y < x) satisfied" $
+        (x PlutusTx.> y) === (y PlutusTx.< x)
+    propCompareLt :: Pair a -> Property
+    propCompareLt (Pair x y) =
+      cover 40.0 (x PlutusTx.< y) "precondition (x < y) satisfied" $
+        (PlutusTx.compare x y == LT) === (x PlutusTx.< y)
+    propCompareGt :: Pair a -> Property
+    propCompareGt (Pair x y) =
+      cover 40.0 (x PlutusTx.> y) "precondition (x > y) satisfied" $
+        (PlutusTx.compare x y == GT) === (x PlutusTx.> y)
+    propCompareEq :: Pair a -> Property
+    propCompareEq (Pair x y) =
+      cover 50.0 (x PlutusTx.== y) "precondition (x = y) satisfied" $
+        (PlutusTx.compare x y == EQ) === (x PlutusTx.== y)
+    propMin :: Pair a -> Property
+    propMin (Pair x y) =
+      cover 50.0 (x PlutusTx.<= y) "precondition (x <= y) satisfied" $
+        PlutusTx.min x y PlutusTx.== if x PlutusTx.<= y then x else y
+    propMax :: Pair a -> Property
+    propMax (Pair x y) =
+      cover 50.0 (x PlutusTx.>= y) "precondition (x >= y) satisfied" $
+        PlutusTx.max x y PlutusTx.== if x PlutusTx.>= y then x else y
     go :: a -> a -> Bool
-    go x y = (x PlutusTx.<= y) && (y PlutusTx.<= x)
-    go2 :: a -> a -> a -> Bool
-    go2 x y z = (x PlutusTx.<= y) == (y PlutusTx.<= z)
+    go x y = x PlutusTx.<= y && y PlutusTx.<= x
+    go2 :: a -> a -> Bool
+    go2 x y = x PlutusTx.<= y && x PlutusTx./= y
 
 {- | Checks that the 'PlutusTx.Semigroup' instance for @a@ has an associative
  'PlutusTx.<>'.
@@ -970,6 +1213,20 @@ semiringConsistencyLawsWith gen shr =
       (x PlutusTx.+ y) PlutusTx.* z === (x PlutusTx.* z) PlutusTx.+ (y PlutusTx.* z)
 
 -- Helpers
+
+sortTriple ::
+  forall (a :: Type).
+  (PlutusTx.Ord a) =>
+  Triple a ->
+  Triple a
+sortTriple (Triple a b c) =
+  case (PlutusTx.compare a b, PlutusTx.compare b c, PlutusTx.compare a c) of
+    (GT, GT, _) -> Triple c b a
+    (GT, _, GT) -> Triple b c a
+    (GT, _, _) -> Triple b a c
+    (_, GT, GT) -> Triple c a b
+    (_, GT, _) -> Triple a c b
+    (_, _, _) -> Triple a b c
 
 knownEntangled ::
   forall (a :: Type).

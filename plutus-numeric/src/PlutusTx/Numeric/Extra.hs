@@ -33,14 +33,18 @@ module PlutusTx.Numeric.Extra (
   rem,
   (^),
   powNat,
-  (^+),
 ) where
 
 import Data.Kind (Type)
-import PlutusTx.NatRatio.Internal (NatRatio (NatRatio))
+import PlutusTx.NatRatio.Internal (NatRatio (NatRatio), nrMonus)
 import PlutusTx.Natural.Internal (Natural (Natural))
-import PlutusTx.Prelude hiding (divMod, even)
-import PlutusTx.Ratio qualified as Ratio
+import PlutusTx.Prelude hiding (divMod, even, (%))
+import PlutusTx.Rational qualified as Rational
+import PlutusTx.Rational.Internal (
+  Rational (Rational),
+  rDiv,
+  rPowInteger,
+ )
 import Prelude ()
 
 {- | Raise by a 'Natural' power.
@@ -71,21 +75,6 @@ powNat x (Natural n) =
     else expBySquaring x n
 
 infixr 8 `powNat`
-
-{- | 'powNat' as an infix operator.
-
- @since 1.0
--}
-{-# INLINEABLE (^+) #-}
-(^+) ::
-  forall (m :: Type).
-  (MultiplicativeMonoid m) =>
-  m ->
-  Natural ->
-  m
-(^+) = powNat
-
-infixr 8 ^+
 
 {- | An 'AdditiveMonoid' with a notion of monus. Provides one operation @'^-'@,
  also called \'monus\'.
@@ -134,9 +123,7 @@ instance AdditiveHemigroup Natural where
 -}
 instance AdditiveHemigroup NatRatio where
   {-# INLINEABLE (^-) #-}
-  NatRatio r1 ^- NatRatio r2
-    | r1 < r2 = zero
-    | otherwise = NatRatio $ r1 - r2
+  nr ^- nr' = nrMonus nr nr'
 
 {- | We define the combination of an 'AdditiveHemigroup' and a
  'MultiplicativeMonoid' as a \'hemiring\'. This is designed to be symmetric
@@ -185,13 +172,8 @@ class (Ord a, Semiring a) => EuclideanClosed a where
 -- | @since 1.0
 instance EuclideanClosed Natural where
   {-# INLINEABLE divMod #-}
-  divMod n@(Natural x) (Natural y)
-    | y == zero = (zero, n)
-    | y == one = (n, zero)
-    | otherwise =
-      ( Natural . divide x $ y
-      , Natural . modulo x $ y
-      )
+  divMod (Natural x) (Natural y) = case x `divMod` y of
+    (d, r) -> (Natural d, Natural r)
 
 -- | @since 1.0
 instance EuclideanClosed Integer where
@@ -234,20 +216,19 @@ class (MultiplicativeMonoid a) => MultiplicativeGroup a where
   powInteger x i
     | i == zero = one
     | i == one = x
-    | i < zero = reciprocal . expBySquaring x . Ratio.abs $ i
+    | i < zero = reciprocal . expBySquaring x . abs $ i
     | otherwise = expBySquaring x i
 
 infixr 8 `powInteger`
 
 -- | @since 1.0
-instance MultiplicativeGroup Rational where
+instance MultiplicativeGroup Rational.Rational where
   {-# INLINEABLE (/) #-}
-  x / y = x * reciprocal y
+  (/) = rDiv
   {-# INLINEABLE reciprocal #-}
-  reciprocal x =
-    let n = Ratio.numerator x
-        m = Ratio.denominator x
-     in m % n
+  reciprocal = Rational.recip
+  {-# INLINEABLE powInteger #-}
+  powInteger = rPowInteger
 
 -- | @since 1.0
 instance MultiplicativeGroup NatRatio where
@@ -255,6 +236,8 @@ instance MultiplicativeGroup NatRatio where
   NatRatio r / NatRatio r' = NatRatio (r / r')
   {-# INLINEABLE reciprocal #-}
   reciprocal (NatRatio r) = NatRatio . reciprocal $ r
+  {-# INLINEABLE powInteger #-}
+  powInteger (NatRatio r) = NatRatio . powInteger r
 
 -- | @since 1.0
 type Field a = (AdditiveGroup a, MultiplicativeGroup a)
@@ -278,23 +261,21 @@ type Hemifield a = (AdditiveHemigroup a, MultiplicativeGroup a)
  For 'abs', the following laws apply:
 
  1. @'abs' x '>=' 'zero'@
- 2. @'abs' 'zero' = 'zero'@
+ 2. @x '<=' 'abs' x@
  3. @'abs' (x '*' y) = 'abs' x '*' 'abs' y@
- 4. @'abs' (x '+' y) '<=' 'abs' x '+' 'abs' y@
 
  Additionally, if you define 'signum', the following law applies:
 
- 5. @'abs' x '*' 'signum' x = x@
+ 4. @'abs' x '*' 'signum' x = x@
 
- For the methods relating to the additive restriction, the following laws
- apply:
+ For the methods relating to the additive restriction, the following law
+ applies:
 
- 1. @'projectAbs' '.' 'addExtend' = 'id'@
- 2. If @'abs' x = x@, then @'addExtend' '.' 'projectAbs' '$' x = x@
+ 1. @'addExtend' '.' 'projectAbs' '$' x = 'abs' x@
 
  Additionally, if you define 'restrictMay', the following law applies:
 
- 3. @restrictMay x = Just y@ if and only if @abs x = x@.
+ 2. @restrictMay x = Just y@ if and only if @abs x = x@.
 
  @since 1.0
 -}
@@ -315,9 +296,11 @@ class (Ord a, Ring a) => IntegralDomain a r | a -> r, r -> a where
 -- | @since 1.0
 instance IntegralDomain Integer Natural where
   {-# INLINEABLE abs #-}
-  abs = Ratio.abs
+  abs x
+    | x < zero = negate x
+    | otherwise = x
   {-# INLINEABLE projectAbs #-}
-  projectAbs = Natural . Ratio.abs
+  projectAbs = Natural . abs
   {-# INLINEABLE restrictMay #-}
   restrictMay x
     | x < zero = Nothing
@@ -326,17 +309,22 @@ instance IntegralDomain Integer Natural where
   addExtend (Natural i) = i
 
 -- | @since 1.0
-instance IntegralDomain Rational NatRatio where
+instance IntegralDomain Rational.Rational NatRatio where
   {-# INLINEABLE abs #-}
-  abs = Ratio.abs
+  abs = Rational.abs
   {-# INLINEABLE projectAbs #-}
-  projectAbs = NatRatio . Ratio.abs
+  projectAbs = NatRatio . Rational.abs
   {-# INLINEABLE restrictMay #-}
   restrictMay x
     | x < zero = Nothing
     | otherwise = Just . NatRatio $ x
   {-# INLINEABLE addExtend #-}
   addExtend (NatRatio r) = r
+  {-# INLINEABLE signum #-}
+  signum (Rational n _)
+    | n < zero = Rational (negate one) one
+    | n == zero = zero
+    | otherwise = one
 
 {- | Non-operator version of '^-'.
 

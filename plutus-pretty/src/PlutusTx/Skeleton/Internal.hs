@@ -62,7 +62,7 @@ import Plutus.V1.Ledger.Value (
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins (matchData)
 import PlutusTx.Prelude
-import PlutusTx.Skeleton.String (intToString)
+import PlutusTx.Skeleton.String (bsToString, intToString)
 import Prelude qualified
 
 {- | An \'essentials\' representation of a value's structure, as well as
@@ -71,17 +71,12 @@ import Prelude qualified
  @since 2.1
 -}
 data Skeleton
-  = ByteStringS BuiltinByteString
-  | BoolS Bool
+  = BoolS Bool
   | IntegerS Integer
   | StringS BuiltinString
-  | AssocMapS [(Skeleton, Skeleton)]
   | ConS BuiltinString [Skeleton]
-  | RecS
-      BuiltinString
-      (BuiltinString, Skeleton)
-      [(BuiltinString, Skeleton)]
-  | TupleS Skeleton [Skeleton]
+  | RecS BuiltinString [(BuiltinString, Skeleton)]
+  | TupleS Skeleton Skeleton
   | ListS [Skeleton]
   deriving stock
     ( -- | @since 2.1
@@ -96,17 +91,14 @@ instance Eq Skeleton where
   sk == sk' = case (sk, sk') of
     (BoolS b, BoolS b') -> b == b'
     (IntegerS i, IntegerS i') -> i == i'
-    (ByteStringS bs, ByteStringS bs') -> bs == bs'
     (StringS s, StringS s') -> s == s'
-    (AssocMapS m, AssocMapS m') -> m == m'
     (ConS nam sks, ConS nam' sks') ->
       nam == nam' && sks == sks'
-    (RecS nam keyVal keyVals, RecS nam' keyVal' keyVals') ->
-      keyVal == keyVal'
-        && keyVals == keyVals'
+    (RecS nam keyVals, RecS nam' keyVals') ->
+      keyVals == keyVals'
         && nam == nam'
-    (TupleS x xs, TupleS x' xs') ->
-      x == x' && xs == xs'
+    (TupleS x y, TupleS x' y') ->
+      x == x' && y == y'
     (ListS xs, ListS xs') -> xs == xs'
     _ -> False
 
@@ -164,7 +156,7 @@ instance Skeletal Bool where
 -- | @since 2.1
 instance Skeletal BuiltinByteString where
   {-# INLINEABLE skeletize #-}
-  skeletize = ByteStringS
+  skeletize = StringS . bsToString
 
 -- | @since 2.1
 instance (Skeletal a) => Skeletal (Maybe a) where
@@ -178,18 +170,18 @@ instance (Skeletal a) => Skeletal [a] where
   {-# INLINEABLE skeletize #-}
   skeletize = ListS . fmap skeletize
 
--- | @since 2.1
+{- | We represent a 'AssocMap.Map' as a list of tuples of its key-value pairs.
+
+ @since 2.1
+-}
 instance (Skeletal k, Skeletal v) => Skeletal (AssocMap.Map k v) where
   {-# INLINEABLE skeletize #-}
-  skeletize = AssocMapS . fmap go . AssocMap.toList
-    where
-      go :: (k, v) -> (Skeleton, Skeleton)
-      go (key, val) = (skeletize key, skeletize val)
+  skeletize = ListS . fmap skeletize . AssocMap.toList
 
 -- | @since 2.1
 instance (Skeletal a, Skeletal b) => Skeletal (a, b) where
   {-# INLINEABLE skeletize #-}
-  skeletize (x, y) = TupleS (skeletize x) [skeletize y]
+  skeletize (x, y) = TupleS (skeletize x) (skeletize y)
 
 -- | @since 2.1
 instance Skeletal TxId where
@@ -202,8 +194,9 @@ instance Skeletal TxOutRef where
   skeletize (TxOutRef txi txix) =
     RecS
       "TxOutRef"
-      ("txOutRefId", skeletize txi)
-      [("txOutRefIdx", skeletize txix)]
+      [ ("txOutRefId", skeletize txi)
+      , ("txOutRefIdx", skeletize txix)
+      ]
 
 -- | @since 2.1
 instance Skeletal PubKeyHash where
@@ -235,8 +228,9 @@ instance Skeletal Address where
   skeletize (Address cred stakingCred) =
     RecS
       "Address"
-      ("addressCredential", skeletize cred)
-      [("addressStakingCredential", skeletize stakingCred)]
+      [ ("addressCredential", skeletize cred)
+      , ("addressStakingCredential", skeletize stakingCred)
+      ]
 
 -- | @since 2.1
 instance Skeletal CurrencySymbol where
@@ -264,8 +258,8 @@ instance Skeletal TxOut where
   skeletize (TxOut addr val mHash) =
     RecS
       "TxOut"
-      ("txOutAddress", skeletize addr)
-      [ ("txOutValue", skeletize val)
+      [ ("txOutAddress", skeletize addr)
+      , ("txOutValue", skeletize val)
       , ("txOutDatumHash", skeletize mHash)
       ]
 
@@ -275,8 +269,9 @@ instance Skeletal TxInInfo where
   skeletize (TxInInfo txoRef txo) =
     RecS
       "TxInInfo"
-      ("txInInfoOutRef", skeletize txoRef)
-      [("txInInfoResolved", skeletize txo)]
+      [ ("txInInfoOutRef", skeletize txoRef)
+      , ("txInInfoResolved", skeletize txo)
+      ]
 
 -- | @since 2.1
 instance Skeletal DCert where
@@ -319,8 +314,9 @@ instance (Skeletal a) => Skeletal (Interval a) where
   skeletize (Interval from to) =
     RecS
       "Interval"
-      ("ivFrom", skeletize from)
-      [("ivTo", skeletize to)]
+      [ ("ivFrom", skeletize from)
+      , ("ivTo", skeletize to)
+      ]
 
 -- | @since 2.1
 instance Skeletal POSIXTime where
@@ -336,20 +332,19 @@ instance Skeletal Datum where
 instance Skeletal TxInfo where
   {-# INLINEABLE skeletize #-}
   skeletize txi =
-    RecS "TxInfo" ("txInfoInputs", skeletize . txInfoInputs $ txi) go
-    where
-      go :: [(BuiltinString, Skeleton)]
-      go =
-        [ ("txInfoOutputs", skeletize . txInfoOutputs $ txi)
-        , ("txInfoFee", skeletize . txInfoFee $ txi)
-        , ("txInfoMint", skeletize . txInfoMint $ txi)
-        , ("txInfoDCert", skeletize . txInfoDCert $ txi)
-        , ("txInfoWdrl", skeletize . txInfoWdrl $ txi)
-        , ("txInfoValidRange", skeletize . txInfoValidRange $ txi)
-        , ("txInfoSignatories", skeletize . txInfoSignatories $ txi)
-        , ("txInfoData", skeletize . txInfoData $ txi)
-        , ("txInfoId", skeletize . txInfoId $ txi)
-        ]
+    RecS
+      "TxInfo"
+      [ ("txInfoInputs", skeletize . txInfoInputs $ txi)
+      , ("txInfoOutputs", skeletize . txInfoOutputs $ txi)
+      , ("txInfoFee", skeletize . txInfoFee $ txi)
+      , ("txInfoMint", skeletize . txInfoMint $ txi)
+      , ("txInfoDCert", skeletize . txInfoDCert $ txi)
+      , ("txInfoWdrl", skeletize . txInfoWdrl $ txi)
+      , ("txInfoValidRange", skeletize . txInfoValidRange $ txi)
+      , ("txInfoSignatories", skeletize . txInfoSignatories $ txi)
+      , ("txInfoData", skeletize . txInfoData $ txi)
+      , ("txInfoId", skeletize . txInfoId $ txi)
+      ]
 
 -- | @since 2.1
 instance Skeletal ScriptPurpose where
@@ -366,5 +361,6 @@ instance Skeletal ScriptContext where
   skeletize (ScriptContext txi sp) =
     RecS
       "ScriptContext"
-      ("scriptContextTxInfo", skeletize txi)
-      [("scriptContextPurpose", skeletize sp)]
+      [ ("scriptContextTxInfo", skeletize txi)
+      , ("scriptContextPurpose", skeletize sp)
+      ]

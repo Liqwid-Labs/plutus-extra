@@ -10,6 +10,7 @@ packages:
   ./plutus-list/plutus-list.cabal
   ./plutus-size-check/plutus-size-check.cabal
   ./quickcheck-plutus-instances/quickcheck-plutus-instances.cabal
+  ./plutus-deriving/plutus-deriving.cabal
 
 -- Always build tests and benchmarks.
 tests: true

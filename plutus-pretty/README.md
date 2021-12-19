@@ -11,7 +11,8 @@ Plutus types. This is a workaround for some types not having stock-derived
 For on-chain, we provide a separate pretty-printing solution, based around a
 structural representation and a type class to convert values into it. To ensure
 safety and correctness, we only allow a Template Haskell-based derivation for
-instances of this type class.
+instances of this type class. The output of the pretty-printer is JSON, as it's
+designed for debugging.
 
 ## What can this do?
 

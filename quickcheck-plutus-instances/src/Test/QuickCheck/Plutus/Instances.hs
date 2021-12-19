@@ -23,10 +23,11 @@
 -}
 module Test.QuickCheck.Plutus.Instances () where
 
-import Control.Monad (guard)
+import Control.Monad (forM, guard)
 import Data.ByteString (ByteString)
 import Data.Kind (Type)
 import Data.Maybe (maybeToList)
+import Data.Text (Text)
 import Data.Word (Word8)
 import GHC.Exts qualified as GHC
 import Ledger.Oracle (
@@ -50,7 +51,10 @@ import Plutus.V1.Ledger.Scripts (
   DatumHash (DatumHash),
   ValidatorHash (ValidatorHash),
  )
-import Plutus.V1.Ledger.Time (POSIXTime (POSIXTime))
+import Plutus.V1.Ledger.Time (
+  DiffMilliSeconds (DiffMilliSeconds),
+  POSIXTime (POSIXTime),
+ )
 import Plutus.V1.Ledger.Tx (
   TxOut (TxOut),
   TxOutRef (TxOutRef),
@@ -61,6 +65,8 @@ import Plutus.V1.Ledger.Value (
   CurrencySymbol (CurrencySymbol),
   TokenName (TokenName),
   Value (Value),
+  flattenValue,
+  singleton,
  )
 import PlutusTx (
   Data (B, Constr, I, List, Map),
@@ -72,8 +78,10 @@ import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Builtins.Internal (
   BuiltinByteString (BuiltinByteString),
   BuiltinData (BuiltinData),
+  BuiltinString (BuiltinString),
  )
 import PlutusTx.Prelude qualified as PTx
+import PlutusTx.Ratio qualified as Ratio
 import Test.QuickCheck.Arbitrary (
   Arbitrary (arbitrary, shrink),
   Arbitrary1 (liftArbitrary, liftShrink),
@@ -84,14 +92,21 @@ import Test.QuickCheck.Function (Function (function), functionMap)
 import Test.QuickCheck.Gen (
   Gen,
   chooseInt,
+  getSize,
   oneof,
   scale,
   sized,
+  suchThat,
   variant,
   vectorOf,
  )
+import Test.QuickCheck.Instances.Text ()
 import Test.QuickCheck.Modifiers (NonNegative (NonNegative))
-import Test.QuickCheck.Plutus.Modifiers (UniqueKeys (UniqueKeys))
+import Test.QuickCheck.Plutus.Modifiers (
+  UniqueKeys (UniqueKeys),
+  UniqueList (UniqueList),
+  uniqueListOf,
+ )
 
 -- | @since 1.0
 instance Arbitrary BuiltinByteString where
@@ -173,6 +188,19 @@ instance Function Data where
         Right (Left ds) -> List ds
         Right (Right (Left keyVals)) -> Map keyVals
         Right (Right (Right (ix, ds))) -> Constr ix ds
+
+-- | @since 1.5
+deriving via Integer instance Arbitrary DiffMilliSeconds
+
+-- | @since 1.5
+deriving via Integer instance CoArbitrary DiffMilliSeconds
+
+-- | @since 1.5
+instance Function DiffMilliSeconds where
+  function = functionMap into DiffMilliSeconds
+    where
+      into :: DiffMilliSeconds -> Integer
+      into (DiffMilliSeconds i) = i
 
 -- | @since 1.0
 deriving via BuiltinByteString instance Arbitrary LedgerBytes
@@ -449,10 +477,16 @@ instance (Function k, Function v) => Function (AssocMap.Map k v) where
   function = functionMap AssocMap.toList AssocMap.fromList
 
 -- | @since 1.1
-deriving via
-  (UniqueKeys CurrencySymbol (UniqueKeys TokenName Integer))
-  instance
-    Arbitrary Value
+instance Arbitrary Value where
+  arbitrary = do
+    num <- log2 <$> getSize
+    UniqueList css <- uniqueListOf num
+    lst <- forM css $ \cs -> do
+      UniqueList tns <- uniqueListOf num
+      lst' <- forM tns $ \tn -> (tn,) <$> arbitrary `suchThat` (PTx./= PTx.zero)
+      pure (cs, AssocMap.fromList lst')
+    pure . Value . AssocMap.fromList $ lst
+  shrink = map (foldMap (\(cs, tn, i) -> singleton cs tn i)) . shrink . flattenValue
 
 -- | @since 1.1
 deriving via
@@ -614,6 +648,35 @@ instance Function AssetClass where
       into :: AssetClass -> (CurrencySymbol, TokenName)
       into (AssetClass x) = x
 
+-- | @since 1.2
+deriving via Text instance Arbitrary BuiltinString
+
+-- | @since 1.2
+deriving via Text instance CoArbitrary BuiltinString
+
+-- | @since 1.2
+instance Function BuiltinString where
+  function = functionMap into BuiltinString
+    where
+      into :: BuiltinString -> Text
+      into (BuiltinString t) = t
+
+-- | @since 1.4
+instance Arbitrary Ratio.Rational where
+  arbitrary = Ratio.fromGHC <$> arbitrary
+  shrink = fmap Ratio.fromGHC . shrink . Ratio.toGHC
+
+-- | @since 1.4
+instance CoArbitrary Ratio.Rational where
+  coarbitrary r gen = do
+    let num = Ratio.numerator r
+    let den = Ratio.denominator r
+    coarbitrary num . coarbitrary den $ gen
+
+-- | @since 1.4
+instance Function Ratio.Rational where
+  function = functionMap Ratio.toGHC Ratio.fromGHC
+
 -- Helpers
 
 -- Generates ByteStrings up to 64 bytes long
@@ -650,3 +713,9 @@ shrinkNonNegative :: Integer -> [Integer]
 shrinkNonNegative i = do
   NonNegative i' <- shrink . NonNegative $ i
   pure i'
+
+-- Integer part of logarithm base 2
+log2 :: Int -> Int
+log2 n
+  | n <= 1 = 0
+  | otherwise = 1 + log2 (n `div` 2)

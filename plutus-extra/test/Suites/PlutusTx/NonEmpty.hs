@@ -26,10 +26,6 @@ import PlutusTx.NonEmpty qualified as NonEmpty
 
 --------------------------------------------------------------------------------
 
-instance (PlutusPrelude.Eq a, Arbitrary a) => Arbitrary (NonEmpty a) where
-  arbitrary =
-    (:|) <$> arbitrary @a <*> arbitrary @[a]
-
 prop_Insertion x xs = NonEmpty.toList (x :| xs) == x : xs
 
 prop_HeadTailConcat xs = NonEmpty.head xs :| NonEmpty.tail xs PlutusPrelude.== xs
