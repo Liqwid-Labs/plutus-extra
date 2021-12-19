@@ -57,13 +57,12 @@ isSortedOn ::
   Bool
 isSortedOn f = isSortedBy (\x y -> f x <= f y)
 
-{-# INLINEABLE isSorted #-}
-
 {- | Checks if the 'Foldable' is sorted in ascending order with respect to its
 elements' 'Ord' instance.
 
 @since 1.0
 -}
+{-# INLINEABLE isSorted #-}
 isSorted ::
   forall (f :: Type -> Type) (a :: Type).
   (Foldable f, Ord a) =>
