@@ -55,6 +55,7 @@ library
 
   other-modules:
     Test.Tasty.Plutus.Internal.Context
+    Test.Tasty.Plutus.Internal.DumpScript
     Test.Tasty.Plutus.Internal.Env
     Test.Tasty.Plutus.Internal.Feedback
     Test.Tasty.Plutus.Internal.Options
@@ -67,8 +68,10 @@ library
     , bytestring         ^>=0.10.12.0
     , cardano-api
     , containers         ^>=0.6.2.1
+    , filepath           ^>=1.4.2
     , mtl                ^>=2.2.2
     , plutus-contract
+    , plutus-core
     , plutus-ledger
     , plutus-ledger-api
     , plutus-numeric     ^>=4.0

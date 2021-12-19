@@ -36,8 +36,8 @@ module Test.Tasty.Plutus.Script.Property (
   scriptPropertyPass,
 ) where
 
-import Control.Monad.RWS.Strict (tell)
-import Control.Monad.Reader (Reader, ask, asks, runReader)
+import Control.Monad.RWS.Strict (MonadReader (ask), tell)
+import Control.Monad.Reader (Reader, asks, runReader)
 import Data.Kind (Type)
 import Data.Proxy (Proxy (Proxy))
 import Data.Sequence qualified as Seq

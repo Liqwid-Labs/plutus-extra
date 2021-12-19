@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE Trustworthy #-}
 
 {- |
@@ -22,18 +23,21 @@ module Test.Tasty.Plutus.WithScript (
 import Control.Monad.RWS.Strict (evalRWS)
 import Data.Kind (Type)
 import GHC.Exts (toList)
-import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, validatorScript)
+import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, ValidatorType, WrappedValidatorType, mkTypedValidator, validatorScript)
 import Plutus.V1.Ledger.Contexts (ScriptContext)
-import Plutus.V1.Ledger.Scripts (MintingPolicy)
+import Plutus.V1.Ledger.Scripts (MintingPolicy (getMintingPolicy), Validator (getValidator), mkMintingPolicyScript)
+import PlutusTx (CompiledCode, applyCode)
 import PlutusTx.Builtins (BuiltinData, BuiltinString, appendString, trace)
 import PlutusTx.IsData.Class (FromData (fromBuiltinData))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Plutus.Internal.Context (
   Purpose (ForMinting, ForSpending),
  )
+import Test.Tasty.Plutus.Internal.DumpScript (DumpScript (DumpScript))
 import Test.Tasty.Plutus.Internal.WithScript (
   WithScript (WithMinting, WithSpending),
  )
+import Test.Tasty.Providers (singleTest)
 import Prelude
 
 {- | Given the name for the tests, a 'Validator', and a collection of
@@ -62,12 +66,21 @@ import Prelude
 withValidator ::
   forall (s :: Type).
   String ->
-  TypedValidator s ->
+  CompiledCode (ValidatorType s) ->
+  CompiledCode (ValidatorType s -> WrappedValidatorType) ->
   WithScript ( 'ForSpending (DatumType s) (RedeemerType s)) () ->
   TestTree
-withValidator name val (WithSpending comp) =
+withValidator name code wrap (WithSpending comp) =
   case evalRWS comp (validatorScript val) () of
-    ((), tests) -> testGroup name . toList $ tests
+    ((), tests) -> testGroup name . (dump :) . toList $ tests
+  where
+    dump :: TestTree
+    dump =
+      singleTest
+        "Dump script"
+        (DumpScript name (getValidator $ validatorScript val) code)
+    val :: TypedValidator s
+    val = mkTypedValidator @s code wrap
 
 {- | Given the name for the tests, a 'MintingPolicy', and a collection of
  minting-related tests, execute all of them as a 'TestTree'.
@@ -93,12 +106,18 @@ withValidator name val (WithSpending comp) =
 withMintingPolicy ::
   forall (r :: Type).
   String ->
-  MintingPolicy ->
+  CompiledCode (r -> ScriptContext -> Bool) ->
+  CompiledCode ((r -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> ())) ->
   WithScript ( 'ForMinting r) () ->
   TestTree
-withMintingPolicy name mp (WithMinting comp) =
+withMintingPolicy name code wrap (WithMinting comp) =
   case evalRWS comp mp () of
-    ((), tests) -> testGroup name . toList $ tests
+    ((), tests) -> testGroup name . (dump :) . toList $ tests
+  where
+    dump :: TestTree
+    dump = singleTest "Dump script" (DumpScript name (getMintingPolicy mp) code)
+    mp :: MintingPolicy
+    mp = mkMintingPolicyScript (wrap `applyCode` code)
 
 {- | A wrapper for validators. Use this to construct 'Validator's suitable for
  passing to 'withValidator'.

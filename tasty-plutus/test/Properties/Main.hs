@@ -63,7 +63,7 @@ tests :: TestTree
 tests =
   localOption [maxSize| 20 |] $
     localOption [testCount| 100 |] $
-      withValidator "Property based testing" typedSimpleValidator $ do
+      withValidator @TestScript "Property based testing" $$(compile [||simpleValidator||]) $$(compile [||toTestValidator||]) $ do
         scriptProperty "Validator checks the sum of the inputs" $
           GenForSpending gen1 transform1
         scriptProperty "Validator checks the product of the inputs" $
