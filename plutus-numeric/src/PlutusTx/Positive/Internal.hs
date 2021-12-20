@@ -30,57 +30,57 @@ import Text.Show.Pretty (PrettyVal (prettyVal))
 
 {- | A positive number.
 
- @since 1.0
+ @since 4.1
 -}
 newtype Positive = Positive Integer
   deriving
-    ( -- | @since
+    ( -- | @since 4.1
       AdditiveSemigroup
-    , -- | @since
+    , -- | @since 4.1
       MultiplicativeSemigroup
-    , -- | @since
+    , -- | @since 4.1
       Eq
-    , -- | @since
+    , -- | @since 4.1
       Ord
-    , -- | @since
+    , -- | @since 4.1
       ToData
-    , -- | @since
+    , -- | @since 4.1
       ToJSON
-    , -- | @since
+    , -- | @since 4.1
       Prelude.Eq
-    , -- | @since
+    , -- | @since 4.1
       Prelude.Ord
-    , -- | @since
+    , -- | @since 4.1
       ToSchema
-    , -- | @since
+    , -- | @since 4.1
       CoArbitrary
-    , -- | @since
+    , -- | @since 4.1
       PlutusSchema.ToSchema
-    , -- | @since
+    , -- | @since 4.1
       PlutusSchema.ToArgument
     )
     via Integer
   deriving stock
-    ( -- | @since
+    ( -- | @since 4.1
       Prelude.Show
     )
 
 {- | Displays like a positive integer.
 
- @since
+ @since 4.1
 -}
 instance PrettyVal Positive where
   {-# INLINEABLE prettyVal #-}
   prettyVal (Positive i) = prettyVal i
 
--- | @since
+-- | @since 4.1
 instance FromJSON Positive where
   parseJSON v = Prelude.fmap Positive $ do
     i <- parseJSON v
     guard (i > 0)
     Prelude.pure i
 
--- | @since
+-- | @since 4.1
 instance FromData Positive where
   {-# INLINEABLE fromBuiltinData #-}
   fromBuiltinData dat =
@@ -95,7 +95,7 @@ instance FromData Positive where
       go :: forall (a :: Type). a -> Maybe Positive
       go = const Nothing
 
--- | @since
+-- | @since 4.1
 instance UnsafeFromData Positive where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData dat =
@@ -104,7 +104,7 @@ instance UnsafeFromData Positive where
 
 {- | This is partial all over the place, but so is 'Enum' for most things.
 
- @since
+ @since 4.1
 -}
 instance Enum Positive where
   {-# INLINEABLE succ #-}
@@ -120,12 +120,12 @@ instance Enum Positive where
   {-# INLINEABLE fromEnum #-}
   fromEnum (Positive n) = n
 
--- | @since
+-- | @since 4.1
 instance Arbitrary Positive where
   arbitrary = Positive . Prelude.abs Prelude.<$> arbitrary `suchThat` (/= 0)
   shrink (Positive i) = Positive Prelude.<$> (Prelude.filter (> 0) . shrink $ i)
 
--- | @since
+-- | @since 4.1
 instance Function Positive where
   function = functionMap into Positive
     where

@@ -17,6 +17,14 @@ import PlutusTx.Positive.Internal (Positive (Positive))
 import Text.Read (readMaybe)
 import Prelude
 
+{- | Quasi-quoter for 'Positive' literals
+
+ Used as follows:
+
+ > [positive| 13 |]
+
+ @since 4.1
+-}
 positive :: QuasiQuoter
 positive =
   QuasiQuoter
