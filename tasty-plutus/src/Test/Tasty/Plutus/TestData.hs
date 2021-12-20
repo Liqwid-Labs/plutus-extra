@@ -12,7 +12,12 @@ module Test.Tasty.Plutus.TestData (
   -- * Data type
   TestData (..),
   Outcome (..),
+  Tokens (Tokens, unTokens),
+
+  -- * Helper functions
   passIf,
+  burningTokens,
+  mintingTokens,
 
   -- * QuickCheck support
   Methodology (..),
@@ -20,8 +25,6 @@ module Test.Tasty.Plutus.TestData (
   static,
   Generator (..),
   TestItems (..),
-  Tokens (Tokens, unTokens),
-  token,
 ) where
 
 import Data.Kind (Type)
@@ -33,8 +36,11 @@ import Test.QuickCheck.Gen (Gen)
 import Test.Tasty.Plutus.Context (ContextBuilder)
 import Test.Tasty.Plutus.Internal.Context (
   Purpose (ForMinting, ForSpending),
+ )
+import Test.Tasty.Plutus.Internal.Minting (
   Tokens (Tokens, unTokens),
-  token,
+  burningTokens,
+  mintingTokens,
  )
 import Prelude
 

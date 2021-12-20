@@ -8,8 +8,6 @@ module Test.Tasty.Plutus.Internal.Context (
   ContextBuilder (..),
   compileSpending,
   compileMinting,
-  Tokens (Tokens, unTokens),
-  token,
   makeIncompleteContexts,
   outputsToInputs,
 ) where
@@ -17,7 +15,9 @@ module Test.Tasty.Plutus.Internal.Context (
 import Control.Arrow ((***))
 import Data.Bifunctor (first)
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.Map.Strict qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Semigroup (sconcat)
 import Data.Sequence (Seq)
@@ -57,9 +57,12 @@ import Plutus.V1.Ledger.Api (
  )
 import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.Value qualified as Value
-import PlutusTx.AssocMap (Map)
-import PlutusTx.AssocMap qualified as Map
+import Plutus.V1.Ledger.Value.Extra (filterValue)
 import PlutusTx.Prelude (length)
+import Test.Tasty.Plutus.Internal.Minting (
+  Tokens (Tokens),
+  processMintingQuery,
+ )
 import Test.Tasty.Plutus.Options (ScriptInputPosition (Head, Tail))
 import Prelude hiding (length)
 
@@ -225,15 +228,24 @@ compileMinting ::
 compileMinting conf cb (Tokens toks) =
   ScriptContext go (Minting sym)
   where
+    sym :: CurrencySymbol
+    sym = testCurrencySymbol conf
+
+    mintingValue :: Value
+    mintingValue =
+      Map.foldMapWithKey (Value.singleton sym)
+        . Map.fromList
+        . map processMintingQuery
+        . NonEmpty.toList
+        $ toks
+
     go :: TxInfo
     go =
       let baseInfo = baseTxInfo conf cb
        in baseInfo
             { txInfoMint =
-                Value.Value (Map.singleton sym toks) <> txInfoMint baseInfo
+                mintingValue <> txInfoMint baseInfo
             }
-
-    sym = testCurrencySymbol conf
 
 {- | Combine a list of partial contexts that should,
      when combined, validate, but fail when any one
@@ -270,7 +282,7 @@ makeIncompleteContexts ctxs = map (first sconcat) ctxs2
   where
     ctxs1 = removeContext ctxs
     ctxs2 = mapMaybe nonEmpty1st ctxs1
-    nonEmpty1st :: ([a], b) -> Maybe (NonEmpty.NonEmpty a, b)
+    nonEmpty1st :: ([a], b) -> Maybe (NonEmpty a, b)
     nonEmpty1st (xs, y) = (,y) <$> NonEmpty.nonEmpty xs
 
 {- All context outputs are converted to a list of inputs:
@@ -297,11 +309,12 @@ baseTxInfo ::
   TxInfo
 baseTxInfo conf (ContextBuilder ins outs pkhs dats mints) =
   let valHash = testValidatorHash conf
+      value = foldMap (filterValue filterCS . unMint) mints
    in TxInfo
         { txInfoInputs = createTxInInfo conf <$> indexedInputs
         , txInfoOutputs = toList . fmap (toTxOut valHash) $ outs
         , txInfoFee = testFee conf
-        , txInfoMint = foldMap unMint mints
+        , txInfoMint = value
         , txInfoDCert = []
         , txInfoWdrl = []
         , txInfoValidRange = testTimeRange conf
@@ -316,7 +329,11 @@ baseTxInfo conf (ContextBuilder ins outs pkhs dats mints) =
     indexedInputs :: [(Integer, Input)]
     indexedInputs = zip [1 ..] . toList $ ins
 
+    unMint :: Minting -> Value
     unMint (Mint val) = val
+
+    filterCS :: CurrencySymbol -> TokenName -> Integer -> Bool
+    filterCS cs _ _ = cs /= testCurrencySymbol conf
 
 toInputDatum :: Input -> Maybe (DatumHash, Datum)
 toInputDatum (Input typ _) = case typ of
@@ -355,34 +372,6 @@ toTxOut valHash (Output typ v) = case typ of
     TxOut (scriptHashAddress hash) v . justDatumHash $ dat
   OwnType dat ->
     TxOut (scriptHashAddress valHash) v . justDatumHash $ dat
-
-{- | Tokens to be minted by minting policy.
-
-  -- This type is 'Semigroup' but not 'Monoid', as a minting policy cannot be
-  -- triggered if no tokens are minted.
-
-  @since 4.1
--}
-newtype Tokens = Tokens {unTokens :: Map TokenName Integer}
-  deriving stock
-    ( -- | @since 4.1
-      Eq
-    , -- | @since 4.1
-      Show
-    )
-
--- | @since 4.1
-instance Semigroup Tokens where
-  Tokens a <> Tokens b = Tokens (Map.unionWith (+) a b)
-
-{- | Helper function to specify tokens to be minted.
-
-  Combine using the 'Semigroup' instance for 'Tokens'.
-
-  @since 4.1
--}
-token :: TokenName -> Integer -> Tokens
-token name = Tokens . Map.singleton name
 
 -- Helper for makeIncompleteContexts : Take a list
 -- of pairs, and create another list of pairs where
