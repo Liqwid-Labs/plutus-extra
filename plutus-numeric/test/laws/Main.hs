@@ -9,6 +9,7 @@ import PlutusTx.Numeric.Laws (
   integralDomainLaws,
   multiplicativeGroupLaws,
  )
+import PlutusTx.Positive (Positive)
 import PlutusTx.Rational (Rational)
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.Plutus.Laws (
@@ -33,20 +34,26 @@ main =
   defaultMain . adjustOption (max testMinimum) . testGroup "Laws" $
     [ jsonLaws @Natural
     , jsonLaws @NatRatio
+    , jsonLaws @Positive
     , jsonLaws @Rational
     , dataLaws @Natural
     , dataLaws @NatRatio
+    , dataLaws @Positive
     , dataLaws @Rational
     , plutusEqLaws @Natural
     , plutusEqLawsSubstitution @Natural
+    , plutusEqLaws @Positive
+    , plutusEqLawsSubstitution @Positive
     , plutusEqLaws @Rational
     , plutusEqLawsSubstitution @Rational
     , plutusEqLaws @NatRatio
     , plutusEqLawsSubstitution @NatRatio
     , plutusOrdLaws @Natural
+    , plutusOrdLaws @Positive
     , plutusOrdLaws @Rational
     , plutusOrdLaws @NatRatio
     , additiveSemigroupLaws @Natural
+    , additiveSemigroupLaws @Positive
     , additiveSemigroupLaws @Rational
     , additiveSemigroupLaws @NatRatio
     , additiveMonoidLaws @Natural
@@ -54,9 +61,11 @@ main =
     , additiveMonoidLaws @NatRatio
     , additiveGroupLaws @Rational
     , multiplicativeSemigroupLaws @Natural
+    , multiplicativeSemigroupLaws @Positive
     , multiplicativeSemigroupLaws @Rational
     , multiplicativeSemigroupLaws @NatRatio
     , multiplicativeMonoidLaws @Natural
+    , multiplicativeMonoidLaws @Positive
     , multiplicativeMonoidLaws @Rational
     , multiplicativeMonoidLaws @NatRatio
     , semiringConsistencyLaws @Natural

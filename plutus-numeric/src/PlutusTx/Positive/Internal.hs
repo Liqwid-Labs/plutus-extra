@@ -39,6 +39,8 @@ newtype Positive = Positive Integer
     , -- | @since 4.1
       MultiplicativeSemigroup
     , -- | @since 4.1
+      MultiplicativeMonoid
+    , -- | @since 4.1
       Eq
     , -- | @since 4.1
       Ord
