@@ -56,4 +56,4 @@ noDecl what _ = qError what "declaration"
 
 qError :: String -> String -> Q a
 qError what context =
-  fail $ "'" <> what <> "' cannot be used in a " <> context <> "context."
+  fail $ "'" <> what <> "' cannot be used in a " <> context <> " context."
