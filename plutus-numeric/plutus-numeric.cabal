@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-numeric
-version:            4.0
+version:            4.1
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -59,6 +59,7 @@ library
     PlutusTx.Numeric.Extra
     PlutusTx.Numeric.Gen
     PlutusTx.Numeric.Laws
+    PlutusTx.Positive
     PlutusTx.Rational
     PlutusTx.SchemaUtils
 
@@ -67,6 +68,8 @@ library
     PlutusTx.NatRatio.QQ
     PlutusTx.Natural.Internal
     PlutusTx.Natural.QQ
+    PlutusTx.Positive.Internal
+    PlutusTx.Positive.QQ
     PlutusTx.Rational.Internal
     PlutusTx.Rational.QQ
 
