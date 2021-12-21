@@ -138,6 +138,7 @@ instance Function Positive where
 
  @since 4.1
 -}
+{-# INLINEABLE getPositive #-}
 getPositive :: Positive -> Integer
 getPositive (Positive i) = i
 
