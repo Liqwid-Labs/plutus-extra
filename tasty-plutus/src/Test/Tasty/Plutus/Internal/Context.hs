@@ -62,8 +62,9 @@ import Plutus.V1.Ledger.Value.Extra (filterValue)
 import PlutusTx.Positive (Positive, getPositive)
 import PlutusTx.Prelude (length)
 import Test.Tasty.Plutus.Internal.Minting (
-  MintingPolicyQuery,
-  processMintingQuery,
+  MintingPolicyAction (BurnAction, MintAction),
+  MintingPolicyTask (MPTask),
+  Tokens (Tokens),
  )
 import Test.Tasty.Plutus.Options (ScriptInputPosition (Head, Tail))
 import Prelude hiding (length)
@@ -249,7 +250,7 @@ compileMinting ::
   forall (r :: Type).
   TransactionConfig ->
   ContextBuilder ( 'ForMinting r) ->
-  NonEmpty MintingPolicyQuery ->
+  NonEmpty MintingPolicyTask ->
   ScriptContext
 compileMinting conf cb toks =
   ScriptContext go (Minting sym)
@@ -261,7 +262,7 @@ compileMinting conf cb toks =
     mintingValue =
       Map.foldMapWithKey (Value.singleton sym)
         . Map.fromList
-        . map processMintingQuery
+        . map processMPTask
         . NonEmpty.toList
         $ toks
 
@@ -272,6 +273,12 @@ compileMinting conf cb toks =
             { txInfoMint =
                 mintingValue <> txInfoMint baseInfo
             }
+    processMPTask :: MintingPolicyTask -> (TokenName, Integer)
+    processMPTask (MPTask action (Tokens tn pos)) =
+      let i = case action of
+            MintAction -> getPositive pos
+            BurnAction -> negate $ getPositive pos
+       in (tn, i)
 
 {- | Combine a list of partial contexts that should,
      when combined, validate, but fail when any one

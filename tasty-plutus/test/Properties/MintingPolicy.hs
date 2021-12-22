@@ -12,8 +12,6 @@ import Prelude hiding (($), (&&), (*), (+), (==))
 import Ledger.Crypto (PubKeyHash)
 import Ledger.Typed.Scripts (MintingPolicy)
 import Plutus.V1.Ledger.Scripts (mkMintingPolicyScript)
-import Plutus.V1.Ledger.Value (TokenName)
-import PlutusTx.Positive (Positive)
 import Test.QuickCheck.Plutus.Instances ()
 import Test.Tasty (TestTree)
 import Test.Tasty.Plutus.Context (
@@ -26,17 +24,18 @@ import Test.Tasty.Plutus.Script.Property (scriptProperty, scriptPropertyPass)
 import Test.Tasty.Plutus.TestData (
   Generator (GenForMinting),
   Methodology (Methodology),
-  MintingPolicyQuery,
+  MintingPolicyTask,
   Outcome,
   TestItems (
     ItemsForMinting,
-    mintCB,
-    mintOutcome,
-    mintRedeemer,
-    mintTokens
+    mpCB,
+    mpOutcome,
+    mpRedeemer,
+    mpTasks
   ),
-  burningTokens,
-  mintingTokens,
+  Tokens,
+  burnTokens,
+  mintTokens,
   passIf,
  )
 import Test.Tasty.Plutus.WithScript (toTestMintingPolicy, withMintingPolicy)
@@ -67,10 +66,10 @@ tests =
     scriptPropertyPass "MintingPolicy always succeeds if the key is correct" $
       GenForMinting gen1 transform2
 
-gen1 :: Methodology (Integer, (TokenName, Positive), (TokenName, Positive))
+gen1 :: Methodology (Integer, Tokens, Tokens)
 gen1 = Methodology gen' genericShrink
   where
-    gen' :: Gen (Integer, (TokenName, Positive), (TokenName, Positive))
+    gen' :: Gen (Integer, Tokens, Tokens)
     gen' = do
       randomKey <- arbitrary
       key <- elements [randomKey, secretKey]
@@ -80,30 +79,30 @@ gen1 = Methodology gen' genericShrink
 
 -- | Creates TestItems with an arbitrary key used in Redeemer
 transform1 ::
-  (Integer, (TokenName, Positive), (TokenName, Positive)) ->
+  (Integer, Tokens, Tokens) ->
   TestItems ( 'ForMinting Integer)
-transform1 (key, (tnMint, posMint), (tnBurn, posBurn)) =
+transform1 (key, toksMint, toksBurn) =
   ItemsForMinting
-    { mintRedeemer = key
-    , mintTokens = toks
-    , mintCB = cb
-    , mintOutcome = out
+    { mpRedeemer = key
+    , mpTasks = tasks
+    , mpCB = cb
+    , mpOutcome = out
     }
   where
-    toks :: NonEmpty MintingPolicyQuery
-    toks =
-      mintingTokens tnMint posMint
-        <> burningTokens tnBurn posBurn
+    tasks :: NonEmpty MintingPolicyTask
+    tasks =
+      mintTokens toksMint
+        <> burnTokens toksBurn
     out :: Outcome
     out = passIf $ key == secretKey
     cb :: ContextBuilder ( 'ForMinting Integer)
     cb =
-      paysTokensToPubKey userPKHash1 (tnMint, posMint)
-        <> spendsTokensFromPubKeySigned userPKHash2 (tnBurn, posBurn)
+      paysTokensToPubKey userPKHash1 toksMint
+        <> spendsTokensFromPubKeySigned userPKHash2 toksBurn
 
 -- | Creates TestItems with correct secretKey used in Redeemer
 transform2 ::
-  (Integer, (TokenName, Positive), (TokenName, Positive)) ->
+  (Integer, Tokens, Tokens) ->
   TestItems ( 'ForMinting Integer)
 transform2 = transformItems . transform1
   where

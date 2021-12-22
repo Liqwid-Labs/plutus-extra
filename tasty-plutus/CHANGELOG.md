@@ -2,6 +2,33 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## Unreleased
+
+### Added
+
+* ContextBuilder combinators:
+  * `paysTokensToPubKey`
+  * `paysTokensToWallet`
+  * `paysTokensToOther`
+  * `spendsTokensFromPubKey`
+  * `spendsTokensFromWallet`
+  * `spendsTokensFromPubKeySigned`
+  * `spendsTokensFromWalletSigned`
+  * `spendsTokensFromOther`
+* `MintingPolicyAction` and `MintingPolicyTask` to describe the actions
+   required by the tested minting policy
+* Example of property based testing of minting policy
+
+### Changed
+
+* `Tokens` type corresponds to some positive number of 'TokenName' belonging
+  to the tested minting policy
+* `ItemsForMinting` fields:
+  * `mintRedeemer` to `mpRedeemer`
+  * `mintCB` to `mpCB`
+  * `mintOutcome` to `mpOutcome`
+  * `mintTokens :: Tokens` to `mpTasks :: NonEmpty MintimngPolicyTask ` 
+
 ## 5.1 -- 2021-12-16
 
 ### Changed
