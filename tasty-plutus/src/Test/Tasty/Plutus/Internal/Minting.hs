@@ -1,7 +1,6 @@
 module Test.Tasty.Plutus.Internal.Minting (
   -- * Types
   MintingPolicyQuery (..),
-  Tokens (..),
 
   -- * Helpers
   processMintingQuery,
@@ -14,27 +13,7 @@ module Test.Tasty.Plutus.Internal.Minting (
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import Plutus.V1.Ledger.Api (TokenName)
 import PlutusTx.Positive (Positive, getPositive)
-import PlutusTx.Prelude qualified as PTx
 import Prelude
-
-{- | Tokens to be minted or burned by minting policy.
-
-  -- This type is 'Semigroup' but not 'Monoid', as a minting policy cannot be
-  -- triggered if no tokens are minted.
-
-  @since 4.1
--}
-newtype Tokens = Tokens {unTokens :: NonEmpty MintingPolicyQuery}
-  deriving stock
-    ( -- | @since 4.1
-      Eq
-    , -- | @since 4.1
-      Show
-    )
-  deriving newtype
-    ( -- | @since 4.1
-      Semigroup
-    )
 
 data MintingPolicyQuery
   = MintQuery TokenName Positive
@@ -49,7 +28,7 @@ data MintingPolicyQuery
 processMintingQuery :: MintingPolicyQuery -> (TokenName, Integer)
 processMintingQuery = \case
   MintQuery tn pos -> (tn,) . getPositive $ pos
-  BurnQuery tn pos -> (tn,) . negate . getPositive $ i
+  BurnQuery tn pos -> (tn,) . negate . getPositive $ pos
 
 {- | Create `MintingPolicyQuery` for minting tokens
 

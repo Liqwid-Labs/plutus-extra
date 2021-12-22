@@ -12,7 +12,6 @@ module Test.Tasty.Plutus.TestData (
   -- * Data type
   TestData (..),
   Outcome (..),
-  Tokens (Tokens, unTokens),
 
   -- * Helper functions
   passIf,
@@ -28,6 +27,7 @@ module Test.Tasty.Plutus.TestData (
 ) where
 
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Semigroup (stimes, stimesIdempotent)
 import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.IsData.Class (FromData, ToData)
@@ -38,7 +38,7 @@ import Test.Tasty.Plutus.Internal.Context (
   Purpose (ForMinting, ForSpending),
  )
 import Test.Tasty.Plutus.Internal.Minting (
-  Tokens (Tokens, unTokens),
+  MintingPolicyQuery,
   burningTokens,
   mintingTokens,
  )
@@ -77,10 +77,10 @@ data TestData (p :: Purpose) where
     --
     -- @since 3.0
     redeemer ->
-    -- | The tokens to be minted by the script.
+    -- | List of tokens to be minted by the script.
     --
     -- @since 4.1
-    Tokens ->
+    NonEmpty MintingPolicyQuery ->
     TestData ( 'ForMinting redeemer)
 
 {- | Describes whether a case, comprised of a script and a test data for the
@@ -218,7 +218,7 @@ data TestItems (p :: Purpose) where
       mintRedeemer :: redeemer
     , -- | Tokens minted with the MintingPolicy
       -- @since 5.0
-      mintTokens :: Tokens
+      mintTokens :: NonEmpty MintingPolicyQuery
     , -- | ContextBuilder used for creating ScriptContext
       -- @since 5.0
       mintCB :: ContextBuilder ( 'ForMinting redeemer)

@@ -1,6 +1,7 @@
 module Test.Tasty.Plutus.Internal.Context (
   Purpose (..),
   ExternalType (..),
+  ValueType (..),
   Input (..),
   Output (..),
   Minting (..),
@@ -58,9 +59,10 @@ import Plutus.V1.Ledger.Api (
 import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Value.Extra (filterValue)
+import PlutusTx.Positive (Positive, getPositive)
 import PlutusTx.Prelude (length)
 import Test.Tasty.Plutus.Internal.Minting (
-  Tokens (Tokens),
+  MintingPolicyQuery,
   processMintingQuery,
  )
 import Test.Tasty.Plutus.Options (ScriptInputPosition (Head, Tail))
@@ -109,13 +111,32 @@ data ExternalType
       Show
     )
 
+{- | Different types of value:
+
+  `TokensValue` is only used within `ContextBuilder ('ForMinting r)`
+  for representing classes, belonging to the tested MintingPolicy.
+
+  In all other cases `GeneralValue` is used.
+
+ @since 6.0
+-}
+data ValueType
+  = -- | @since 6.0
+    GeneralValue Value
+  | -- | @since 6.0
+    TokensValue TokenName Positive
+  deriving stock
+    ( -- | @since 6.0
+      Show
+    )
+
 {- | An input to a script, consisting of a value and a type.
 
  @since 1.0
 -}
 data Input
   = -- | @since 3.0
-    Input ExternalType Value
+    Input ExternalType ValueType
   deriving stock
     ( -- | @since 1.0
       Show
@@ -127,14 +148,19 @@ data Input
 -}
 data Output
   = -- | @since 3.0
-    Output ExternalType Value
+    Output ExternalType ValueType
   deriving stock
     ( -- | @since 1.0
       Show
     )
 
-{- | A minting result. Do not use this for tokens being minted by the current
- minting policy; pass those as 'Tokens' to the test instead.
+{- | Value minted with different MintingPolicy. Do not use this for tokens being minted by the tested
+ MintingPolicy;
+
+ = Note
+
+ AssetСlasses with CurrencySymbol matching testCurrencySymbol in TransactionConfig
+ will be excluded from the resulting ScriptContext
 
  @since 3.0
 -}
@@ -200,7 +226,7 @@ compileSpending ::
   datum ->
   Value ->
   ScriptContext
-compileSpending conf cb d val =
+compileSpending conf cb d v =
   ScriptContext go
     . Spending
     . TxOutRef (testTxId conf)
@@ -210,7 +236,7 @@ compileSpending conf cb d val =
     go =
       let dt = toBuiltinData d
           baseInfo = baseTxInfo conf cb
-          inInfo = createTxInInfo conf (0, Input (OwnType dt) val)
+          inInfo = createTxInInfo conf (0, Input (OwnType dt) (GeneralValue v))
           inData = datumWithHash dt
        in baseInfo
             { txInfoInputs = case scriptInputPosition conf of
@@ -223,9 +249,9 @@ compileMinting ::
   forall (r :: Type).
   TransactionConfig ->
   ContextBuilder ( 'ForMinting r) ->
-  Tokens ->
+  NonEmpty MintingPolicyQuery ->
   ScriptContext
-compileMinting conf cb (Tokens toks) =
+compileMinting conf cb toks =
   ScriptContext go (Minting sym)
   where
     sym :: CurrencySymbol
@@ -312,7 +338,7 @@ baseTxInfo conf (ContextBuilder ins outs pkhs dats mints) =
       value = foldMap (filterValue filterCS . unMint) mints
    in TxInfo
         { txInfoInputs = createTxInInfo conf <$> indexedInputs
-        , txInfoOutputs = toList . fmap (toTxOut valHash) $ outs
+        , txInfoOutputs = toList . fmap (toTxOut conf valHash) $ outs
         , txInfoFee = testFee conf
         , txInfoMint = value
         , txInfoDCert = []
@@ -354,24 +380,28 @@ datumWithHash dt = (datumHash dt', dt')
     dt' = Datum dt
 
 createTxInInfo :: TransactionConfig -> (Integer, Input) -> TxInInfo
-createTxInInfo conf (ix, Input typ v) =
-  TxInInfo (TxOutRef (testTxId conf) ix) $ case typ of
-    PubKeyType pkh -> TxOut (pubKeyHashAddress pkh) v Nothing
-    ScriptType hash dat ->
-      TxOut (scriptHashAddress hash) v . justDatumHash $ dat
-    OwnType dat ->
-      TxOut (scriptHashAddress . testValidatorHash $ conf) v . justDatumHash $ dat
+createTxInInfo conf (ix, Input typ valType) =
+  let val = extractValue conf valType
+   in TxInInfo (TxOutRef (testTxId conf) ix) $
+        case typ of
+          PubKeyType pkh -> TxOut (pubKeyHashAddress pkh) val Nothing
+          ScriptType hash dat ->
+            TxOut (scriptHashAddress hash) val . justDatumHash $ dat
+          OwnType dat ->
+            TxOut (scriptHashAddress . testValidatorHash $ conf) val . justDatumHash $ dat
 
 justDatumHash :: BuiltinData -> Maybe DatumHash
 justDatumHash = Just . datumHash . Datum
 
-toTxOut :: ValidatorHash -> Output -> TxOut
-toTxOut valHash (Output typ v) = case typ of
-  PubKeyType pkh -> TxOut (pubKeyHashAddress pkh) v Nothing
-  ScriptType hash dat ->
-    TxOut (scriptHashAddress hash) v . justDatumHash $ dat
-  OwnType dat ->
-    TxOut (scriptHashAddress valHash) v . justDatumHash $ dat
+toTxOut :: TransactionConfig -> ValidatorHash -> Output -> TxOut
+toTxOut conf valHash (Output typ valType) =
+  let val = extractValue conf valType
+   in case typ of
+        PubKeyType pkh -> TxOut (pubKeyHashAddress pkh) val Nothing
+        ScriptType hash dat ->
+          TxOut (scriptHashAddress hash) val . justDatumHash $ dat
+        OwnType dat ->
+          TxOut (scriptHashAddress valHash) val . justDatumHash $ dat
 
 -- Helper for makeIncompleteContexts : Take a list
 -- of pairs, and create another list of pairs where
@@ -392,3 +422,12 @@ removeNth :: Integer -> [a] -> ([a], Maybe a)
 removeNth _ [] = ([], Nothing)
 removeNth 0 (x : xs) = (xs, Just x)
 removeNth n (x : xs) = first (x :) $ removeNth (n - 1) xs
+
+extractValue :: TransactionConfig -> ValueType -> Value
+extractValue conf = \case
+  GeneralValue val -> val
+  TokensValue tokenName pos ->
+    Value.singleton
+      (testCurrencySymbol conf)
+      tokenName
+      (getPositive pos)

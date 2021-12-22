@@ -59,7 +59,6 @@ library
     Test.Tasty.Plutus.Internal.Feedback
     Test.Tasty.Plutus.Internal.Minting
     Test.Tasty.Plutus.Internal.Options
-    Test.Tasty.Plutus.Internal.QQ
     Test.Tasty.Plutus.Internal.Run
     Test.Tasty.Plutus.Internal.WithScript
     Test.Tasty.Plutus.Options.QQ
