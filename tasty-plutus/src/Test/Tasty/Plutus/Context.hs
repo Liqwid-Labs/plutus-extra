@@ -148,12 +148,11 @@ addDatum ::
   ContextBuilder p
 addDatum = datum . toBuiltinData
 
-{- | Context with minting Value.
+{- | Context with minting Value using a MintingPolicy other than the tested one.
 
  = Note
 
- Value minted with different MintingPolicy.
- Do not use this for tokens being minted by the tested MintingPolicy;
+ Do not use this for Value being minted by the tested MintingPolicy;
 
  AssetСlasses with CurrencySymbol matching testCurrencySymbol in TransactionConfig
  will be excluded from the resulting ScriptContext
@@ -217,7 +216,8 @@ paysTokensToWallet ::
   ContextBuilder ( 'ForMinting r)
 paysTokensToWallet wallet = paysTokensToPubKey (walletPubKeyHash wallet)
 
-{- | Indicate that the script being tested must pay itself the given amount.
+{- | Indicate that a payment must happen to the script being tested, worth
+ the given amount.
 
  @since 4.0
 -}
@@ -230,8 +230,8 @@ paysToSelf ::
 paysToSelf v dt =
   output . Output (OwnType . toBuiltinData $ dt) $ GeneralValue v
 
-{- | Indicate that the script being tested must pay another script the given
- amount.
+{- | Indicate that a payment must happen to another script, worth the
+ given amount.
 
  @since 4.0
 -}
@@ -406,7 +406,8 @@ spendsTokensFromOther ::
 spendsTokensFromOther hash (tn, pos) d =
   input . Input (ScriptType hash . toBuiltinData $ d) $ TokensValue tn pos
 
-{- | Indicate that the given 'Value' must be minted with another minting policy.
+{- | Indicate that the given 'Value' must be minted with minting policy
+ other than the tested one.
 
  @since 3.2
 -}
