@@ -12,6 +12,7 @@ module Test.Tasty.Plutus.TestData (
   -- * Data type
   TestData (..),
   Outcome (..),
+  MintingPolicyQuery (..),
 
   -- * Helper functions
   passIf,
@@ -38,7 +39,7 @@ import Test.Tasty.Plutus.Internal.Context (
   Purpose (ForMinting, ForSpending),
  )
 import Test.Tasty.Plutus.Internal.Minting (
-  MintingPolicyQuery,
+  MintingPolicyQuery (BurnQuery, MintQuery),
   burningTokens,
   mintingTokens,
  )

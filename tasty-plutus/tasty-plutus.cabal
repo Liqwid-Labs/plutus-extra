@@ -95,6 +95,8 @@ test-suite properties
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
+    MintingPolicy
+    Validator
   hs-source-dirs: test/Properties
   build-depends:
     , base                         ^>=4.14
@@ -102,6 +104,7 @@ test-suite properties
     , plutus-extra                 ^>=4.0
     , plutus-ledger
     , plutus-ledger-api
+    , plutus-numeric                 ^>=4.1
     , plutus-tx
     , plutus-tx-plugin
     , quickcheck-plutus-instances  ^>=1.5
