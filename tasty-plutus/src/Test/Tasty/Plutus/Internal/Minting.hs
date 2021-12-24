@@ -41,7 +41,12 @@ data MintingPolicyTask
 data MintingPolicyAction
   = BurnAction
   | MintAction
-  deriving stock (Eq, Show)
+  deriving stock
+    ( -- | @since 6.0
+      Eq
+    , -- | @since 6.0
+      Show
+    )
 
 {- | 'Tokens' corresponds to some positive number of 'TokenName' belonging
  to the tested minting policy.
@@ -49,7 +54,12 @@ data MintingPolicyAction
  @since 6.0
 -}
 data Tokens = Tokens TokenName Positive
-  deriving stock (Eq, Show)
+  deriving stock
+    ( -- | @since 6.0
+      Eq
+    , -- | @since 6.0
+      Show
+    )
 
 -- | @since 6.0
 instance Arbitrary Tokens where
