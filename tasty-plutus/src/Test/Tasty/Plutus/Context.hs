@@ -179,7 +179,7 @@ paysToPubKey ::
 paysToPubKey pkh =
   output . Output (PubKeyType pkh) . GeneralValue
 
-{- | Indicate that the given 'Tokens' belonging to the tested minting policy
+{- | Indicate that the given 'Tokens' controlled by the tested minting policy
 must be payed to the given public key.
 
  @since 6.0
@@ -204,7 +204,7 @@ paysToWallet ::
   ContextBuilder p
 paysToWallet wallet = paysToPubKey (walletPubKeyHash wallet)
 
-{- | Indicate that the given 'Tokens' belonging  to the tested minting policy
+{- | Indicate that the given 'Tokens' controlled by the tested minting policy
  must be payed to the given 'Wallet'.
 
  @since 6.0
@@ -245,7 +245,7 @@ paysToOther ::
 paysToOther hash v dt =
   output . Output (ScriptType hash . toBuiltinData $ dt) $ GeneralValue v
 
-{- | Indicate that the given 'Tokens' belonging to the tested minting policy
+{- | Indicate that the given 'Tokens' controlled by the tested minting policy
  must be payed to another script.
 
  @since 6.0
@@ -294,7 +294,7 @@ spendsFromPubKey ::
 spendsFromPubKey pkh =
   input . Input (PubKeyType pkh) . GeneralValue
 
-{- | Indicate that the given 'Tokens' belonging to the tested minting policy
+{- | Indicate that the given 'Tokens' controlled by the tested minting policy
  must be spent from the given public key.
 
  @since 6.0
@@ -341,7 +341,7 @@ spendsFromWallet ::
   ContextBuilder p
 spendsFromWallet wallet = spendsFromPubKey (walletPubKeyHash wallet)
 
-{- | Indicate that the given 'Tokens belonging to the tested minting policy
+{- | Indicate that the given 'Tokens controlled by the tested minting policy
  must be spent from the given 'Wallet'
 
  @since 6.0
@@ -391,7 +391,7 @@ spendsFromOther ::
 spendsFromOther hash v d =
   input . Input (ScriptType hash . toBuiltinData $ d) $ GeneralValue v
 
-{- | Indicate that the given 'Tokens' belonging to the tested minting policy
+{- | Indicate that the given 'Tokens' controlled by the tested minting policy
  must be spent from another script.
 
  @since 6.0

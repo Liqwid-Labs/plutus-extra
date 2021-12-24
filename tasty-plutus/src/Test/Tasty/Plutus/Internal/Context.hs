@@ -155,13 +155,13 @@ data Output
       Show
     )
 
-{- | Value minted with different MintingPolicy. Do not use this for tokens being minted by the tested
- MintingPolicy;
+{- | 'Value' minted with minting policy other than the tested one.
+ Do not use this for tokens being minted by the tested minting policy.
 
  = Note
 
- AssetСlasses with CurrencySymbol matching testCurrencySymbol in TransactionConfig
- will be excluded from the resulting ScriptContext
+ Asset classes with 'CurrencySymbol' matching 'testCurrencySymbol' in 'TransactionConfig'
+ will be excluded from the resulting 'ScriptContext'.
 
  @since 3.0
 -}

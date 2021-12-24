@@ -48,8 +48,8 @@ data MintingPolicyAction
       Show
     )
 
-{- | 'Tokens' corresponds to some positive number of 'TokenName' belonging
- to the tested minting policy.
+{- | 'Tokens' corresponds to some positive number of 'TokenName'
+ controled by the tested minting policy.
 
  @since 6.0
 -}
