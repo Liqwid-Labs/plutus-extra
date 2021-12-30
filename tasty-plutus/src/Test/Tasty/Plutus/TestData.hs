@@ -220,7 +220,7 @@ data TestItems (p :: Purpose) where
       -- | @since 5.0
       mintOutcome :: Outcome
     } ->
-    TestItems ('ForMinting redeemer)
-    
+    TestItems ( 'ForMinting redeemer)
+
 -- | @since 5.0
 deriving stock instance Show (TestItems p)
