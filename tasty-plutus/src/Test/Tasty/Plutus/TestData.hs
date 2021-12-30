@@ -219,3 +219,6 @@ data TestItems (p :: Purpose) where
       mintOutcome :: Outcome
     } ->
     TestItems 'ForMinting
+
+-- | @since 5.0
+deriving stock instance Show (TestItems p)
