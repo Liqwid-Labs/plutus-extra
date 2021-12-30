@@ -1,0 +1,85 @@
+{
+    "seed": 123456,
+    "data": [
+        {
+            "data": 18,
+            "tag": "I"
+        },
+        {
+            "data": 5,
+            "tag": "I"
+        },
+        {
+            "data": 16,
+            "tag": "I"
+        },
+        {
+            "data": 10,
+            "tag": "I"
+        },
+        {
+            "data": 22,
+            "tag": "I"
+        },
+        {
+            "data": 19,
+            "tag": "I"
+        },
+        {
+            "data": 20,
+            "tag": "I"
+        },
+        {
+            "data": 9,
+            "tag": "I"
+        },
+        {
+            "data": 7,
+            "tag": "I"
+        },
+        {
+            "data": 10,
+            "tag": "I"
+        },
+        {
+            "data": 9,
+            "tag": "I"
+        },
+        {
+            "data": 6,
+            "tag": "I"
+        },
+        {
+            "data": 30,
+            "tag": "I"
+        },
+        {
+            "data": 2,
+            "tag": "I"
+        },
+        {
+            "data": 12,
+            "tag": "I"
+        },
+        {
+            "data": 22,
+            "tag": "I"
+        },
+        {
+            "data": 15,
+            "tag": "I"
+        },
+        {
+            "data": 10,
+            "tag": "I"
+        },
+        {
+            "data": 22,
+            "tag": "I"
+        },
+        {
+            "data": 30,
+            "tag": "I"
+        }
+    ]
+}

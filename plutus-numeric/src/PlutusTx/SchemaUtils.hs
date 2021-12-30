@@ -1,5 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
+{- | Module: PlutusTx.SchemaUtils
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Sergey Kurgak <sergey@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+-}
 module PlutusTx.SchemaUtils (
   RatioFields ((:%:)),
   ratioDeclareNamedSchema,
@@ -73,18 +80,6 @@ ratioFixFormArgument num denom =
       ]
 
 -- | @since 2.3
-ratioFormSchema ::
-  forall (numerator :: Symbol) (denominator :: Symbol).
-  ( KnownSymbol numerator
-  , KnownSymbol denominator
-  ) =>
-  FormSchema
-ratioFormSchema =
-  FormSchemaObject
-    [ (symbolVal (Proxy @numerator), toSchema @Integer)
-    , (symbolVal (Proxy @denominator), toSchema @Integer)
-    ]
-
 ratioTypeName ::
   forall (numerator :: Symbol) (denominator :: Symbol).
   ( KnownSymbol numerator
@@ -99,4 +94,17 @@ ratioTypeName ratioName =
     , symbolVal (Proxy @numerator)
     , " : "
     , symbolVal (Proxy @denominator)
+    ]
+
+-- | @since 2.3
+ratioFormSchema ::
+  forall (numerator :: Symbol) (denominator :: Symbol).
+  ( KnownSymbol numerator
+  , KnownSymbol denominator
+  ) =>
+  FormSchema
+ratioFormSchema =
+  FormSchemaObject
+    [ (symbolVal (Proxy @numerator), toSchema @Integer)
+    , (symbolVal (Proxy @denominator), toSchema @Integer)
     ]

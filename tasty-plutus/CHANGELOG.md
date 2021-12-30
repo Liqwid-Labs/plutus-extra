@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 5.1 -- 2021-12-16
+
+### Changed
+
+* `Purpse` was extended with additional type parameters for additional type safety.
+
 ## 5.0 -- 2021-12-10
 
 ### Added

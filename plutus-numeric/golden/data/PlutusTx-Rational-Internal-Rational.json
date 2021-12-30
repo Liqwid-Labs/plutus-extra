@@ -1,0 +1,285 @@
+{
+    "seed": 123456,
+    "data": [
+        {
+            "data": [
+                {
+                    "data": -1,
+                    "tag": "I"
+                },
+                {
+                    "data": 1,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": -2,
+                    "tag": "I"
+                },
+                {
+                    "data": 19,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": -20,
+                    "tag": "I"
+                },
+                {
+                    "data": 17,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 2,
+                    "tag": "I"
+                },
+                {
+                    "data": 1,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 27,
+                    "tag": "I"
+                },
+                {
+                    "data": 19,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": -14,
+                    "tag": "I"
+                },
+                {
+                    "data": 1,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": -5,
+                    "tag": "I"
+                },
+                {
+                    "data": 9,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": -11,
+                    "tag": "I"
+                },
+                {
+                    "data": 2,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": -9,
+                    "tag": "I"
+                },
+                {
+                    "data": 17,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": -2,
+                    "tag": "I"
+                },
+                {
+                    "data": 11,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 3,
+                    "tag": "I"
+                },
+                {
+                    "data": 17,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 1,
+                    "tag": "I"
+                },
+                {
+                    "data": 1,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 23,
+                    "tag": "I"
+                },
+                {
+                    "data": 24,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": -26,
+                    "tag": "I"
+                },
+                {
+                    "data": 9,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 2,
+                    "tag": "I"
+                },
+                {
+                    "data": 1,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 1,
+                    "tag": "I"
+                },
+                {
+                    "data": 21,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 13,
+                    "tag": "I"
+                },
+                {
+                    "data": 22,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": 10,
+                    "tag": "I"
+                },
+                {
+                    "data": 3,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": -1,
+                    "tag": "I"
+                },
+                {
+                    "data": 4,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        },
+        {
+            "data": [
+                {
+                    "data": -5,
+                    "tag": "I"
+                },
+                {
+                    "data": 9,
+                    "tag": "I"
+                }
+            ],
+            "index": 0,
+            "tag": "Constr"
+        }
+    ]
+}

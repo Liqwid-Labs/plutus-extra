@@ -12,8 +12,9 @@ module PlutusTx.Natural.Internal (
 
 import Control.Monad (guard)
 import Data.Aeson (FromJSON (parseJSON), ToJSON)
-import Data.OpenApi.Schema qualified as OpenApi
-import PlutusTx.Builtins (matchData, unsafeDataAsI)
+import Data.Kind (Type)
+import Data.OpenApi.Schema (ToSchema)
+import PlutusTx.Builtins (matchData)
 import PlutusTx.IsData (
   FromData (fromBuiltinData),
   ToData,
@@ -21,7 +22,7 @@ import PlutusTx.IsData (
  )
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude hiding (even)
-import Schema (ToArgument, ToSchema)
+import Schema qualified as PlutusSchema
 import Test.QuickCheck.Arbitrary (
   Arbitrary (arbitrary, shrink),
   CoArbitrary,
@@ -53,17 +54,17 @@ newtype Natural = Natural Integer
     , -- | @since 1.0
       ToJSON
     , -- | @since 1.0
-      ToSchema
-    , -- | @since 1.0
-      ToArgument
-    , -- | @since 1.0
       Prelude.Eq
     , -- | @since 1.1
       Prelude.Ord
     , -- | @since 1.0
-      OpenApi.ToSchema
+      ToSchema
     , -- | @since 2.2
       CoArbitrary
+    , -- | @since 1.0
+      PlutusSchema.ToSchema
+    , -- | @since 1.0
+      PlutusSchema.ToArgument
     )
     via Integer
   deriving stock
@@ -92,25 +93,21 @@ instance FromData Natural where
   fromBuiltinData dat =
     matchData
       dat
-      (\_ -> const Nothing)
-      (const Nothing)
-      (const Nothing)
+      (const go)
       go
-      (const Nothing)
+      go
+      (\i -> if i < zero then Nothing else Just . Natural $ i)
+      go
     where
-      go :: Integer -> Maybe Natural
-      go x
-        | x < zero = Nothing
-        | otherwise = Just . Natural $ x
+      go :: forall (a :: Type). a -> Maybe Natural
+      go = const Nothing
 
 -- | @since 1.0
 instance UnsafeFromData Natural where
   {-# INLINEABLE unsafeFromBuiltinData #-}
   unsafeFromBuiltinData dat =
-    let asI = unsafeDataAsI dat
-     in if asI >= 0
-          then Natural asI
-          else error . trace "Cannot decode a negative value to Natural" $ ()
+    let i = unsafeFromBuiltinData dat
+     in if i < zero then error () else Natural i
 
 {- | This is partial all over the place, but so is 'Enum' for most things.
 
@@ -133,7 +130,7 @@ instance Enum Natural where
 -- | @since 1.0
 instance Arbitrary Natural where
   arbitrary = Natural . Prelude.abs Prelude.<$> arbitrary
-  shrink (Natural i) = Natural Prelude.<$> (Prelude.filter (> 0) . shrink $ i)
+  shrink (Natural i) = Natural Prelude.<$> (Prelude.filter (>= 0) . shrink $ i)
 
 -- | @since 2.2
 instance Function Natural where

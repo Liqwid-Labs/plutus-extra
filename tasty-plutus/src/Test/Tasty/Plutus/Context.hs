@@ -138,7 +138,7 @@ addDatum ::
   ContextBuilder p
 addDatum = datum . toBuiltinData
 
-{- | Context with one minting.
+{- | Context with one minting using a different MintingPolicy.
 
  @since 3.2
 -}
@@ -174,7 +174,8 @@ paysToWallet ::
   ContextBuilder p
 paysToWallet wallet = paysToPubKey (walletPubKeyHash wallet)
 
-{- | Indicate that the script being tested must pay itself the given amount.
+{- | Indicate that a payment must happen to the script being tested, worth
+ the given amount.
 
  @since 4.0
 -}
@@ -187,8 +188,8 @@ paysToSelf ::
 paysToSelf v dt =
   output . Output (OwnType . toBuiltinData $ dt) $ v
 
-{- | Indicate that the script being tested must pay another script the given
- amount.
+{- | Indicate that a payment must happen to another script, worth the
+ given amount.
 
  @since 4.0
 -}
@@ -283,7 +284,7 @@ spendsFromOther ::
 spendsFromOther hash v d =
   input . Input (ScriptType hash . toBuiltinData $ d) $ v
 
-{- | Indicate that someone must mint the given 'Value'.
+{- | Indicate that the given 'Value' must be minted with another MintingPolicy.
 
  @since 3.2
 -}

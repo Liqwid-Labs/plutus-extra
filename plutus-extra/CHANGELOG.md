@@ -2,6 +2,51 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+
+## Unreleased
+
+## 4.0 -- 2021-12-14
+
+### Added
+
+- PlutusTx.Data.Extra: `toDatumHash` to get `DatumHash` of a value
+- `OpenApi.ToSchema`, `Arbitrary`, `CoArbitrary`, `Function` instances
+  for `PlutusTx.Set`
+- PlutusTx.UniqueMap:
+  - `Arbitrary`, `CoArbitrary` and `Function` instances for `UniqueMap`
+  - `Inclusion`describing the relationship between two arbitrary maps
+    regarding inclusion
+  - `inclusion` to check the inclusion status of two maps
+
+### Changed
+
+- PlutusTx.Data.Extra:
+  - `toDatum`, `toRedeemer`, `fromDatum` and `fromRedeemer`
+    use _Datum_ and _Redeemer_ types instead of _ValidatorTypes_
+- PlutusTx.UniqueMap: `Map` renamed to `UniqueMap`
+
+### Removed
+
+- PlutusTx.UniqueMap: `all`, `null`, `filter`, `mapThese` functions
+
+## 3.2 -- 2021-12-14
+
+### Added
+
+- Added `addressValueOptions` to make construction of
+  emulator traces involving data easier.
+
+## 3.1 -- 2021-12-13
+
+### Added
+
+- Instances of `Eq`, `Ord`, `Arbitrary`, `CoArbitrary`
+  and `Function` for `NonEmpty`
+
+### Changed
+
+- `NonEmpty` `Show` instance is derived
+
 ## 3.0 -- 2021-11-11
 
 ### Changed
