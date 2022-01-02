@@ -1,4 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# OPTIONS_GHC -Wno-orphans #-} -- needed for Eq (,,)
 
 module PlutusTx.Skeleton.Internal (
   Skeleton (..),
@@ -76,7 +77,7 @@ data Skeleton
   | StringS BuiltinString
   | ConS BuiltinString [Skeleton]
   | RecS BuiltinString [(BuiltinString, Skeleton)]
-  | TupleS Skeleton Skeleton
+  | TupleS Skeleton Skeleton (Maybe Skeleton)
   | ListS [Skeleton]
   deriving stock
     ( -- | @since 2.1
@@ -97,8 +98,8 @@ instance Eq Skeleton where
     (RecS nam keyVals, RecS nam' keyVals') ->
       keyVals == keyVals'
         && nam == nam'
-    (TupleS x y, TupleS x' y') ->
-      x == x' && y == y'
+    (TupleS x y z, TupleS x' y' z') ->
+      x == x' && y == y' && z == z'
     (ListS xs, ListS xs') -> xs == xs'
     _ -> False
 
@@ -120,6 +121,15 @@ instance Eq Skeleton where
 -}
 class (Eq a) => Skeletal a where
   skeletize :: a -> Skeleton
+
+-- | @since 2.2
+instance (Eq a, Eq b, Eq c) => Eq (a, b, c) where
+  {-# INLINEABLE (==) #-}
+  (x, y, z) == (x', y', z') = x == x' && y == y' && z == z'
+
+-- | @since 2.2
+instance (Skeletal a, Skeletal b, Skeletal c) => Skeletal (a, b, c) where
+  skeletize (x, y, z) = TupleS (skeletize x) (skeletize y) (Just . skeletize $ z)
 
 -- | @since 2.1
 instance Skeletal BuiltinData where
@@ -181,7 +191,7 @@ instance (Skeletal k, Skeletal v) => Skeletal (AssocMap.Map k v) where
 -- | @since 2.1
 instance (Skeletal a, Skeletal b) => Skeletal (a, b) where
   {-# INLINEABLE skeletize #-}
-  skeletize (x, y) = TupleS (skeletize x) (skeletize y)
+  skeletize (x, y) = TupleS (skeletize x) (skeletize y) Nothing
 
 -- | @since 2.1
 instance Skeletal TxId where

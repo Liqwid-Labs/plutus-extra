@@ -21,6 +21,7 @@ main =
     [ testProperty "BuiltinString pretty-print" stringSkeletalProp
     , testProperty "Tuple pretty-print" tupleSkeletalProp
     , testProperty "Record pretty-print" recordSkeletalProp
+    , testProperty "Tuple3 pretty-print" tuple3SkeletalProp
     ]
   where
     go :: QuickCheckTests
@@ -49,6 +50,21 @@ tupleSkeletalProp = forAllShrinkShow arbitrary shrink ppShow go
               PTx.<> " }"
           rhs = showSkeletal tup
        in lhs === rhs
+
+tuple3SkeletalProp :: Property
+tuple3SkeletalProp = forAllShrinkShow arbitrary shrink ppShow go
+  where
+    go :: (BuiltinString, Integer, BuiltinString) -> Property
+    go tup@(s, i, s') = 
+      let lhs = "{ \"fst\": " PTx.<>
+                showSkeletal s PTx.<>
+                ", \"snd\": " PTx.<>
+                showSkeletal i PTx.<>
+                ", \"thd\": " PTx.<>
+                showSkeletal s' PTx.<>
+                " }"
+          rhs = showSkeletal tup
+        in lhs === rhs
 
 recordSkeletalProp :: Property
 recordSkeletalProp = forAllShrinkShow arbitrary shrink ppShow go

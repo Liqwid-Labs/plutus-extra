@@ -35,7 +35,7 @@ renderSkeleton = \case
   StringS bis -> embed ("\"" <> bis <> "\"")
   ConS conName conArgs -> renderTagged conName conArgs
   RecS recConName fieldVals -> renderKV recConName fieldVals
-  TupleS x y -> renderTuple x y
+  TupleS x y z -> renderTuple x y z
   ListS xs -> renderArray xs
 
 {-# INLINEABLE renderTagged #-}
@@ -57,13 +57,16 @@ renderKV name fieldVals =
     <+> embed "}"
 
 {-# INLINEABLE renderTuple #-}
-renderTuple :: Skeleton -> Skeleton -> Builder
-renderTuple x y =
+renderTuple :: Skeleton -> Skeleton -> Maybe Skeleton -> Builder
+renderTuple x y mz =
   embed "{ \"fst\":"
     <+> (renderSkeleton x <> embed ",")
     <+> embed "\"snd\":"
-    <+> renderSkeleton y
-    <+> embed "}"
+    <+> (renderSkeleton y <> case mz of 
+      Nothing -> embed " }"
+      Just z -> embed ", \"thd\":" <+>
+                renderSkeleton z <+>
+                embed "}")
 
 {-# INLINEABLE renderArray #-}
 renderArray :: [Skeleton] -> Builder
