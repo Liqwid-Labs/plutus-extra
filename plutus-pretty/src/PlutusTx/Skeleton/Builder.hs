@@ -62,11 +62,13 @@ renderTuple x y mz =
   embed "{ \"fst\":"
     <+> (renderSkeleton x <> embed ",")
     <+> embed "\"snd\":"
-    <+> (renderSkeleton y <> case mz of 
-      Nothing -> embed " }"
-      Just z -> embed ", \"thd\":" <+>
-                renderSkeleton z <+>
-                embed "}")
+    <+> ( renderSkeleton y <> case mz of
+            Nothing -> embed " }"
+            Just z ->
+              embed ", \"thd\":"
+                <+> renderSkeleton z
+                <+> embed "}"
+        )
 
 {-# INLINEABLE renderArray #-}
 renderArray :: [Skeleton] -> Builder

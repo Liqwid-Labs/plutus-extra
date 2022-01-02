@@ -55,16 +55,17 @@ tuple3SkeletalProp :: Property
 tuple3SkeletalProp = forAllShrinkShow arbitrary shrink ppShow go
   where
     go :: (BuiltinString, Integer, BuiltinString) -> Property
-    go tup@(s, i, s') = 
-      let lhs = "{ \"fst\": " PTx.<>
-                showSkeletal s PTx.<>
-                ", \"snd\": " PTx.<>
-                showSkeletal i PTx.<>
-                ", \"thd\": " PTx.<>
-                showSkeletal s' PTx.<>
-                " }"
+    go tup@(s, i, s') =
+      let lhs =
+            "{ \"fst\": "
+              PTx.<> showSkeletal s
+              PTx.<> ", \"snd\": "
+              PTx.<> showSkeletal i
+              PTx.<> ", \"thd\": "
+              PTx.<> showSkeletal s'
+              PTx.<> " }"
           rhs = showSkeletal tup
-        in lhs === rhs
+       in lhs === rhs
 
 recordSkeletalProp :: Property
 recordSkeletalProp = forAllShrinkShow arbitrary shrink ppShow go

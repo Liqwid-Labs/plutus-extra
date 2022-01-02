@@ -1,5 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
-{-# OPTIONS_GHC -Wno-orphans #-} -- needed for Eq (,,)
+-- needed for Eq (,,)
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module PlutusTx.Skeleton.Internal (
   Skeleton (..),
@@ -56,6 +57,7 @@ import Plutus.V1.Ledger.Scripts (
 import Plutus.V1.Ledger.Time (POSIXTime (POSIXTime))
 import Plutus.V1.Ledger.TxId (TxId (TxId))
 import Plutus.V1.Ledger.Value (
+  AssetClass (AssetClass),
   CurrencySymbol (CurrencySymbol),
   TokenName (TokenName),
   Value (Value),
@@ -129,7 +131,13 @@ instance (Eq a, Eq b, Eq c) => Eq (a, b, c) where
 
 -- | @since 2.2
 instance (Skeletal a, Skeletal b, Skeletal c) => Skeletal (a, b, c) where
+  {-# INLINEABLE skeletize #-}
   skeletize (x, y, z) = TupleS (skeletize x) (skeletize y) (Just . skeletize $ z)
+
+-- | @since 2.2
+instance Skeletal AssetClass where
+  {-# INLINEABLE skeletize #-}
+  skeletize (AssetClass xs) = ConS "AssetClass" [skeletize xs]
 
 -- | @since 2.1
 instance Skeletal BuiltinData where
