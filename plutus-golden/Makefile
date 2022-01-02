@@ -45,7 +45,7 @@ build: requires_nix_shell plutus-golden.cabal
 	cabal v2-build $(GHC_FLAGS)
 
 watch: requires_nix_shell plutus-golden.cabal
-	while sleep 1; do find plutus-extra.cabal src test | entr -cd make build; done
+	while sleep 1; do find plutus-golden.cabal src test | entr -cd make build; done
 
 test: requires_nix_shell plutus-golden.cabal
 	cabal v2-test
@@ -73,19 +73,19 @@ format_check: requires_nix_shell
 CABAL_SOURCES := $(shell git ls-tree -r HEAD --full-tree --name-only | grep -E '.*\.cabal' )
 
 cabalfmt: requires_nix_shell
-	cabal-fmt --inplace $(CABAL_SOURCES)
+	cd .. ; cabal-fmt --inplace $(CABAL_SOURCES)
 
 cabalfmt_check: requires_nix_shell
-	cabal-fmt --check $(CABAL_SOURCES)
+	cd .. ; cabal-fmt --check $(CABAL_SOURCES)
 
 # Nix files to format
-NIX_SOURCES := $(shell git ls-tree -r HEAD --full-tree --name-only | grep -E '.*\.nix' )
+NIX_SOURCES := $(shell git ls-tree -r HEAD --full-tree --name-only | grep -E '.*\.nix$$' )
 
 nixfmt: requires_nix_shell
-	nixfmt $(NIX_SOURCES)
+	cd .. ; nixfmt $(NIX_SOURCES)
 
 nixfmt_check: requires_nix_shell
-	nixfmt --check $(NIX_SOURCES)
+	cd .. ; nixfmt --check $(NIX_SOURCES)
 
 # Check with hlint, currently I couldn't get --refactor to work
 lint: requires_nix_shell
