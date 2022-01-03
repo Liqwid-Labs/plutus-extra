@@ -2,35 +2,57 @@ cradle:
   cabal:
     - path: "./plutus-deriving/src"
       component: "lib:plutus-deriving"
+
     - path: "./plutus-deriving/test"
-      component: "lib:plutus-deriving-testlib"
+      component: "plutus-deriving:lib:testlib"
+
     - path: "./plutus-deriving/test/size"
-      component: "test:plutus-deriving-size"
+      component: "plutus-deriving:test:size"
+
     - path: "./plutus-deriving/test/laws"
-      component: "test:plutus-deriving-laws"
+      component: "plutus-deriving:test:laws"
+
     - path: "./plutus-extra/src"
       component: "lib:plutus-extra"
+
     - path: "./plutus-extra/test"
-      component: "test:plutus-extra-test"
+      component: "plutus-extra:test:plutus-extra-test"
+
     - path: "./plutus-golden/src"
       component: "lib:plutus-golden"
+
     - path: "./plutus-laws/src"
       component: "lib:plutus-laws"
+
     - path: "./plutus-numeric/src"
       component: "lib:plutus-numeric"
+
     - path: "./plutus-numeric/test/property"
-      component: "test:plutus-numeric-property"
+      component: "plutus-numeric:test:property"
+
     - path: "./plutus-numeric/test/golden"
-      component: "test:plutus-numeric-golden"
+      component: "plutus-numeric:test:golden"
+
     - path: "./plutus-numeric/test/laws"
-      component: "test:plutus-numeric-laws"
+      component: "plutus-numeric:test:laws"
+
     - path: "./plutus-numeric/test/size"
-      component: "test:plutus-numeric-size"
+      component: "plutus-numeric:test:size"
+
     - path: "./plutus-pretty/src"
       component: "lib:plutus-pretty"
+
+    - path: "./plutus-pretty/test/script-size"
+      component: "plutus-pretty:test:script-size"
+
+    - path: "./plutus-pretty/test/properties"
+      component: "plutus-pretty:test:properties"
+
     - path: "./plutus-size-check/src"
       component: "lib:plutus-size-check"
+
     - path: "./quickcheck-plutus-instances/src"
       component: "lib:quickcheck-plutus-instances"
+
     - path: "./tasty-plutus/src"
       component: "lib:tasty-plutus"

@@ -58,7 +58,7 @@ library
 
   hs-source-dirs:  src
 
-library plutus-deriving-testlib
+library testlib
   import:          lang
   visibility:      private
   exposed-modules: Test
@@ -70,7 +70,7 @@ library plutus-deriving-testlib
 
   hs-source-dirs:  test
 
-test-suite plutus-deriving-size
+test-suite size
   import:         test-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
@@ -79,11 +79,11 @@ test-suite plutus-deriving-size
     , plutus-size-check  ^>=1.1
     , plutus-tx
     , plutus-tx-plugin
-    , plutus-deriving-testlib
+    , testlib
 
   hs-source-dirs: test/size
 
-test-suite plutus-deriving-laws
+test-suite laws
   import:         test-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
@@ -91,6 +91,6 @@ test-suite plutus-deriving-laws
     , plutus-laws       ^>=2.3
     , plutus-tx
     , tasty-quickcheck  ^>=0.10.1.2
-    , plutus-deriving-testlib
+    , testlib
 
   hs-source-dirs: test/laws

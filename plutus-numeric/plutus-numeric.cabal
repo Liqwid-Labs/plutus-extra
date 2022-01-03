@@ -81,7 +81,7 @@ library
 
   hs-source-dirs:  src
 
-test-suite plutus-numeric-property
+test-suite property
   import:         test-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
@@ -102,7 +102,7 @@ test-suite plutus-numeric-property
 
   hs-source-dirs: test/property
 
-test-suite plutus-numeric-golden
+test-suite golden
   import:         test-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
@@ -112,7 +112,7 @@ test-suite plutus-numeric-golden
 
   hs-source-dirs: test/golden
 
-test-suite plutus-numeric-laws
+test-suite laws
   import:         test-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
@@ -122,7 +122,7 @@ test-suite plutus-numeric-laws
 
   hs-source-dirs: test/laws
 
-test-suite plutus-numeric-size
+test-suite size
   import:         test-lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
