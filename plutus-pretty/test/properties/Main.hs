@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-specialize #-}
 
 module Main (main) where
 
@@ -43,11 +44,11 @@ tupleSkeletalProp = forAllShrinkShow arbitrary shrink ppShow go
     go :: (BuiltinString, Integer) -> Property
     go tup@(s, i) =
       let lhs =
-            "{ \"fst\": "
+            "{\"fst\": "
               PTx.<> showSkeletal s
               PTx.<> ", \"snd\": "
               PTx.<> showSkeletal i
-              PTx.<> " }"
+              PTx.<> "}"
           rhs = showSkeletal tup
        in lhs === rhs
 
@@ -57,27 +58,28 @@ tuple3SkeletalProp = forAllShrinkShow arbitrary shrink ppShow go
     go :: (BuiltinString, Integer, BuiltinString) -> Property
     go tup@(s, i, s') =
       let lhs =
-            "{ \"fst\": "
+            "{\"fst\": "
               PTx.<> showSkeletal s
               PTx.<> ", \"snd\": "
               PTx.<> showSkeletal i
               PTx.<> ", \"thd\": "
               PTx.<> showSkeletal s'
-              PTx.<> " }"
+              PTx.<> "}"
           rhs = showSkeletal tup
        in lhs === rhs
 
+-- "{ \"recordTag\": \"Foo\", \"fields\": { \"bar\": \"\", \"baz\": 0 } }"
 recordSkeletalProp :: Property
 recordSkeletalProp = forAllShrinkShow arbitrary shrink ppShow go
   where
     go :: Foo -> Property
     go f@(Foo x y) =
       let lhs =
-            "{ \"recordTag\": \"Foo\", \"fields\": { \"bar\": "
+            "{\"recordTag\": \"Foo\", \"fields\": {\"bar\": "
               PTx.<> showSkeletal x
-              PTx.<> " , \"baz\": "
+              PTx.<> ", \"baz\": "
               PTx.<> showSkeletal y
-              PTx.<> " ,  } }"
+              PTx.<> "}}"
        in lhs === showSkeletal f
 
 data Foo = Foo
