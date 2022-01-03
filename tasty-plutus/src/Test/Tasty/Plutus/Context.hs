@@ -46,8 +46,8 @@ module Test.Tasty.Plutus.Context (
   paysToWallet,
   paysLovelaceToPubKey,
   paysLovelaceToWallet,
-  paysSelf,
-  paysOther,
+  paysToSelf,
+  paysToOther,
 
   -- ** Spending
   spendsFromPubKey,
@@ -57,7 +57,6 @@ module Test.Tasty.Plutus.Context (
   spendsFromOther,
 
   -- ** Minting
-  mintsWithSelf,
   mintsValue,
 
   -- ** Combining Contexts
@@ -69,14 +68,14 @@ import Data.Sequence qualified as Seq
 import Plutus.V1.Ledger.Ada (lovelaceValueOf)
 import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Scripts (ValidatorHash)
-import Plutus.V1.Ledger.Value (TokenName, Value)
+import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Test.Tasty.Plutus.Internal.Context (
   ContextBuilder (ContextBuilder),
   ExternalType (OwnType, PubKeyType, ScriptType),
   Input (Input),
-  Minting (OtherMint, OwnMint),
+  Minting (Mint),
   Output (Output),
   Purpose (ForMinting, ForSpending),
   makeIncompleteContexts,
@@ -139,7 +138,7 @@ addDatum ::
   ContextBuilder p
 addDatum = datum . toBuiltinData
 
-{- | Context with one minting.
+{- | Context with one minting using a different MintingPolicy.
 
  @since 3.2
 -}
@@ -175,32 +174,33 @@ paysToWallet ::
   ContextBuilder p
 paysToWallet wallet = paysToPubKey (walletPubKeyHash wallet)
 
-{- | Indicate that the script being tested must pay itself the given amount.
+{- | Indicate that a payment must happen to the script being tested, worth
+ the given amount.
 
- @since 1.0
+ @since 4.0
 -}
-paysSelf ::
+paysToSelf ::
   forall (p :: Purpose) (a :: Type).
   (ToData a) =>
   Value ->
   a ->
   ContextBuilder p
-paysSelf v dt =
+paysToSelf v dt =
   output . Output (OwnType . toBuiltinData $ dt) $ v
 
-{- | Indicate that the script being tested must pay another script the given
- amount.
+{- | Indicate that a payment must happen to another script, worth the
+ given amount.
 
- @since 1.0
+ @since 4.0
 -}
-paysOther ::
+paysToOther ::
   forall (p :: Purpose) (a :: Type).
   (ToData a) =>
   ValidatorHash ->
   Value ->
   a ->
   ContextBuilder p
-paysOther hash v dt =
+paysToOther hash v dt =
   output . Output (ScriptType hash . toBuiltinData $ dt) $ v
 
 {- | As 'paysToPubKey', but using Lovelace.
@@ -284,18 +284,7 @@ spendsFromOther ::
 spendsFromOther hash v d =
   input . Input (ScriptType hash . toBuiltinData $ d) $ v
 
-{- | Indicate that an amount of a given token must be minted.
-
- @since 3.2
--}
-mintsWithSelf ::
-  forall (p :: Purpose).
-  TokenName ->
-  Integer ->
-  ContextBuilder p
-mintsWithSelf tn = minting . OwnMint tn
-
-{- | Indicate that someone must mint the given 'Value'.
+{- | Indicate that the given 'Value' must be minted with another MintingPolicy.
 
  @since 3.2
 -}
@@ -303,4 +292,4 @@ mintsValue ::
   forall (p :: Purpose).
   Value ->
   ContextBuilder p
-mintsValue = minting . OtherMint
+mintsValue = minting . Mint

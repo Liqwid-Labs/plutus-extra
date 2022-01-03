@@ -24,6 +24,15 @@ cradle:
     - path: "./plutus-laws/src"
       component: "lib:plutus-laws"
 
+    - path: "./plutus-list/src"
+      component: "lib:plutus-list"
+
+    - path: "./plutus-list/test/property"
+      component: "plutus-list:test:plutus-list-properties"
+
+    - path: "./plutus-list/test/size"
+      component: "plutus-list:test:plutus-list-size"
+
     - path: "./plutus-numeric/src"
       component: "lib:plutus-numeric"
 
@@ -38,6 +47,15 @@ cradle:
 
     - path: "./plutus-numeric/test/size"
       component: "plutus-numeric:test:size"
+
+    - path: "./plutus-numeric/test/rational-compare-size"
+      component: "plutus-numeric:test:rational-compare-size"
+
+    - path: "./plutus-numeric/test/natratio-compare-size"
+      component: "plutus-numeric:test:natratio-compare-size"
+
+    - path: "./plutus-numeric/test/natural-compare-size"
+      component: "plutus-numeric:test:natural-compare-size"
 
     - path: "./plutus-pretty/src"
       component: "lib:plutus-pretty"
@@ -56,3 +74,6 @@ cradle:
 
     - path: "./tasty-plutus/src"
       component: "lib:tasty-plutus"
+
+    - path: "./tasty-plutus/test/Properties"
+      component: "tasty-plutus:test:properties"

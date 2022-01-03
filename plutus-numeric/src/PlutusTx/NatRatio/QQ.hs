@@ -17,7 +17,7 @@ import Language.Haskell.TH.Syntax (
   Type,
  )
 import PlutusTx.NatRatio.Internal (NatRatio (NatRatio))
-import PlutusTx.Ratio ((%))
+import PlutusTx.Rational.Internal ((%))
 import Text.Read (readMaybe)
 import Text.Read.Lex (Lexeme (Number), numberToRational)
 import Prelude

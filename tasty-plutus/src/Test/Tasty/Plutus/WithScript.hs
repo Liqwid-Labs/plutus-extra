@@ -22,8 +22,9 @@ module Test.Tasty.Plutus.WithScript (
 import Control.Monad.RWS.Strict (evalRWS)
 import Data.Kind (Type)
 import GHC.Exts (toList)
+import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, validatorScript)
 import Plutus.V1.Ledger.Contexts (ScriptContext)
-import Plutus.V1.Ledger.Scripts (MintingPolicy, Validator)
+import Plutus.V1.Ledger.Scripts (MintingPolicy)
 import PlutusTx.Builtins (BuiltinData, BuiltinString, appendString, trace)
 import PlutusTx.IsData.Class (FromData (fromBuiltinData))
 import Test.Tasty (TestTree, testGroup)
@@ -59,12 +60,13 @@ import Prelude
  @since 3.0
 -}
 withValidator ::
+  forall (s :: Type).
   String ->
-  Validator ->
-  WithScript 'ForSpending () ->
+  TypedValidator s ->
+  WithScript ( 'ForSpending (DatumType s) (RedeemerType s)) () ->
   TestTree
 withValidator name val (WithSpending comp) =
-  case evalRWS comp val () of
+  case evalRWS comp (validatorScript val) () of
     ((), tests) -> testGroup name . toList $ tests
 
 {- | Given the name for the tests, a 'MintingPolicy', and a collection of
@@ -89,9 +91,10 @@ withValidator name val (WithSpending comp) =
  @since 3.0
 -}
 withMintingPolicy ::
+  forall (r :: Type).
   String ->
   MintingPolicy ->
-  WithScript 'ForMinting () ->
+  WithScript ( 'ForMinting r) () ->
   TestTree
 withMintingPolicy name mp (WithMinting comp) =
   case evalRWS comp mp () of
@@ -102,11 +105,24 @@ withMintingPolicy name mp (WithMinting comp) =
 
  = Usage
 
- > testValidator :: Validator
- > testValidator = mkValidatorScript $
- >    $$(compile [|| go ||]) `applyCode` $$(compile [|| myValidator ||])
- >   where
- >    go = toTestValidator
+ > data TestScript
+
+ > instance ValidatorTypes TestScript where
+ >   type RedeemerType TestScript = SomeType
+ >   type DatumType TestScript = SomeOtherType
+
+typedSimpleValidator :: TypedValidator TestScript
+
+ > testValidator :: TypedValidator TestScript
+ > testValidator =
+ >  mkTypedValidator @TestScript
+ >    $$(compile [||myValidator||])
+ >    $$(compile [||wrap||])
+ >    where
+ >      wrap ::
+ >        ( SomeType -> SomeOtherType -> ScriptContext -> Bool) ->
+ >        WrappedValidatorType
+ >      wrap = toTestValidator
 
  = Important note
 
@@ -114,12 +130,19 @@ withMintingPolicy name mp (WithMinting comp) =
  'liftCode' and 'applyCode', rather than as literal arguments inside of
  'compile':
 
- > testValidatorWithArg :: Validator
- > testValidatorWithArg = mkValidatorScript $
- >    $$(compile [|| go ||]) `applyCode` ( $$(compile [|| myValidator ||])
- >                                          `applyCode`
- >                                         liftCode arg1
- >                                       )
+ > testValidatorWithArg :: ArgumentType -> Validator
+ > testValidatorWithArg arg =
+ >  mkTypedValidator @TestScript
+ >    ( $$(compile [||myValidator||])
+ >          `applyCode`
+ >          liftCode arg
+ >    )
+ >    $$(compile [||wrap||])
+ >    where
+ >      wrap ::
+ >        ( SomeType -> SomeOtherType -> ScriptContext -> Bool) ->
+ >        WrappedValidatorType
+ >      wrap = toTestValidator
 
  @since 3.0
 -}

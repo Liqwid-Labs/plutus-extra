@@ -1,12 +1,13 @@
 index-state: 2021-10-20T00:00:00Z
 
-packages: 
+packages:
   ./plutus-extra/plutus-extra.cabal
   ./tasty-plutus/tasty-plutus.cabal
   ./plutus-pretty/plutus-pretty.cabal
   ./plutus-numeric/plutus-numeric.cabal
   ./plutus-golden/plutus-golden.cabal
   ./plutus-laws/plutus-laws.cabal
+  ./plutus-list/plutus-list.cabal
   ./plutus-size-check/plutus-size-check.cabal
   ./quickcheck-plutus-instances/quickcheck-plutus-instances.cabal
   ./plutus-deriving/plutus-deriving.cabal
@@ -17,5 +18,3 @@ benchmarks: true
 
 -- The only sensible test display option
 test-show-details: direct
-
-

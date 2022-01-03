@@ -4,11 +4,19 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 2.1 -- 2021-12-17
+
+### Changed
+
+* Default `size` parameter passed to the generator changed from 100 to 30.
+  Most likely you need to update your golden files.
+
 ## 2.0 -- 2021-11-11
 
-- Plutus upgraded
-  - `plutus` pinned to `3f089ccf0ca746b399c99afe51e063b0640af547`
-  - `plutus-apps` pinned to `404af7ac3e27ebcb218c05f79d9a70ca966407c9`
+### Changed
+
+* Plutus upgraded: `plutus` pinned to
+  `3f089ccf0ca746b399c99afe51e063b0640af547`, `plutus-apps` pinned to `404af7ac3e27ebcb218c05f79d9a70ca966407c9`
 
 ## 1.0 -- 2021-10-19
 
