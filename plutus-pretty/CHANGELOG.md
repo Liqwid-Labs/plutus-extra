@@ -4,6 +4,17 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 2.2 -- 2022-01-04
+
+### Added
+
+* `PlutusTx.Skeletal` instances for `AssetClass` and `(,,)`.
+
+### Changed
+
+* More compact JSON from `showSkeletal`.
+* More efficient internals (~10% smaller on-chain code).
+
 ## 2.1 -- 2021-11-19
 
 ### Added

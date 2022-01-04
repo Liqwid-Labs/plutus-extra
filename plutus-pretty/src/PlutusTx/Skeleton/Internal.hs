@@ -1,4 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
+-- needed for Eq (,,)
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module PlutusTx.Skeleton.Internal (
   Skeleton (..),
@@ -55,6 +57,7 @@ import Plutus.V1.Ledger.Scripts (
 import Plutus.V1.Ledger.Time (POSIXTime (POSIXTime))
 import Plutus.V1.Ledger.TxId (TxId (TxId))
 import Plutus.V1.Ledger.Value (
+  AssetClass (AssetClass),
   CurrencySymbol (CurrencySymbol),
   TokenName (TokenName),
   Value (Value),
@@ -76,7 +79,7 @@ data Skeleton
   | StringS BuiltinString
   | ConS BuiltinString [Skeleton]
   | RecS BuiltinString [(BuiltinString, Skeleton)]
-  | TupleS Skeleton Skeleton
+  | TupleS Skeleton Skeleton (Maybe Skeleton)
   | ListS [Skeleton]
   deriving stock
     ( -- | @since 2.1
@@ -97,8 +100,8 @@ instance Eq Skeleton where
     (RecS nam keyVals, RecS nam' keyVals') ->
       keyVals == keyVals'
         && nam == nam'
-    (TupleS x y, TupleS x' y') ->
-      x == x' && y == y'
+    (TupleS x y z, TupleS x' y' z') ->
+      x == x' && y == y' && z == z'
     (ListS xs, ListS xs') -> xs == xs'
     _ -> False
 
@@ -120,6 +123,21 @@ instance Eq Skeleton where
 -}
 class (Eq a) => Skeletal a where
   skeletize :: a -> Skeleton
+
+-- | @since 2.2
+instance (Eq a, Eq b, Eq c) => Eq (a, b, c) where
+  {-# INLINEABLE (==) #-}
+  (x, y, z) == (x', y', z') = x == x' && y == y' && z == z'
+
+-- | @since 2.2
+instance (Skeletal a, Skeletal b, Skeletal c) => Skeletal (a, b, c) where
+  {-# INLINEABLE skeletize #-}
+  skeletize (x, y, z) = TupleS (skeletize x) (skeletize y) (Just . skeletize $ z)
+
+-- | @since 2.2
+instance Skeletal AssetClass where
+  {-# INLINEABLE skeletize #-}
+  skeletize (AssetClass xs) = ConS "AssetClass" [skeletize xs]
 
 -- | @since 2.1
 instance Skeletal BuiltinData where
@@ -181,7 +199,7 @@ instance (Skeletal k, Skeletal v) => Skeletal (AssocMap.Map k v) where
 -- | @since 2.1
 instance (Skeletal a, Skeletal b) => Skeletal (a, b) where
   {-# INLINEABLE skeletize #-}
-  skeletize (x, y) = TupleS (skeletize x) (skeletize y)
+  skeletize (x, y) = TupleS (skeletize x) (skeletize y) Nothing
 
 -- | @since 2.1
 instance Skeletal TxId where
