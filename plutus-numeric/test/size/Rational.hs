@@ -75,7 +75,7 @@ tests =
   , testGroup
       "Serialization"
       [ fitsInto "toBuiltinData" [bytes| 78 |] . fromCompiledCode $ rToBuiltinData
-      , fitsInto "fromBuiltinData" [bytes| 398 |] . fromCompiledCode $ rFromBuiltinData
+      , fitsInto "fromBuiltinData" [bytes| 390 |] . fromCompiledCode $ rFromBuiltinData
       , fitsInto "unsafeFromBuiltinData" [bytes| 263 |] . fromCompiledCode $ rUnsafeFromBuiltinData
       ]
   , testGroup

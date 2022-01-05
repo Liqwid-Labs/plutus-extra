@@ -6,7 +6,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Changed
 
-* `Purpse` was extended with additional type parameters for additional type safety.
+* `Purpose` was extended with additional type parameters for additional type safety.
 
 ## 5.0 -- 2021-12-10
 
