@@ -5,6 +5,12 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 4.1 -- 2022-01-07
+
+### Added 
+
+- Plutus.Contract.Test.Extra: `namedPredicate` to give a name to `TracePredicate`
+
 ## 4.0 -- 2021-12-14
 
 ### Added
