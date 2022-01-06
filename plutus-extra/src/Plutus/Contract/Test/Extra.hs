@@ -73,10 +73,10 @@ import Wallet.Emulator.Folds qualified as Folds
 
  @since 4.1
 -}
-postComposeM :: 
-  forall (a :: Type) (b :: Type) (c :: Type) (m :: Type -> Type). 
-  Monad m => 
-  (b -> m c) -> 
+postComposeM ::
+  forall (a :: Type) (b :: Type) (c :: Type) (m :: Type -> Type).
+  Monad m =>
+  (b -> m c) ->
   L.FoldM m a b ->
   L.FoldM m a c
 postComposeM q (L.FoldM f g h) = L.FoldM f g (h >=> q)
