@@ -5,6 +5,7 @@
  'Plutus.Trace.Emulator.EmulatorTrace' monad.
 -}
 module Plutus.Contract.Test.Extra (
+  namedPredicate,
   walletFundsChangeWithAccumState,
   walletFundsExactChangeWithAccumState,
   valueAtComputedAddress,
@@ -79,6 +80,18 @@ postComposeM ::
   L.FoldM m a b ->
   L.FoldM m a c
 postComposeM q (L.FoldM f g h) = L.FoldM f g (h >=> q)
+
+{- | Give name to a 'TracePredicate'.
+
+ @since 4.1
+-}
+namedPredicate :: String -> TracePredicate -> TracePredicate
+namedPredicate name = postComposeM notify
+  where
+    notify False = False <$ tell message
+    notify b = pure b
+
+    message = "On predicate: " <> viaShow @String @Void name
 
 {- | Check that the funds in the wallet have changed by the given amount, exluding fees.
 
