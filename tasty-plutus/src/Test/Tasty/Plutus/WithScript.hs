@@ -22,8 +22,12 @@ module Test.Tasty.Plutus.WithScript (
 import Control.Monad.RWS.Strict (evalRWS)
 import Data.Kind (Type)
 import GHC.Exts (toList)
-import Ledger.Typed.Scripts (DatumType, RedeemerType, TypedValidator, validatorScript)
-import Plutus.V1.Ledger.Contexts (ScriptContext)
+import Ledger.Typed.Scripts (
+  DatumType,
+  RedeemerType,
+  TypedValidator,
+  validatorScript,
+ )
 import Plutus.V1.Ledger.Scripts (MintingPolicy)
 import PlutusTx.Builtins (BuiltinData, BuiltinString, appendString, trace)
 import PlutusTx.IsData.Class (FromData (fromBuiltinData))
@@ -148,9 +152,9 @@ typedSimpleValidator :: TypedValidator TestScript
 -}
 {-# INLINEABLE toTestValidator #-}
 toTestValidator ::
-  forall (datum :: Type) (redeemer :: Type).
-  (FromData datum, FromData redeemer) =>
-  (datum -> redeemer -> ScriptContext -> Bool) ->
+  forall (datum :: Type) (redeemer :: Type) (ctx :: Type).
+  (FromData datum, FromData redeemer, FromData ctx) =>
+  (datum -> redeemer -> ctx -> Bool) ->
   (BuiltinData -> BuiltinData -> BuiltinData -> ())
 toTestValidator f d r p = case fromBuiltinData d of
   Nothing -> reportParseFailed "Datum"
@@ -173,9 +177,9 @@ toTestValidator f d r p = case fromBuiltinData d of
 -}
 {-# INLINEABLE toTestMintingPolicy #-}
 toTestMintingPolicy ::
-  forall (redeemer :: Type).
-  (FromData redeemer) =>
-  (redeemer -> ScriptContext -> Bool) ->
+  forall (redeemer :: Type) (ctx :: Type).
+  (FromData redeemer, FromData ctx) =>
+  (redeemer -> ctx -> Bool) ->
   (BuiltinData -> BuiltinData -> ())
 toTestMintingPolicy f r p = case fromBuiltinData r of
   Nothing -> reportParseFailed "Redeemer"

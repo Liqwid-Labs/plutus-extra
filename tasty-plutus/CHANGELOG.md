@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 5.2 -- 2022-01-10
+
+### Changes
+
+* `toTestValidator` and `toTestMintingPolicy` now accepts any `FromData` as the script context.
+
 ## 5.1 -- 2021-12-16
 
 ### Changed
@@ -47,10 +53,10 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ### Changed
 
 * Changed API for testing minting policies:
-  * Replaced `OwnMint` and `OtherMint` constructors to `Minting` with single 
-    `Mint` constructor representing mints of currencies other than that of 
+  * Replaced `OwnMint` and `OtherMint` constructors to `Minting` with single
+    `Mint` constructor representing mints of currencies other than that of
     the policy being tested.
-  * Added a `Tokens` field to `MintingTest`, and a parameter to `GenForMinting` 
+  * Added a `Tokens` field to `MintingTest`, and a parameter to `GenForMinting`
     and `fromArbitraryMinting`.
 * Rename `paysSelf` and `paysOther` into `paysToSelf` and `paysToOther` for
   consistency.
