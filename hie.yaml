@@ -48,15 +48,6 @@ cradle:
     - path: "./plutus-numeric/test/size"
       component: "plutus-numeric:test:size"
 
-    - path: "./plutus-numeric/test/rational-compare-size"
-      component: "plutus-numeric:test:rational-compare-size"
-
-    - path: "./plutus-numeric/test/natratio-compare-size"
-      component: "plutus-numeric:test:natratio-compare-size"
-
-    - path: "./plutus-numeric/test/natural-compare-size"
-      component: "plutus-numeric:test:natural-compare-size"
-
     - path: "./plutus-pretty/src"
       component: "lib:plutus-pretty"
 
