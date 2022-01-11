@@ -4,6 +4,7 @@ module PlutusTx.Numeric.Laws (
   euclideanClosedSignedLaws,
   multiplicativeGroupLaws,
   integralDomainLaws,
+  scaleNatLaws,
 ) where
 
 import Data.Kind (Type)
@@ -12,7 +13,9 @@ import PlutusTx.Numeric.Extra (
   EuclideanClosed (divMod),
   IntegralDomain (abs, addExtend, projectAbs, restrictMay, signum),
   MultiplicativeGroup (powInteger, reciprocal, (/)),
+  scaleNat,
  )
+import PlutusTx.Natural (Natural)
 import PlutusTx.Prelude qualified as PTx
 import Test.QuickCheck (
   Property,
@@ -23,7 +26,7 @@ import Test.QuickCheck (
   (=/=),
   (===),
  )
-import Test.QuickCheck.Arbitrary (liftArbitrary, liftShrink)
+import Test.QuickCheck.Arbitrary (arbitrary, liftArbitrary, liftShrink, shrink)
 import Test.QuickCheck.Gen (Gen)
 import Test.QuickCheck.Modifiers (
   Negative (Negative),
@@ -219,6 +222,47 @@ integralDomainLaws =
       \x -> case restrictMay x of
         Nothing -> abs x =/= x
         Just _ -> abs x === x
+
+-- | @since 4.2
+scaleNatLaws ::
+  forall (a :: Type).
+  (Show a, Eq a, PTx.AdditiveMonoid a) =>
+  Laws a
+scaleNatLaws =
+  law "scaleNat n (r1 + r2) = scaleNat n r1 + scaleNat n r2" scaleNatDist
+    <> law "scaleNat n1 (scaleNat n2 r) = scaleNat (n1 * n2) r" scaleNatComp
+    <> law "scaleNat one r = r" scaleNatOne
+    <> law "scaleNat zero r = zero" scaleNatZero
+  where
+    scaleNatDist :: Gen a -> (a -> [a]) -> Property
+    scaleNatDist gen shr =
+      forAllShrinkShow gen' shr' ppShow $
+        \(n,r1,r2) -> scaleNat n (r1 PTx.+ r2) === scaleNat n r1 PTx.+ scaleNat n r2
+      where
+        gen' :: Gen (Natural, a, a)
+        gen' = (,,) <$> arbitrary <*> gen <*> gen
+        shr' :: (Natural, a, a) -> [(Natural, a, a)]
+        shr' (n, a1, a2) = (,,) <$> shrink n <*> shr a1 <*> shr a2
+    
+    scaleNatComp :: Gen a -> (a -> [a]) -> Property
+    scaleNatComp gen shr =
+      forAllShrinkShow gen' shr' ppShow $
+        \(n1,n2,r) -> scaleNat n1 (scaleNat n2 r) === scaleNat (n1 PTx.* n2) r
+      where
+        gen' :: Gen (Natural, Natural, a)
+        gen' = (,,) <$> arbitrary <*> arbitrary <*> gen
+        shr' :: (Natural, Natural, a) -> [(Natural, Natural, a)]
+        shr' (n1, n2, a) = (,,) <$> shrink n1 <*> shrink n2 <*> shr a
+
+    scaleNatOne :: Gen a -> (a -> [a]) -> Property
+    scaleNatOne gen shr =
+      forAllShrinkShow gen shr ppShow $
+        \r -> scaleNat PTx.one r === r
+
+    scaleNatZero :: Gen a -> (a -> [a]) -> Property
+    scaleNatZero gen shr =
+      forAllShrinkShow gen shr ppShow $
+        \r -> scaleNat PTx.zero r === PTx.zero
 
 -- Helpers
 

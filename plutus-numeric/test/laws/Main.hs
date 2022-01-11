@@ -8,6 +8,7 @@ import PlutusTx.Numeric.Laws (
   euclideanClosedSignedLaws,
   integralDomainLaws,
   multiplicativeGroupLaws,
+  scaleNatLaws,
  )
 import PlutusTx.Positive (Positive)
 import PlutusTx.Rational (Rational)
@@ -79,6 +80,10 @@ main =
     , laws @NatRatio "Multiplicative group" multiplicativeGroupLaws
     , laws @Integer "IntegralDomain" integralDomainLaws
     , laws @Rational "IntegralDomain" integralDomainLaws
+    , laws @Integer "scaleNat" scaleNatLaws
+    , laws @Natural "scaleNat" scaleNatLaws
+    , laws @NatRatio "scaleNat" scaleNatLaws
+    , laws @Rational "scaleNat" scaleNatLaws
     ]
   where
     testMinimum :: QuickCheckTests

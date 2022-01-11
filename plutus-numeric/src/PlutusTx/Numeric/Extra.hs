@@ -33,6 +33,7 @@ module PlutusTx.Numeric.Extra (
   rem,
   (^),
   powNat,
+  scaleNat,
 ) where
 
 import Data.Kind (Type)
@@ -387,11 +388,33 @@ infixl 7 `rem`
 
 infixr 8 ^
 
+{- | Scale by a 'Natural' multiplyer.
+
+ = Laws
+
+1. @'scaleNat' n (r1 '+' r2) = 'scaleNat' n r1 '+' 'scaleNat' n r2@
+2. @'scaleNat' n1 ('scaleNat' n2 r) = 'scaleNat' (n1 '*' n2) r@
+3. @'scaleNat' 'one' r = r@
+4. @'scaleNat' 'zero' r = 'zero'@
+
+ @since 4.2
+-}
+{-# INLINEABLE scaleNat #-}
+scaleNat ::
+  forall (a :: Type).
+  (AdditiveMonoid a) =>
+  Natural -> a -> a
+scaleNat (Natural i) a = go i
+  where
+    go :: Integer -> a
+    go 0 = zero
+    go x = a + go (x - 1)
+
 -- Helpers
 
-{-# INLINEABLE expBySquaring #-}
 {- HLint ignore expBySquaring -}
 -- We secretly know that i is always positive.
+{-# INLINEABLE expBySquaring #-}
 expBySquaring ::
   forall (a :: Type).
   (MultiplicativeMonoid a) =>
