@@ -8,6 +8,7 @@ module PlutusTx.Numeric.Laws (
 ) where
 
 import Data.Kind (Type)
+import PlutusTx.Natural (Natural)
 import PlutusTx.Numeric.Extra (
   AdditiveHemigroup ((^-)),
   EuclideanClosed (divMod),
@@ -15,7 +16,6 @@ import PlutusTx.Numeric.Extra (
   MultiplicativeGroup (powInteger, reciprocal, (/)),
   scaleNat,
  )
-import PlutusTx.Natural (Natural)
 import PlutusTx.Prelude qualified as PTx
 import Test.QuickCheck (
   Property,
@@ -237,17 +237,17 @@ scaleNatLaws =
     scaleNatDist :: Gen a -> (a -> [a]) -> Property
     scaleNatDist gen shr =
       forAllShrinkShow gen' shr' ppShow $
-        \(n,r1,r2) -> scaleNat n (r1 PTx.+ r2) === scaleNat n r1 PTx.+ scaleNat n r2
+        \(n, r1, r2) -> scaleNat n (r1 PTx.+ r2) === scaleNat n r1 PTx.+ scaleNat n r2
       where
         gen' :: Gen (Natural, a, a)
         gen' = (,,) <$> arbitrary <*> gen <*> gen
         shr' :: (Natural, a, a) -> [(Natural, a, a)]
         shr' (n, a1, a2) = (,,) <$> shrink n <*> shr a1 <*> shr a2
-    
+
     scaleNatComp :: Gen a -> (a -> [a]) -> Property
     scaleNatComp gen shr =
       forAllShrinkShow gen' shr' ppShow $
-        \(n1,n2,r) -> scaleNat n1 (scaleNat n2 r) === scaleNat (n1 PTx.* n2) r
+        \(n1, n2, r) -> scaleNat n1 (scaleNat n2 r) === scaleNat (n1 PTx.* n2) r
       where
         gen' :: Gen (Natural, Natural, a)
         gen' = (,,) <$> arbitrary <*> arbitrary <*> gen

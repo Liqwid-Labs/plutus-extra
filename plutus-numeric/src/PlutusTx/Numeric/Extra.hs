@@ -403,7 +403,9 @@ infixr 8 ^
 scaleNat ::
   forall (a :: Type).
   (AdditiveMonoid a) =>
-  Natural -> a -> a
+  Natural ->
+  a ->
+  a
 scaleNat (Natural i) a = go i
   where
     go :: Integer -> a
