@@ -409,8 +409,9 @@ scaleNat ::
 scaleNat (Natural i) a = go i
   where
     go :: Integer -> a
-    go 0 = zero
-    go x = a + go (x - 1)
+    go x 
+      | x == zero = zero
+      | otherwise = a + go (x - 1)
 
 -- Helpers
 
