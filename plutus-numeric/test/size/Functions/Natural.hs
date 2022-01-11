@@ -33,8 +33,8 @@ import PlutusTx.Natural (Natural)
 import PlutusTx.Numeric.Extra (
   divMod,
   powNat,
-  (^-),
   scaleNat,
+  (^-),
  )
 import PlutusTx.Prelude qualified as Plutus
 import PlutusTx.TH (compile)

@@ -61,8 +61,8 @@ import PlutusTx.Numeric.Extra (
   projectAbs,
   reciprocal,
   restrictMay,
-  signum,
   scaleNat,
+  signum,
   (/),
  )
 import PlutusTx.Prelude qualified as Plutus
