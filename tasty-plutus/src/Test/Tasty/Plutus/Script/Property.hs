@@ -122,10 +122,10 @@ import Test.Tasty.Plutus.TestData (
   TestItems (
     ItemsForMinting,
     ItemsForSpending,
-    mintCB,
-    mintOutcome,
-    mintRedeemer,
-    mintTokens,
+    mpCB,
+    mpOutcome,
+    mpRedeemer,
+    mpTasks,
     spendCB,
     spendDatum,
     spendOutcome,
@@ -409,10 +409,10 @@ minterProperty ::
   Property
 minterProperty opts mp f outKind seed = case f seed of
   ItemsForMinting
-    { mintRedeemer = r
-    , mintTokens = toks
-    , mintCB = cb
-    , mintOutcome = outcome
+    { mpRedeemer = r
+    , mpTasks = toks
+    , mpCB = cb
+    , mpOutcome = outcome
     } ->
       let td = MintingTest r toks
           script = SomeMinter mp
@@ -439,10 +439,10 @@ prettyMinter ::
   String
 prettyMinter f outKind seed = case f seed of
   ItemsForMinting
-    { mintRedeemer = r :: redeemer
-    , mintTokens = ts
-    , mintCB = cb
-    , mintOutcome = outcome
+    { mpRedeemer = r :: redeemer
+    , mpTasks = ts
+    , mpCB = cb
+    , mpOutcome = outcome
     } ->
       let outcome' :: Outcome
           outcome' = adjustOutcome outKind outcome
@@ -452,7 +452,7 @@ prettyMinter f outKind seed = case f seed of
               $+$ ppDoc seed
               $+$ "Redeemer"
               $+$ ppDoc @redeemer r
-              $+$ "Tokens"
+              $+$ "MintingPolicyTasks"
               $+$ ppDoc ts
               $+$ "ContextBuilder"
               $+$ ppDoc cb
