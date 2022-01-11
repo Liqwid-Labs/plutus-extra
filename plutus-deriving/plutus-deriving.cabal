@@ -88,7 +88,7 @@ test-suite laws
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   build-depends:
-    , plutus-laws       ^>=2.3
+    , plutus-laws       ^>=2.4
     , plutus-tx
     , tasty-quickcheck  ^>=0.10.1.2
     , testlib
