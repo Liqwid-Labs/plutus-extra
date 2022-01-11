@@ -42,6 +42,7 @@ module Functions.Rational (
   rProperFrac,
   rAbsOverload,
   rHalf,
+  rScaleNat,
 ) where
 
 import PlutusTx.Code (CompiledCode)
@@ -61,6 +62,7 @@ import PlutusTx.Numeric.Extra (
   reciprocal,
   restrictMay,
   signum,
+  scaleNat,
   (/),
  )
 import PlutusTx.Prelude qualified as Plutus
@@ -191,3 +193,6 @@ rAbsOverload = $$(compile [||abs||])
 
 rHalf :: CompiledCode Rational
 rHalf = $$(compile [||half||])
+
+rScaleNat :: CompiledCode (Natural -> Rational -> Rational)
+rScaleNat = $$(compile [||scaleNat||])
