@@ -20,6 +20,7 @@ import Test.Tasty.Plutus.Laws (
   dataLaws,
   jsonLaws,
   laws,
+  moduleScaleLaws,
   multiplicativeMonoidLaws,
   multiplicativeSemigroupLaws,
   plutusEqLaws,
@@ -72,6 +73,7 @@ main =
     , semiringConsistencyLaws @Natural
     , semiringConsistencyLaws @Rational
     , semiringConsistencyLaws @NatRatio
+    , moduleScaleLaws @Integer @Rational
     , laws @Natural "Additive hemigroup" additiveHemigroupLaws
     , laws @NatRatio "Additive hemigroup" additiveHemigroupLaws
     , laws @Natural "EuclideanClosed" euclideanClosedLaws
