@@ -388,7 +388,7 @@ infixl 7 `rem`
 
 infixr 8 ^
 
-{- | Scale by a 'Natural' multiplyer.
+{- | Scale by a 'Natural' multiplier.
 
  = Laws
 
