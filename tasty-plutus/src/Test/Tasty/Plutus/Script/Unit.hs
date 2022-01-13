@@ -30,6 +30,7 @@ module Test.Tasty.Plutus.Script.Unit (
   shouldn'tValidateTracing,
 ) where
 
+import Test.Tasty.Plutus.Internal.TestScript (TestValidator, TestMintingPolicy, getTestValidator, getTestMintingPolicy)
 import Control.Arrow ((>>>))
 import Control.Monad.Reader (Reader, asks, runReader)
 import Control.Monad.Writer (tell)
@@ -41,15 +42,7 @@ import Data.Text (Text)
 import Data.Vector (Vector)
 import Data.Vector qualified as Vector
 import Plutus.V1.Ledger.Api (ScriptContext)
-import Plutus.V1.Ledger.Scripts (
-  MintingPolicy,
-  ScriptError (
-    EvaluationError,
-    EvaluationException,
-    MalformedScript
-  ),
-  Validator,
- )
+import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError, EvaluationException, MalformedScript))
 import Test.Tasty.Options (
   OptionDescription (Option),
   OptionSet,
@@ -210,7 +203,7 @@ data ScriptTest (p :: Purpose) where
     Maybe (Vector Text -> Bool) ->
     TestData ( 'ForSpending d r) ->
     ContextBuilder ( 'ForSpending d r) ->
-    Validator ->
+    TestValidator d r ->
     ScriptTest ( 'ForSpending d r)
   Minter ::
     forall (r :: Type).
@@ -218,7 +211,7 @@ data ScriptTest (p :: Purpose) where
     Maybe (Vector Text -> Bool) ->
     TestData ( 'ForMinting r) ->
     ContextBuilder ( 'ForMinting r) ->
-    MintingPolicy ->
+    (TestMintingPolicy r) ->
     ScriptTest ( 'ForMinting r)
 
 data UnitEnv (p :: Purpose) = UnitEnv
@@ -262,8 +255,8 @@ getScript ::
   SomeScript p
 getScript =
   envScriptTest >>> \case
-    Spender _ _ _ _ val -> SomeSpender val
-    Minter _ _ _ _ mp -> SomeMinter mp
+    Spender _ _ _ _ val -> SomeSpender . getTestValidator $ val
+    Minter _ _ _ _ mp -> SomeMinter . getTestMintingPolicy $ mp
 
 getMPred ::
   forall (p :: Purpose).

@@ -34,7 +34,12 @@ module Test.Tasty.Plutus.Script.Property (
   scriptProperty,
   scriptPropertyFail,
   scriptPropertyPass,
-  withSpendGeneratorProp,
+  validatorProperty,
+  validatorPropertyPass,
+  validatorPropertyFail,
+  mintingPolicyProperty,
+  mintingPolicyPropertyPass,
+  mintingPolicyPropertyFail,
 ) where
 
 import Control.Monad.RWS.Strict (tell)
@@ -45,15 +50,7 @@ import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Plutus.V1.Ledger.Contexts (ScriptContext)
-import Plutus.V1.Ledger.Scripts (
-  MintingPolicy,
-  ScriptError (
-    EvaluationError,
-    EvaluationException,
-    MalformedScript
-  ),
-  Validator,
- )
+import Plutus.V1.Ledger.Scripts ( ScriptError (EvaluationError, EvaluationException, MalformedScript))
 import Test.QuickCheck (
   Args (maxSize, maxSuccess),
   Gen,
@@ -116,6 +113,12 @@ import Test.Tasty.Plutus.Options (
   TestValidatorHash,
   TimeRange,
  )
+import Test.Tasty.Plutus.Internal.TestScript (
+  TestValidator,
+  TestMintingPolicy,
+  getTestValidator,
+  getTestMintingPolicy,
+ )
 import Test.Tasty.Plutus.TestData (
   Generator (GenForMinting, GenForSpending),
   Methodology (Methodology),
@@ -132,10 +135,8 @@ import Test.Tasty.Plutus.TestData (
     spendDatum,
     spendOutcome,
     spendRedeemer,
-    spendValue,
-    spendValidator
+    spendValue
   ),
-  getTestValidator,
  )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
@@ -226,37 +227,37 @@ mkScriptPropertyWith ::
   Generator a p ->
   WithScript p ()
 mkScriptPropertyWith outKind name generator = case generator of
-  GenForSpending (Methodology gen shrinker) f ->
+  GenForSpending (Methodology gen shrinker) fTi ->
     WithSpending $ do
       val <- ask
       tell
         . Seq.singleton
         . singleTest name
-        $ Spender val gen shrinker f outKind
-  GenForMinting (Methodology gen shrinker) f ->
+        $ Spender gen shrinker (const val) fTi outKind
+  GenForMinting (Methodology gen shrinker) fTi ->
     WithMinting $ do
       mp <- ask
       tell
         . Seq.singleton
         . singleTest name
-        $ Minter mp gen shrinker f outKind
+        $ Minter gen shrinker (const mp) fTi outKind
 
 data PropertyTest (a :: Type) (p :: Purpose) where
   Spender ::
     forall (a :: Type) (d :: Type) (r :: Type).
     Typeable a =>
-    Validator ->
     Gen a ->
     (a -> [a]) ->
+    (a -> TestValidator d r) ->
     (a -> TestItems ( 'ForSpending d r)) ->
     OutcomeKind ->
     PropertyTest a ( 'ForSpending d r)
   Minter ::
     forall (a :: Type) (r :: Type).
     Typeable a =>
-    MintingPolicy ->
     Gen a ->
     (a -> [a]) ->
+    (a -> TestMintingPolicy r) ->
     (a -> TestItems ( 'ForMinting r)) ->
     OutcomeKind ->
     PropertyTest a ( 'ForMinting r)
@@ -319,12 +320,12 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
     where
       go :: Property
       go = case vt of
-        Spender val gen shrinker f out ->
-          forAllShrinkShow gen shrinker (prettySpender f out) $
-            spenderProperty opts val f out
-        Minter mp gen shrinker f out ->
-          forAllShrinkShow gen shrinker (prettyMinter f out) $
-            minterProperty opts mp f out
+        Spender gen shrinker fVal fTi out ->
+          forAllShrinkShow gen shrinker (prettySpender fTi out) $
+            spenderProperty opts fVal fTi out
+        Minter gen shrinker fMp fTi out ->
+          forAllShrinkShow gen shrinker (prettyMinter fTi out) $
+            minterProperty opts fMp fTi out
   testOptions =
     Tagged
       [ Option @Fee Proxy
@@ -340,12 +341,12 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
 spenderProperty ::
   forall (a :: Type) (d :: Type) (r :: Type).
   OptionSet ->
-  Validator ->
+  (a -> TestValidator d r) ->
   (a -> TestItems ( 'ForSpending d r)) ->
   OutcomeKind ->
   a ->
   Property
-spenderProperty opts val f outKind seed = case f seed of
+spenderProperty opts fVal fTi outKind seed = case fTi seed of
   ItemsForSpending
     { spendDatum = d :: datum
     , spendRedeemer = r :: redeemer
@@ -354,7 +355,7 @@ spenderProperty opts val f outKind seed = case f seed of
     , spendOutcome = outcome
     } ->
       let td = SpendingTest d r v
-          script = SomeSpender val
+          script = SomeSpender . getTestValidator $ fVal seed
           outcome' = adjustOutcome outKind outcome
           env =
             PropertyEnv
@@ -406,12 +407,12 @@ prettySpender f outKind seed = case f seed of
 minterProperty ::
   forall (a :: Type) (r :: Type).
   OptionSet ->
-  MintingPolicy ->
+  (a -> TestMintingPolicy r) ->
   (a -> TestItems ( 'ForMinting r)) ->
   OutcomeKind ->
   a ->
   Property
-minterProperty opts mp f outKind seed = case f seed of
+minterProperty opts fMp fTi outKind seed = case fTi seed of
   ItemsForMinting
     { mpRedeemer = r
     , mpTasks = toks
@@ -419,7 +420,7 @@ minterProperty opts mp f outKind seed = case f seed of
     , mpOutcome = outcome
     } ->
       let td = MintingTest r toks
-          script = SomeMinter mp
+          script = SomeMinter . getTestMintingPolicy $ fMp seed
           outcome' = adjustOutcome outKind outcome
           env =
             PropertyEnv
@@ -496,85 +497,86 @@ produceResult sr = do
     pass :: Reader (PropertyEnv p) Property
     pass = pure $ property True
 
-withSpendGeneratorProp ::
+validatorProperty ::
   forall (a :: Type) (d :: Type)(r :: Type).
   (Show a, Typeable a, Typeable d, Typeable r) =>
   String ->
-  Gen a ->
-  (a -> [a]) ->
+  Methodology a ->
+  (a -> TestValidator d r) ->
   (a -> TestItems ('ForSpending d r))  ->
   TestTree
-withSpendGeneratorProp name gen shr f = 
-  singleTest name $ SpenderGen gen shr f OutcomeDependent
+validatorProperty = mkValidatorPropertyWith OutcomeDependent
 
-data PropertyTestGen (a :: Type) (p :: Purpose) where
-  SpenderGen ::
-    forall (a :: Type) (d :: Type) (r :: Type).
-    Typeable a =>
-    Gen a ->
-    (a -> [a]) ->
-    (a -> TestItems ( 'ForSpending d r)) ->
-    OutcomeKind ->
-    PropertyTestGen a ( 'ForSpending d r)
+validatorPropertyPass ::
+  forall (a :: Type) (d :: Type)(r :: Type).
+  (Show a, Typeable a, Typeable d, Typeable r) =>
+  String ->
+  Methodology a ->
+  (a -> TestValidator d r) ->
+  (a -> TestItems ('ForSpending d r))  ->
+  TestTree
+validatorPropertyPass = mkValidatorPropertyWith OutcomeAlwaysPass
 
-instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTestGen a p) where
-  run opts vt _ = do
-    let PropertyTestCount testCount' = lookupOption opts
-    let PropertyMaxSize maxSize' = lookupOption opts
-    let args = stdArgs {maxSuccess = testCount', maxSize = maxSize'}
-    res <- quickCheckWithResult args go
-    pure $ case res of
-      Success {} -> testPassed ""
-      GaveUp {} -> testFailed "Internal error: gave up."
-      Failure {} -> testFailed ""
-      NoExpectedFailure {} -> testFailed "Internal error: expected failure but saw none."
-    where
-      go :: Property
-      go = case vt of
-        SpenderGen gen shrinker f out ->
-          forAllShrinkShow gen shrinker (prettySpender f out) $
-            spenderPropertyGen opts f out
-  testOptions =
-    Tagged
-      [ Option @Fee Proxy
-      , Option @TimeRange Proxy
-      , Option @TestTxId Proxy
-      , Option @TestCurrencySymbol Proxy
-      , Option @TestValidatorHash Proxy
-      , Option @PropertyTestCount Proxy
-      , Option @PropertyMaxSize Proxy
-      , Option @ScriptInputPosition Proxy
-      ]
+validatorPropertyFail ::
+  forall (a :: Type) (d :: Type)(r :: Type).
+  (Show a, Typeable a, Typeable d, Typeable r) =>
+  String ->
+  Methodology a ->
+  (a -> TestValidator d r) ->
+  (a -> TestItems ('ForSpending d r))  ->
+  TestTree
+validatorPropertyFail = mkValidatorPropertyWith OutcomeAlwaysFail
 
-
-spenderPropertyGen ::
-  forall (a :: Type) (d :: Type) (r :: Type).
-  OptionSet ->
-  (a -> TestItems ( 'ForSpending d r)) ->
+mkValidatorPropertyWith ::
+  forall (a :: Type) (d :: Type)(r :: Type).
+  (Show a, Typeable a, Typeable d, Typeable r) =>
   OutcomeKind ->
-  a ->
-  Property
-spenderPropertyGen opts f outKind seed = case f seed of
-  ItemsForSpending
-    { spendDatum = d :: datum
-    , spendRedeemer = r :: redeemer
-    , spendValue = v
-    , spendCB = cb
-    , spendOutcome = outcome
-    , spendValidator = val
-    } ->
-      let td = SpendingTest d r v
-          script = SomeSpender $ getTestValidator val
-          outcome' = adjustOutcome outKind outcome
-          env =
-            PropertyEnv
-              { envOpts = opts
-              , envScript = script
-              , envTestData = td
-              , envContextBuilder = cb
-              , envOutcome = outcome'
-              }
-       in adjustCoverage outKind outcome
-            . (`runReader` env)
-            . produceResult
-            $ getScriptResult envScript envTestData (getContext getSC) env
+  String ->
+  Methodology a ->
+  (a -> TestValidator d r) ->
+  (a -> TestItems ('ForSpending d r))  ->
+  TestTree
+mkValidatorPropertyWith out name (Methodology gen shr) fVal fTi = 
+  singleTest name $ Spender gen shr fVal fTi out
+
+mintingPolicyProperty ::
+  forall (a :: Type) (r :: Type).
+  (Show a, Typeable a, Typeable r) =>
+  String ->
+  Methodology a ->
+  (a -> TestMintingPolicy r) ->
+  (a -> TestItems ('ForMinting r))  ->
+  TestTree
+mintingPolicyProperty = mkMintingPolicyPropertyWith OutcomeDependent
+
+mintingPolicyPropertyPass ::
+  forall (a :: Type) (r :: Type).
+  (Show a, Typeable a, Typeable r) =>
+  String ->
+  Methodology a ->
+  (a -> TestMintingPolicy r) ->
+  (a -> TestItems ('ForMinting r))  ->
+  TestTree
+mintingPolicyPropertyPass = mkMintingPolicyPropertyWith OutcomeAlwaysPass
+
+mintingPolicyPropertyFail ::
+  forall (a :: Type) (r :: Type).
+  (Show a, Typeable a, Typeable r) =>
+  String ->
+  Methodology a ->
+  (a -> TestMintingPolicy r) ->
+  (a -> TestItems ('ForMinting r))  ->
+  TestTree
+mintingPolicyPropertyFail = mkMintingPolicyPropertyWith OutcomeAlwaysFail
+
+mkMintingPolicyPropertyWith ::
+  forall (a :: Type) (r :: Type).
+  (Show a, Typeable a, Typeable r) =>
+  OutcomeKind ->
+  String ->
+  Methodology a ->
+  (a -> TestMintingPolicy r) ->
+  (a -> TestItems ('ForMinting r))  ->
+  TestTree
+mkMintingPolicyPropertyWith out name (Methodology gen shr) fMp fTi = 
+  singleTest name $ Minter gen shr fMp fTi out
