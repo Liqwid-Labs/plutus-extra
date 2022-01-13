@@ -27,11 +27,6 @@ module Test.Tasty.Plutus.TestData (
   static,
   Generator (..),
   TestItems (..),
-
-  TestValidator (TestValidator),
-  mkTestValidator,
-  getTestValidator,
-
 ) where
 
 import Data.Kind (Type)
@@ -53,8 +48,7 @@ import Test.Tasty.Plutus.Internal.Minting (
  )
 import Prelude
 import PlutusTx
-import Plutus.V1.Ledger.Api (mkValidatorScript)
-import Ledger.Typed.Scripts (Validator)
+
 {- | All the data needed to test a validator or minting policy.
 
  @since 3.0
@@ -155,23 +149,6 @@ static ::
   Methodology a
 static x = Methodology (pure x) (const [])
 
-newtype TestValidator (datum :: Type) (redeemer :: Type) =
-  TestValidator Validator
-  deriving stock (Show)
-
-mkTestValidator ::
-  forall (datum :: Type) (redeemer :: Type) (ctx :: Type).
-  CompiledCode (datum -> redeemer -> ctx -> Bool) ->
-  CompiledCode ((datum -> redeemer -> ctx -> Bool) -> (BuiltinData -> BuiltinData -> BuiltinData -> ())) ->
-  TestValidator datum redeemer
-mkTestValidator v wr = TestValidator $ mkValidatorScript $ wr `applyCode` v
-
-getTestValidator ::
-  forall (datum :: Type) (redeemer :: Type).
-  TestValidator datum redeemer ->
-  Validator
-getTestValidator (TestValidator tv) = tv
-
 {- | Contains a means of generating a seed and a function
  for creating 'TestItems' from the seed.
 
@@ -232,7 +209,6 @@ data TestItems (p :: Purpose) where
     , -- | Result expected from calling the Validator
       -- | @since 5.0
       spendOutcome :: Outcome
-    , spendValidator :: TestValidator datum redeemer
     } ->
     TestItems ( 'ForSpending datum redeemer)
   -- | @since 5.0
