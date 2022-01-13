@@ -10,8 +10,6 @@ import Data.List.NonEmpty (NonEmpty)
 import Prelude hiding (($), (&&), (*), (+), (==))
 
 import Ledger.Crypto (PubKeyHash)
-import Ledger.Typed.Scripts (MintingPolicy)
-import Plutus.V1.Ledger.Scripts (mkMintingPolicyScript)
 import Test.QuickCheck.Plutus.Instances ()
 import Test.Tasty (TestTree)
 import Test.Tasty.Plutus.Context (
@@ -38,7 +36,12 @@ import Test.Tasty.Plutus.TestData (
   mintTokens,
   passIf,
  )
-import Test.Tasty.Plutus.WithScript (toTestMintingPolicy, withMintingPolicy)
+import Test.Tasty.Plutus.WithScript (
+  TestMintingPolicy,
+  toTestMintingPolicy,
+  withMintingPolicy,
+  mkTestMintingPolicy,
+ )
 import Test.Tasty.QuickCheck (
   Gen,
   arbitrary,
@@ -49,7 +52,6 @@ import Test.Tasty.QuickCheck (
 --------------------------------------------------------------------------------
 
 import Plutus.V1.Ledger.Contexts (ScriptContext)
-import PlutusTx (applyCode)
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.Prelude (traceIfFalse, ($), (==))
 import PlutusTx.TH (compile)
@@ -127,11 +129,11 @@ myMintingPolicy secret key _ = correctKey
       traceIfFalse "The provided key is wrong" $
         secret == key
 
-myMintingPolicyScript :: MintingPolicy
+myMintingPolicyScript :: TestMintingPolicy Integer
 myMintingPolicyScript =
-  mkMintingPolicyScript $
+  mkTestMintingPolicy
+    $$(compile [||myMintingPolicy secretKey||])
     $$(compile [||wrap||])
-      `applyCode` $$(compile [||myMintingPolicy secretKey||])
   where
     wrap ::
       (Integer -> ScriptContext -> Bool) ->
