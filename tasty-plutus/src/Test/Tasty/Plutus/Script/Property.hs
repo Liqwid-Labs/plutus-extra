@@ -34,6 +34,7 @@ module Test.Tasty.Plutus.Script.Property (
   scriptProperty,
   scriptPropertyFail,
   scriptPropertyPass,
+  withSpendGeneratorProp,
 ) where
 
 import Control.Monad.RWS.Strict (tell)
@@ -66,6 +67,7 @@ import Test.QuickCheck (
   quickCheckWithResult,
   stdArgs,
  )
+import Test.Tasty (TestTree)
 import Test.Tasty.Options (OptionDescription (Option), OptionSet, lookupOption)
 import Test.Tasty.Plutus.Internal.Context (
   ContextBuilder,
@@ -130,8 +132,10 @@ import Test.Tasty.Plutus.TestData (
     spendDatum,
     spendOutcome,
     spendRedeemer,
-    spendValue
+    spendValue,
+    spendValidator
   ),
+  getTestValidator,
  )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
@@ -491,3 +495,86 @@ produceResult sr = do
   where
     pass :: Reader (PropertyEnv p) Property
     pass = pure $ property True
+
+withSpendGeneratorProp ::
+  forall (a :: Type) (d :: Type)(r :: Type).
+  (Show a, Typeable a, Typeable d, Typeable r) =>
+  String ->
+  Gen a ->
+  (a -> [a]) ->
+  (a -> TestItems ('ForSpending d r))  ->
+  TestTree
+withSpendGeneratorProp name gen shr f = 
+  singleTest name $ SpenderGen gen shr f OutcomeDependent
+
+data PropertyTestGen (a :: Type) (p :: Purpose) where
+  SpenderGen ::
+    forall (a :: Type) (d :: Type) (r :: Type).
+    Typeable a =>
+    Gen a ->
+    (a -> [a]) ->
+    (a -> TestItems ( 'ForSpending d r)) ->
+    OutcomeKind ->
+    PropertyTestGen a ( 'ForSpending d r)
+
+instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTestGen a p) where
+  run opts vt _ = do
+    let PropertyTestCount testCount' = lookupOption opts
+    let PropertyMaxSize maxSize' = lookupOption opts
+    let args = stdArgs {maxSuccess = testCount', maxSize = maxSize'}
+    res <- quickCheckWithResult args go
+    pure $ case res of
+      Success {} -> testPassed ""
+      GaveUp {} -> testFailed "Internal error: gave up."
+      Failure {} -> testFailed ""
+      NoExpectedFailure {} -> testFailed "Internal error: expected failure but saw none."
+    where
+      go :: Property
+      go = case vt of
+        SpenderGen gen shrinker f out ->
+          forAllShrinkShow gen shrinker (prettySpender f out) $
+            spenderPropertyGen opts f out
+  testOptions =
+    Tagged
+      [ Option @Fee Proxy
+      , Option @TimeRange Proxy
+      , Option @TestTxId Proxy
+      , Option @TestCurrencySymbol Proxy
+      , Option @TestValidatorHash Proxy
+      , Option @PropertyTestCount Proxy
+      , Option @PropertyMaxSize Proxy
+      , Option @ScriptInputPosition Proxy
+      ]
+
+
+spenderPropertyGen ::
+  forall (a :: Type) (d :: Type) (r :: Type).
+  OptionSet ->
+  (a -> TestItems ( 'ForSpending d r)) ->
+  OutcomeKind ->
+  a ->
+  Property
+spenderPropertyGen opts f outKind seed = case f seed of
+  ItemsForSpending
+    { spendDatum = d :: datum
+    , spendRedeemer = r :: redeemer
+    , spendValue = v
+    , spendCB = cb
+    , spendOutcome = outcome
+    , spendValidator = val
+    } ->
+      let td = SpendingTest d r v
+          script = SomeSpender $ getTestValidator val
+          outcome' = adjustOutcome outKind outcome
+          env =
+            PropertyEnv
+              { envOpts = opts
+              , envScript = script
+              , envTestData = td
+              , envContextBuilder = cb
+              , envOutcome = outcome'
+              }
+       in adjustCoverage outKind outcome
+            . (`runReader` env)
+            . produceResult
+            $ getScriptResult envScript envTestData (getContext getSC) env
