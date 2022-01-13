@@ -11,16 +11,16 @@
 module Test.Tasty.Plutus.WithScript (
   -- * Environment monad
   WithScript,
-  WrappedValidator,
-  WrappedMintingPolicy,
+
+  -- * Wrappers for scripts
+  TestMintingPolicy,
+  TestValidator,
 
   -- * Helper functions
   withValidator,
   withMintingPolicy,
   toTestValidator,
   toTestMintingPolicy,
-  TestMintingPolicy,
-  TestValidator,
   mkTestMintingPolicy,
   mkTestMintingPolicyUnsafe,
   mkTestValidator,
@@ -51,13 +51,13 @@ import Test.Tasty.Plutus.Internal.WithScript (
  )
 import Prelude
 
-{- | Given the name for the tests, a 'Validator', and a collection of
+{- | Given the name for the tests, a 'TestValidator', and a collection of
  spending-related tests, execute all of them as a 'TestTree'.
 
  = Usage
 
  > myTests :: TestTree
- > myTests = withValidator "Testing my spending" myValidator $ do
+ > myTests = withValidator "Testing my spending" myTestValidator $ do
  >    shouldValidate "Valid case" validData validContext
  >    shouldn'tValidate "Invalid context" validData invalidContext
  >    shouldn'tValidate "Invalid data" invalidData validContext
@@ -69,8 +69,9 @@ import Prelude
 
  = Important note
 
- Unless your 'Validator' has been prepared using 'toTestValidator', this will
- likely not behave as intended.
+ Unless your 'TestValidator' has been prepared using 'toTestValidator', this will
+ likely not behave as intended. We use 'WrappedValidator' to prevent
+ other wrapper functions from being used.
 
  @since 3.0
 -}
@@ -84,13 +85,13 @@ withValidator name val (WithSpending comp) =
   case evalRWS comp val () of
     ((), tests) -> testGroup name . toList $ tests
 
-{- | Given the name for the tests, a 'MintingPolicy', and a collection of
+{- | Given the name for the tests, a 'TestMintingPolicy', and a collection of
  minting-related tests, execute all of them as a 'TestTree'.
 
  = Usage
 
  > myTests :: TestTree
- > myTests = withMintingPolicy "Testing my minting" mp $ do
+ > myTests = withMintingPolicy "Testing my minting" myTestMintingPolicy $ do
  >    shouldValidate "Valid case" validData validContext
  >    shouldn'tValidate "Invalid context" validData invalidContext
  >    shouldn'tValidate "Invalid data" invalidData validContext
@@ -100,8 +101,9 @@ withValidator name val (WithSpending comp) =
 
  = Important note
 
- Unless your 'MintingPolicy' has been prepared using 'toTestMintingPolicy',
- this will likely not behave as intended.
+ Unless your 'TestMintingPolicy' has been prepared using 'toTestMintingPolicy',
+ this will likely not behave as intended. We use 'WrappedMintingPolicy' to prevent
+ other wrapper functions from being used.
 
  @since 3.0
 -}
@@ -115,29 +117,16 @@ withMintingPolicy name mp (WithMinting comp) =
   case evalRWS comp mp () of
     ((), tests) -> testGroup name . toList $ tests
 
-{- | A wrapper for validators. Use this to construct 'Validator's suitable for
+{- | A wrapper for validators. Use this to construct 'TestValidator's suitable for
  passing to 'withValidator'.
 
  = Usage
 
- > data TestScript
-
- > instance ValidatorTypes TestScript where
- >   type RedeemerType TestScript = SomeType
- >   type DatumType TestScript = SomeOtherType
-
-typedSimpleValidator :: TypedValidator TestScript
-
- > testValidator :: TypedValidator TestScript
+ > testValidator :: TestValidator SomeType SomeOtherType
  > testValidator =
- >  mkTypedValidator @TestScript
+ >  mkTestValidator
  >    $$(compile [||myValidator||])
- >    $$(compile [||wrap||])
- >    where
- >      wrap ::
- >        ( SomeType -> SomeOtherType -> ScriptContext -> Bool) ->
- >        WrappedValidatorType
- >      wrap = toTestValidator
+ >    $$(compile [||toTestValidator||])
 
  = Important note
 
@@ -145,19 +134,14 @@ typedSimpleValidator :: TypedValidator TestScript
  'liftCode' and 'applyCode', rather than as literal arguments inside of
  'compile':
 
- > testValidatorWithArg :: ArgumentType -> Validator
+ > testValidatorWithArg :: ArgumentType -> TestValidator SomeType SomeOtherType
  > testValidatorWithArg arg =
- >  mkTypedValidator @TestScript
+ >  mkTestValidator
  >    ( $$(compile [||myValidator||])
  >          `applyCode`
  >          liftCode arg
  >    )
- >    $$(compile [||wrap||])
- >    where
- >      wrap ::
- >        ( SomeType -> SomeOtherType -> ScriptContext -> Bool) ->
- >        WrappedValidatorType
- >      wrap = toTestValidator
+ >    $$(compile [||toTestValidator||])
 
  @since 3.0
 -}
@@ -184,6 +168,14 @@ toTestValidator f = WrappedValidator $ \d r p ->
 
  The usage (and caveats) of this function is similar to 'toTestValidator'; see
  its documentation for details.
+
+ = Usage
+
+ > testMintingPolicy :: TestMintingPolicy SomeType
+ > testMintingPolicy =
+ >  mkTestMintingPolicy
+ >    $$(compile [||myMintingPolicy||])
+ >    $$(compile [||toTestMintingPolicy||])
 
  @since 3.0
 -}

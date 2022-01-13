@@ -34,9 +34,13 @@ module Test.Tasty.Plutus.Script.Property (
   scriptProperty,
   scriptPropertyFail,
   scriptPropertyPass,
+
+  -- * For testing parameterized Validators
   validatorProperty,
   validatorPropertyPass,
   validatorPropertyFail,
+
+  -- * For testing parameterized MintingPolicy
   mintingPolicyProperty,
   mintingPolicyPropertyPass,
   mintingPolicyPropertyFail,
@@ -215,6 +219,126 @@ scriptPropertyPass ::
   WithScript p ()
 scriptPropertyPass = mkScriptPropertyWith OutcomeAlwaysPass
 
+{- | Given a 'Methodology' to generate a seed, a functions to create
+a 'TestValidator' as well as a 'TestItems' from the seed, check that:
+
+ * For any 'TestItems' with Outcome equals 'Pass', the 'TestValidator' succeeds; and
+ * For any 'TestItems' with Outcome equals 'Fail', the 'TestValidator' fails.
+
+ This will also check /coverage/: specifically, the property will fail unless
+ the provided way produces roughly equal numbers of 'Pass' and
+ 'Fail'-classified cases.
+
+ @since 6.0
+-}
+validatorProperty ::
+  forall (a :: Type) (d :: Type) (r :: Type).
+  (Show a, Typeable a, Typeable d, Typeable r) =>
+  String ->
+  Methodology a ->
+  (a -> TestValidator d r) ->
+  (a -> TestItems ( 'ForSpending d r)) ->
+  TestTree
+validatorProperty = mkValidatorPropertyWith OutcomeDependent
+
+{- | Given a 'Methodology' to generate a seed, a functions to create
+a 'TestValidator' as well as a 'TestItems' from the seed, check that:
+
+ * For any 'TestItems' the 'TestValidator' always succeeds.
+
+ This test ignores 'Outcome' from 'TestItems' and changes it to 'Pass'
+
+ @since 6.0
+-}
+validatorPropertyPass ::
+  forall (a :: Type) (d :: Type) (r :: Type).
+  (Show a, Typeable a, Typeable d, Typeable r) =>
+  String ->
+  Methodology a ->
+  (a -> TestValidator d r) ->
+  (a -> TestItems ( 'ForSpending d r)) ->
+  TestTree
+validatorPropertyPass = mkValidatorPropertyWith OutcomeAlwaysPass
+
+{- | Given a 'Methodology' to generate a seed, a functions to create
+a 'TestValidator' as well as a 'TestItems' from the seed, check that:
+
+ * For any 'TestItems' the 'TestValidator' always fails.
+
+ This test ignores 'Outcome' from 'TestItems' and changes it to 'Fail'
+
+ @since 6.0
+-}
+validatorPropertyFail ::
+  forall (a :: Type) (d :: Type) (r :: Type).
+  (Show a, Typeable a, Typeable d, Typeable r) =>
+  String ->
+  Methodology a ->
+  (a -> TestValidator d r) ->
+  (a -> TestItems ( 'ForSpending d r)) ->
+  TestTree
+validatorPropertyFail = mkValidatorPropertyWith OutcomeAlwaysFail
+
+{- | Given a 'Methodology' to generate a seed, a functions to create
+a 'TestMintingPolicy' as well as a 'TestItems' from the seed, check that:
+
+ * For any 'TestItems' with Outcome equals 'Pass', the 'TestMitingPolicy' succeeds; and
+ * For any 'TestItems' with Outcome equals 'Fail', the 'TestMitingPolicy' fails.
+
+ This will also check /coverage/: specifically, the property will fail unless
+ the provided way produces roughly equal numbers of 'Pass' and
+ 'Fail'-classified cases.
+
+ @since 6.0
+-}
+mintingPolicyProperty ::
+  forall (a :: Type) (r :: Type).
+  (Show a, Typeable a, Typeable r) =>
+  String ->
+  Methodology a ->
+  (a -> TestMintingPolicy r) ->
+  (a -> TestItems ( 'ForMinting r)) ->
+  TestTree
+mintingPolicyProperty = mkMintingPolicyPropertyWith OutcomeDependent
+
+{- | Given a 'Methodology' to generate a seed, a functions to create
+a 'TestMintingPolicy' as well as a 'TestItems' from the seed, check that:
+
+ * For any 'TestItems' the 'TestMintingPolicy' always succeeds.
+
+ This test ignores 'Outcome' from 'TestItems' and changes it to 'Pass'
+
+ @since 6.0
+-}
+mintingPolicyPropertyPass ::
+  forall (a :: Type) (r :: Type).
+  (Show a, Typeable a, Typeable r) =>
+  String ->
+  Methodology a ->
+  (a -> TestMintingPolicy r) ->
+  (a -> TestItems ( 'ForMinting r)) ->
+  TestTree
+mintingPolicyPropertyPass = mkMintingPolicyPropertyWith OutcomeAlwaysPass
+
+{- | Given a 'Methodology' to generate a seed, a functions to create
+a 'TestMintingPolicy' as well as a 'TestItems' from the seed, check that:
+
+ * For any 'TestItems' the 'TestMintingPolicy' always fails.
+
+ This test ignores 'Outcome' from 'TestItems' and changes it to 'Fail'
+
+ @since 6.0
+-}
+mintingPolicyPropertyFail ::
+  forall (a :: Type) (r :: Type).
+  (Show a, Typeable a, Typeable r) =>
+  String ->
+  Methodology a ->
+  (a -> TestMintingPolicy r) ->
+  (a -> TestItems ( 'ForMinting r)) ->
+  TestTree
+mintingPolicyPropertyFail = mkMintingPolicyPropertyWith OutcomeAlwaysFail
+
 -- Helpers
 
 mkScriptPropertyWith ::
@@ -241,6 +365,30 @@ mkScriptPropertyWith outKind name generator = case generator of
         . Seq.singleton
         . singleTest name
         $ Minter gen shrinker (const mp) fTi outKind
+
+mkValidatorPropertyWith ::
+  forall (a :: Type) (d :: Type) (r :: Type).
+  (Show a, Typeable a, Typeable d, Typeable r) =>
+  OutcomeKind ->
+  String ->
+  Methodology a ->
+  (a -> TestValidator d r) ->
+  (a -> TestItems ( 'ForSpending d r)) ->
+  TestTree
+mkValidatorPropertyWith out name (Methodology gen shr) fVal fTi =
+  singleTest name $ Spender gen shr fVal fTi out
+
+mkMintingPolicyPropertyWith ::
+  forall (a :: Type) (r :: Type).
+  (Show a, Typeable a, Typeable r) =>
+  OutcomeKind ->
+  String ->
+  Methodology a ->
+  (a -> TestMintingPolicy r) ->
+  (a -> TestItems ( 'ForMinting r)) ->
+  TestTree
+mkMintingPolicyPropertyWith out name (Methodology gen shr) fMp fTi =
+  singleTest name $ Minter gen shr fMp fTi out
 
 data PropertyTest (a :: Type) (p :: Purpose) where
   Spender ::
@@ -496,87 +644,3 @@ produceResult sr = do
   where
     pass :: Reader (PropertyEnv p) Property
     pass = pure $ property True
-
-validatorProperty ::
-  forall (a :: Type) (d :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable d, Typeable r) =>
-  String ->
-  Methodology a ->
-  (a -> TestValidator d r) ->
-  (a -> TestItems ( 'ForSpending d r)) ->
-  TestTree
-validatorProperty = mkValidatorPropertyWith OutcomeDependent
-
-validatorPropertyPass ::
-  forall (a :: Type) (d :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable d, Typeable r) =>
-  String ->
-  Methodology a ->
-  (a -> TestValidator d r) ->
-  (a -> TestItems ( 'ForSpending d r)) ->
-  TestTree
-validatorPropertyPass = mkValidatorPropertyWith OutcomeAlwaysPass
-
-validatorPropertyFail ::
-  forall (a :: Type) (d :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable d, Typeable r) =>
-  String ->
-  Methodology a ->
-  (a -> TestValidator d r) ->
-  (a -> TestItems ( 'ForSpending d r)) ->
-  TestTree
-validatorPropertyFail = mkValidatorPropertyWith OutcomeAlwaysFail
-
-mkValidatorPropertyWith ::
-  forall (a :: Type) (d :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable d, Typeable r) =>
-  OutcomeKind ->
-  String ->
-  Methodology a ->
-  (a -> TestValidator d r) ->
-  (a -> TestItems ( 'ForSpending d r)) ->
-  TestTree
-mkValidatorPropertyWith out name (Methodology gen shr) fVal fTi =
-  singleTest name $ Spender gen shr fVal fTi out
-
-mintingPolicyProperty ::
-  forall (a :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable r) =>
-  String ->
-  Methodology a ->
-  (a -> TestMintingPolicy r) ->
-  (a -> TestItems ( 'ForMinting r)) ->
-  TestTree
-mintingPolicyProperty = mkMintingPolicyPropertyWith OutcomeDependent
-
-mintingPolicyPropertyPass ::
-  forall (a :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable r) =>
-  String ->
-  Methodology a ->
-  (a -> TestMintingPolicy r) ->
-  (a -> TestItems ( 'ForMinting r)) ->
-  TestTree
-mintingPolicyPropertyPass = mkMintingPolicyPropertyWith OutcomeAlwaysPass
-
-mintingPolicyPropertyFail ::
-  forall (a :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable r) =>
-  String ->
-  Methodology a ->
-  (a -> TestMintingPolicy r) ->
-  (a -> TestItems ( 'ForMinting r)) ->
-  TestTree
-mintingPolicyPropertyFail = mkMintingPolicyPropertyWith OutcomeAlwaysFail
-
-mkMintingPolicyPropertyWith ::
-  forall (a :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable r) =>
-  OutcomeKind ->
-  String ->
-  Methodology a ->
-  (a -> TestMintingPolicy r) ->
-  (a -> TestItems ( 'ForMinting r)) ->
-  TestTree
-mkMintingPolicyPropertyWith out name (Methodology gen shr) fMp fTi =
-  singleTest name $ Minter gen shr fMp fTi out
