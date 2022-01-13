@@ -30,7 +30,6 @@ module Test.Tasty.Plutus.Script.Unit (
   shouldn'tValidateTracing,
 ) where
 
-import Test.Tasty.Plutus.Internal.TestScript (TestValidator, TestMintingPolicy, getTestValidator, getTestMintingPolicy)
 import Control.Arrow ((>>>))
 import Control.Monad.Reader (Reader, asks, runReader)
 import Control.Monad.Writer (tell)
@@ -81,6 +80,7 @@ import Test.Tasty.Plutus.Internal.Run (
     ScriptPassed
   ),
  )
+import Test.Tasty.Plutus.Internal.TestScript (TestMintingPolicy, TestValidator, getTestMintingPolicy, getTestValidator)
 import Test.Tasty.Plutus.Internal.WithScript (
   WithScript (WithMinting, WithSpending),
  )
@@ -211,7 +211,7 @@ data ScriptTest (p :: Purpose) where
     Maybe (Vector Text -> Bool) ->
     TestData ( 'ForMinting r) ->
     ContextBuilder ( 'ForMinting r) ->
-    (TestMintingPolicy r) ->
+    TestMintingPolicy r ->
     ScriptTest ( 'ForMinting r)
 
 data UnitEnv (p :: Purpose) = UnitEnv

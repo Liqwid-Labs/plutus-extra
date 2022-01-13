@@ -8,8 +8,8 @@ import Data.Sequence (Seq)
 import Test.Tasty.Plutus.Internal.Context (
   Purpose (ForMinting, ForSpending),
  )
+import Test.Tasty.Plutus.Internal.TestScript (TestMintingPolicy, TestValidator)
 import Test.Tasty.Providers (TestTree)
-import Test.Tasty.Plutus.Internal.TestScript (TestValidator, TestMintingPolicy)
 
 {- | Provides a monadic API for composing tests against the same validator or
  minting policy. While it has all the capabilities of a monad, you mostly

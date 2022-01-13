@@ -35,10 +35,10 @@ import Test.Tasty.Plutus.TestData (
  )
 import Test.Tasty.Plutus.WithScript (
   TestValidator,
-  toTestValidator,
-  withValidator,
   mkTestValidator,
   mkTestValidatorUnsafe,
+  toTestValidator,
+  withValidator,
  )
 import Test.Tasty.QuickCheck (
   Gen,
@@ -50,9 +50,9 @@ import Test.Tasty.QuickCheck (
 --------------------------------------------------------------------------------
 
 import Plutus.V1.Ledger.Contexts (ScriptContext)
+import PlutusTx (applyCode, liftCode)
 import PlutusTx.Prelude (traceIfFalse, ($), (&&), (*), (+), (==))
 import PlutusTx.TH (compile)
-import PlutusTx (applyCode, liftCode)
 import Wallet.Emulator.Types (WalletNumber (WalletNumber))
 import Wallet.Emulator.Wallet (fromWalletNumber, walletPubKeyHash)
 
@@ -60,20 +60,21 @@ import Wallet.Emulator.Wallet (fromWalletNumber, walletPubKeyHash)
 
 tests :: TestTree
 tests =
-  testGroup "Validator tests"
-  [ withValidator "With simple TestValidator:" simpleTestValidator $ do
-      scriptProperty "Validator checks the sum of the inputs" $
-        GenForSpending genForSimple transformForSimple1
-      scriptProperty "Validator checks the product of the inputs" $
-        GenForSpending genForSimple transformForSimple2
-      scriptPropertyPass "Validator succeeds if the sum and product are correct" $
-        GenForSpending genForSimple transformForSimple3
-  , validatorProperty
-      "Validator checks secret key"
-      genForParam
-      (\(secret,_,_) -> paramTestValidator secret)
-      transformForParam
-  ]
+  testGroup
+    "Validator tests"
+    [ withValidator "With simple TestValidator:" simpleTestValidator $ do
+        scriptProperty "Validator checks the sum of the inputs" $
+          GenForSpending genForSimple transformForSimple1
+        scriptProperty "Validator checks the product of the inputs" $
+          GenForSpending genForSimple transformForSimple2
+        scriptPropertyPass "Validator succeeds if the sum and product are correct" $
+          GenForSpending genForSimple transformForSimple3
+    , validatorProperty
+        "Validator checks secret key"
+        genForParam
+        (\(secret, _, _) -> paramTestValidator secret)
+        transformForParam
+    ]
 
 genForSimple :: Methodology (Integer, Integer, Integer, Integer, Value)
 genForSimple = Methodology gen' genericShrink
@@ -194,7 +195,7 @@ paramValidator secret _ guess _ = correctGuess
 paramTestValidator :: Integer -> TestValidator () Integer
 paramTestValidator secret =
   mkTestValidator
-    ( $$(compile [||paramValidator||]) `applyCode` (liftCode secret))
+    ($$(compile [||paramValidator||]) `applyCode` liftCode secret)
     $$(compile [||toTestValidator||])
 
 userPKHash :: PubKeyHash

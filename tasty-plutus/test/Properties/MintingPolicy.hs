@@ -38,9 +38,9 @@ import Test.Tasty.Plutus.TestData (
  )
 import Test.Tasty.Plutus.WithScript (
   TestMintingPolicy,
+  mkTestMintingPolicy,
   toTestMintingPolicy,
   withMintingPolicy,
-  mkTestMintingPolicy,
  )
 import Test.Tasty.QuickCheck (
   Gen,
@@ -52,7 +52,6 @@ import Test.Tasty.QuickCheck (
 --------------------------------------------------------------------------------
 
 import Plutus.V1.Ledger.Contexts (ScriptContext)
-import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.Prelude (traceIfFalse, ($), (==))
 import PlutusTx.TH (compile)
 import Wallet.Emulator.Types (WalletNumber (WalletNumber))
@@ -133,12 +132,7 @@ myMintingPolicyScript :: TestMintingPolicy Integer
 myMintingPolicyScript =
   mkTestMintingPolicy
     $$(compile [||myMintingPolicy secretKey||])
-    $$(compile [||wrap||])
-  where
-    wrap ::
-      (Integer -> ScriptContext -> Bool) ->
-      (BuiltinData -> BuiltinData -> ())
-    wrap = toTestMintingPolicy
+    $$(compile [||toTestMintingPolicy||])
 
 userPKHash1 :: PubKeyHash
 userPKHash1 = walletPubKeyHash $ fromWalletNumber $ WalletNumber 1

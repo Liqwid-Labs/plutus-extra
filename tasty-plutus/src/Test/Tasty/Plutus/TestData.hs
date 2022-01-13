@@ -33,6 +33,7 @@ import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Semigroup (stimes, stimesIdempotent)
 import Plutus.V1.Ledger.Value (Value)
+import PlutusTx
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Test.QuickCheck.Gen (Gen)
 import Test.Tasty.Plutus.Context (ContextBuilder)
@@ -47,7 +48,6 @@ import Test.Tasty.Plutus.Internal.Minting (
   mintTokens,
  )
 import Prelude
-import PlutusTx
 
 {- | All the data needed to test a validator or minting policy.
 

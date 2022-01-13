@@ -50,7 +50,7 @@ import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Plutus.V1.Ledger.Contexts (ScriptContext)
-import Plutus.V1.Ledger.Scripts ( ScriptError (EvaluationError, EvaluationException, MalformedScript))
+import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError, EvaluationException, MalformedScript))
 import Test.QuickCheck (
   Args (maxSize, maxSuccess),
   Gen,
@@ -102,6 +102,12 @@ import Test.Tasty.Plutus.Internal.Run (
     ScriptPassed
   ),
  )
+import Test.Tasty.Plutus.Internal.TestScript (
+  TestMintingPolicy,
+  TestValidator,
+  getTestMintingPolicy,
+  getTestValidator,
+ )
 import Test.Tasty.Plutus.Internal.WithScript (
   WithScript (WithMinting, WithSpending),
  )
@@ -112,12 +118,6 @@ import Test.Tasty.Plutus.Options (
   TestTxId,
   TestValidatorHash,
   TimeRange,
- )
-import Test.Tasty.Plutus.Internal.TestScript (
-  TestValidator,
-  TestMintingPolicy,
-  getTestValidator,
-  getTestMintingPolicy,
  )
 import Test.Tasty.Plutus.TestData (
   Generator (GenForMinting, GenForSpending),
@@ -498,45 +498,45 @@ produceResult sr = do
     pass = pure $ property True
 
 validatorProperty ::
-  forall (a :: Type) (d :: Type)(r :: Type).
+  forall (a :: Type) (d :: Type) (r :: Type).
   (Show a, Typeable a, Typeable d, Typeable r) =>
   String ->
   Methodology a ->
   (a -> TestValidator d r) ->
-  (a -> TestItems ('ForSpending d r))  ->
+  (a -> TestItems ( 'ForSpending d r)) ->
   TestTree
 validatorProperty = mkValidatorPropertyWith OutcomeDependent
 
 validatorPropertyPass ::
-  forall (a :: Type) (d :: Type)(r :: Type).
+  forall (a :: Type) (d :: Type) (r :: Type).
   (Show a, Typeable a, Typeable d, Typeable r) =>
   String ->
   Methodology a ->
   (a -> TestValidator d r) ->
-  (a -> TestItems ('ForSpending d r))  ->
+  (a -> TestItems ( 'ForSpending d r)) ->
   TestTree
 validatorPropertyPass = mkValidatorPropertyWith OutcomeAlwaysPass
 
 validatorPropertyFail ::
-  forall (a :: Type) (d :: Type)(r :: Type).
+  forall (a :: Type) (d :: Type) (r :: Type).
   (Show a, Typeable a, Typeable d, Typeable r) =>
   String ->
   Methodology a ->
   (a -> TestValidator d r) ->
-  (a -> TestItems ('ForSpending d r))  ->
+  (a -> TestItems ( 'ForSpending d r)) ->
   TestTree
 validatorPropertyFail = mkValidatorPropertyWith OutcomeAlwaysFail
 
 mkValidatorPropertyWith ::
-  forall (a :: Type) (d :: Type)(r :: Type).
+  forall (a :: Type) (d :: Type) (r :: Type).
   (Show a, Typeable a, Typeable d, Typeable r) =>
   OutcomeKind ->
   String ->
   Methodology a ->
   (a -> TestValidator d r) ->
-  (a -> TestItems ('ForSpending d r))  ->
+  (a -> TestItems ( 'ForSpending d r)) ->
   TestTree
-mkValidatorPropertyWith out name (Methodology gen shr) fVal fTi = 
+mkValidatorPropertyWith out name (Methodology gen shr) fVal fTi =
   singleTest name $ Spender gen shr fVal fTi out
 
 mintingPolicyProperty ::
@@ -545,7 +545,7 @@ mintingPolicyProperty ::
   String ->
   Methodology a ->
   (a -> TestMintingPolicy r) ->
-  (a -> TestItems ('ForMinting r))  ->
+  (a -> TestItems ( 'ForMinting r)) ->
   TestTree
 mintingPolicyProperty = mkMintingPolicyPropertyWith OutcomeDependent
 
@@ -555,7 +555,7 @@ mintingPolicyPropertyPass ::
   String ->
   Methodology a ->
   (a -> TestMintingPolicy r) ->
-  (a -> TestItems ('ForMinting r))  ->
+  (a -> TestItems ( 'ForMinting r)) ->
   TestTree
 mintingPolicyPropertyPass = mkMintingPolicyPropertyWith OutcomeAlwaysPass
 
@@ -565,7 +565,7 @@ mintingPolicyPropertyFail ::
   String ->
   Methodology a ->
   (a -> TestMintingPolicy r) ->
-  (a -> TestItems ('ForMinting r))  ->
+  (a -> TestItems ( 'ForMinting r)) ->
   TestTree
 mintingPolicyPropertyFail = mkMintingPolicyPropertyWith OutcomeAlwaysFail
 
@@ -576,7 +576,7 @@ mkMintingPolicyPropertyWith ::
   String ->
   Methodology a ->
   (a -> TestMintingPolicy r) ->
-  (a -> TestItems ('ForMinting r))  ->
+  (a -> TestItems ( 'ForMinting r)) ->
   TestTree
-mkMintingPolicyPropertyWith out name (Methodology gen shr) fMp fTi = 
+mkMintingPolicyPropertyWith out name (Methodology gen shr) fMp fTi =
   singleTest name $ Minter gen shr fMp fTi out

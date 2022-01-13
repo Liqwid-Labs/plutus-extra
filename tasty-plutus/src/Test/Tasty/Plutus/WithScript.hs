@@ -11,45 +11,45 @@
 module Test.Tasty.Plutus.WithScript (
   -- * Environment monad
   WithScript,
+  WrappedValidator,
+  WrappedMintingPolicy,
 
   -- * Helper functions
   withValidator,
   withMintingPolicy,
   toTestValidator,
   toTestMintingPolicy,
-  
   TestMintingPolicy,
   TestValidator,
-  
   mkTestMintingPolicy,
   mkTestMintingPolicyUnsafe,
-
   mkTestValidator,
   mkTestValidatorUnsafe,
-
 ) where
 
 import Control.Monad.RWS.Strict (evalRWS)
 import Data.Kind (Type)
 import GHC.Exts (toList)
-import PlutusTx.Builtins (BuiltinData, BuiltinString, appendString, trace)
+import PlutusTx.Builtins (BuiltinString, appendString, trace)
 import PlutusTx.IsData.Class (FromData (fromBuiltinData))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Plutus.Internal.Context (
   Purpose (ForMinting, ForSpending),
  )
+import Test.Tasty.Plutus.Internal.TestScript (
+  TestMintingPolicy,
+  TestValidator,
+  WrappedMintingPolicy (WrappedMintingPolicy),
+  WrappedValidator (WrappedValidator),
+  mkTestMintingPolicy,
+  mkTestMintingPolicyUnsafe,
+  mkTestValidator,
+  mkTestValidatorUnsafe,
+ )
 import Test.Tasty.Plutus.Internal.WithScript (
   WithScript (WithMinting, WithSpending),
  )
 import Prelude
-import Test.Tasty.Plutus.Internal.TestScript (
-  TestValidator,
-  TestMintingPolicy,
-  mkTestValidator,
-  mkTestMintingPolicy,
-  mkTestValidatorUnsafe,
-  mkTestMintingPolicyUnsafe,
- )
 
 {- | Given the name for the tests, a 'Validator', and a collection of
  spending-related tests, execute all of them as a 'TestTree'.
@@ -166,17 +166,18 @@ toTestValidator ::
   forall (datum :: Type) (redeemer :: Type) (ctx :: Type).
   (FromData datum, FromData redeemer, FromData ctx) =>
   (datum -> redeemer -> ctx -> Bool) ->
-  (BuiltinData -> BuiltinData -> BuiltinData -> ())
-toTestValidator f d r p = case fromBuiltinData d of
-  Nothing -> reportParseFailed "Datum"
-  Just d' -> case fromBuiltinData r of
-    Nothing -> reportParseFailed "Redeemer"
-    Just r' -> case fromBuiltinData p of
-      Nothing -> reportParseFailed "ScriptContext"
-      Just p' ->
-        if f d' r' p'
-          then reportPass
-          else reportFail
+  WrappedValidator
+toTestValidator f = WrappedValidator $ \d r p ->
+  case fromBuiltinData d of
+    Nothing -> reportParseFailed "Datum"
+    Just d' -> case fromBuiltinData r of
+      Nothing -> reportParseFailed "Redeemer"
+      Just r' -> case fromBuiltinData p of
+        Nothing -> reportParseFailed "ScriptContext"
+        Just p' ->
+          if f d' r' p'
+            then reportPass
+            else reportFail
 
 {- | A wrapper for minting policies. Use this to construct a 'MintingPolicy'
  suitable for passing to 'withMintingPolicy'.
@@ -191,15 +192,16 @@ toTestMintingPolicy ::
   forall (redeemer :: Type) (ctx :: Type).
   (FromData redeemer, FromData ctx) =>
   (redeemer -> ctx -> Bool) ->
-  (BuiltinData -> BuiltinData -> ())
-toTestMintingPolicy f r p = case fromBuiltinData r of
-  Nothing -> reportParseFailed "Redeemer"
-  Just r' -> case fromBuiltinData p of
-    Nothing -> reportParseFailed "ScriptContext"
-    Just p' ->
-      if f r' p'
-        then reportPass
-        else reportFail
+  WrappedMintingPolicy
+toTestMintingPolicy f = WrappedMintingPolicy $ \r p ->
+  case fromBuiltinData r of
+    Nothing -> reportParseFailed "Redeemer"
+    Just r' -> case fromBuiltinData p of
+      Nothing -> reportParseFailed "ScriptContext"
+      Just p' ->
+        if f r' p'
+          then reportPass
+          else reportFail
 
 -- Helpers
 
