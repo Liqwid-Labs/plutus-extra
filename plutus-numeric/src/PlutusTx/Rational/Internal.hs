@@ -149,6 +149,14 @@ instance MultiplicativeMonoid Rational where
   {-# INLINEABLE one #-}
   one = Rational one one
 
+-- | @since 4.2
+instance Plutus.Module Integer Rational where
+  {-# INLINEABLE scale #-}
+  scale i (Rational n d) =
+    let newNum = i * n
+        gcd = euclid newNum d
+     in Rational (newNum `quotient` gcd) (d `quotient` gcd)
+
 -- | @since 4.0
 instance Arbitrary Rational where
   arbitrary = do

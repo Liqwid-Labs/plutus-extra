@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-numeric
-version:            4.1
+version:            4.2
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -78,7 +78,7 @@ library
     , hedgehog           ^>=1.0.5
     , openapi3           ^>=3.1.0
     , playground-common
-    , plutus-laws        ^>=2.3
+    , plutus-laws        ^>=2.4
     , plutus-tx
     , pretty-show        ^>=1.10
     , QuickCheck         ^>=2.14.2
@@ -124,7 +124,7 @@ test-suite laws
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   build-depends:
-    , plutus-laws       ^>=2.3
+    , plutus-laws       ^>=2.4
     , tasty-quickcheck  ^>=0.10.1.2
 
   hs-source-dirs: test/laws

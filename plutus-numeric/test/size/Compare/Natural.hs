@@ -29,6 +29,7 @@ tests =
       "Additive"
       [ fitsUnder "+" (fromCompiledCode Nat.natPlus) (fromCompiledCode I.iPlus)
       , fitsUnder "zero" (fromCompiledCode Nat.natZero) (fromCompiledCode I.iZero)
+      , fitsUnder "scaleNat" (fromCompiledCode Nat.natScaleNat) (fromCompiledCode I.iScaleNat)
       , expectFailBecause "monus requires more checks"
           . fitsUnder "^- vs -" (fromCompiledCode Nat.natMonus)
           . fromCompiledCode
