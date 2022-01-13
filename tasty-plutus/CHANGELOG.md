@@ -27,13 +27,19 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   * `mintRedeemer` to `mpRedeemer`
   * `mintCB` to `mpCB`
   * `mintOutcome` to `mpOutcome`
-  * `mintTokens :: Tokens` to `mpTasks :: NonEmpty MintimngPolicyTask ` 
+  * `mintTokens :: Tokens` to `mpTasks :: NonEmpty MintimngPolicyTask`
+  
+## 5.2 -- 2022-01-10
+
+### Changes
+
+* `toTestValidator` and `toTestMintingPolicy` now accepts any `FromData` as the script context.
 
 ## 5.1 -- 2021-12-16
 
 ### Changed
 
-* `Purpse` was extended with additional type parameters for additional type safety.
+* `Purpose` was extended with additional type parameters for additional type safety.
 
 ## 5.0 -- 2021-12-10
 
@@ -74,10 +80,10 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ### Changed
 
 * Changed API for testing minting policies:
-  * Replaced `OwnMint` and `OtherMint` constructors to `Minting` with single 
-    `Mint` constructor representing mints of currencies other than that of 
+  * Replaced `OwnMint` and `OtherMint` constructors to `Minting` with single
+    `Mint` constructor representing mints of currencies other than that of
     the policy being tested.
-  * Added a `Tokens` field to `MintingTest`, and a parameter to `GenForMinting` 
+  * Added a `Tokens` field to `MintingTest`, and a parameter to `GenForMinting`
     and `fromArbitraryMinting`.
 * Rename `paysSelf` and `paysOther` into `paysToSelf` and `paysToOther` for
   consistency.

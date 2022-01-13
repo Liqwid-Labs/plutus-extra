@@ -1,5 +1,6 @@
 {-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE NoImplicitPrelude #-}
+{-# OPTIONS_GHC -fno-specialize #-}
 
 {- | Module: PlutusTx.Skeleton
  Copyright: (C) MLabs 2021

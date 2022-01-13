@@ -183,9 +183,10 @@ instance ToData Rational where
 -- | @since 4.0
 instance FromData Rational where
   {-# INLINEABLE fromBuiltinData #-}
-  fromBuiltinData dat = case fromBuiltinData dat of
-    Nothing -> Nothing
-    Just (n, d) -> if d == zero then error () else Just (n % d)
+  fromBuiltinData dat = do
+    (n, d) <- fromBuiltinData dat
+    guard (d /= zero)
+    pure (n % d)
 
 -- | @since 4.0
 instance UnsafeFromData Rational where
