@@ -233,5 +233,5 @@ data TestItems (p :: Purpose) where
     } ->
     TestItems ( 'ForMinting redeemer)
 
--- | @since 5.0
+-- | @since 6.0
 deriving stock instance Show (TestItems p)
