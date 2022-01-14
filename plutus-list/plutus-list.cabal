@@ -51,7 +51,7 @@ library
 
   build-depends:
     , playground-common
-    , plutus-numeric     ^>=4.1
+    , plutus-numeric     ^>=4.2
     , plutus-tx
     , template-haskell   ^>=2.16.0.0
 
@@ -61,13 +61,12 @@ test-suite plutus-list-properties
   import:         lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
-
   build-depends:
     , plutus-list
-    , plutus-numeric     ^>=4.1
+    , plutus-numeric    ^>=4.2
     , plutus-tx
-    , tasty              ^>=1.4.1
-    , tasty-quickcheck   ^>=0.10.1.2
+    , tasty             ^>=1.4.1
+    , tasty-quickcheck  ^>=0.10.1.2
 
   hs-source-dirs: test/property
 
@@ -75,11 +74,10 @@ test-suite plutus-list-size
   import:         lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
-
   build-depends:
     , plutus-ledger-api
     , plutus-list
-    , plutus-numeric     ^>=4.1
+    , plutus-numeric     ^>=4.2
     , plutus-size-check  ^>=1.1
     , plutus-tx
     , plutus-tx-plugin

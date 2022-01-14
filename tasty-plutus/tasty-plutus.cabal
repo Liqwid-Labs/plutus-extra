@@ -75,7 +75,7 @@ library
     , plutus-extra                 ^>=4.0
     , plutus-ledger
     , plutus-ledger-api
-    , plutus-numeric               ^>=4.1
+    , plutus-numeric               ^>=4.2
     , plutus-pretty                ^>=2.2
     , plutus-tx
     , plutus-tx-plugin
@@ -109,7 +109,7 @@ test-suite properties
     , plutus-extra                 ^>=4.0
     , plutus-ledger
     , plutus-ledger-api
-    , plutus-numeric               ^>=4.1
+    , plutus-numeric               ^>=4.2
     , plutus-tx
     , plutus-tx-plugin
     , quickcheck-plutus-instances  ^>=1.5

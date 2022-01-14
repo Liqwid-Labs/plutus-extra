@@ -31,6 +31,7 @@ tests =
       [ fitsInto "+" [bytes| 12 |] . fromCompiledCode $ Nat.natPlus
       , fitsInto "zero" [bytes| 8 |] . fromCompiledCode $ Nat.natZero
       , fitsInto "^-" [bytes| 44 |] . fromCompiledCode $ Nat.natMonus
+      , fitsInto "scaleNat" [bytes| 107 |] .fromCompiledCode $ Nat.natScaleNat
       ]
   , testGroup
       "MultiplicativeMonoid"

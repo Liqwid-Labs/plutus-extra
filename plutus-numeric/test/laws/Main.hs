@@ -8,6 +8,7 @@ import PlutusTx.Numeric.Laws (
   euclideanClosedSignedLaws,
   integralDomainLaws,
   multiplicativeGroupLaws,
+  scaleNatLaws,
  )
 import PlutusTx.Positive (Positive)
 import PlutusTx.Rational (Rational)
@@ -19,6 +20,7 @@ import Test.Tasty.Plutus.Laws (
   dataLaws,
   jsonLaws,
   laws,
+  moduleScaleLaws,
   multiplicativeMonoidLaws,
   multiplicativeSemigroupLaws,
   plutusEqLaws,
@@ -71,6 +73,7 @@ main =
     , semiringConsistencyLaws @Natural
     , semiringConsistencyLaws @Rational
     , semiringConsistencyLaws @NatRatio
+    , moduleScaleLaws @Integer @Rational
     , laws @Natural "Additive hemigroup" additiveHemigroupLaws
     , laws @NatRatio "Additive hemigroup" additiveHemigroupLaws
     , laws @Natural "EuclideanClosed" euclideanClosedLaws
@@ -79,6 +82,10 @@ main =
     , laws @NatRatio "Multiplicative group" multiplicativeGroupLaws
     , laws @Integer "IntegralDomain" integralDomainLaws
     , laws @Rational "IntegralDomain" integralDomainLaws
+    , laws @Integer "scaleNat" scaleNatLaws
+    , laws @Natural "scaleNat" scaleNatLaws
+    , laws @NatRatio "scaleNat" scaleNatLaws
+    , laws @Rational "scaleNat" scaleNatLaws
     ]
   where
     testMinimum :: QuickCheckTests

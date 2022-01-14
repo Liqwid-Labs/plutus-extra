@@ -32,6 +32,7 @@ tests =
       , fitsInto "zero" [bytes| 24 |] . fromCompiledCode $ R.rZero
       , fitsInto "-" [bytes| 159 |] . fromCompiledCode $ R.rMinus
       , fitsInto "negate" [bytes| 35 |] . fromCompiledCode $ R.rNegate
+      , fitsInto "scaleNat" [bytes| 242 |] .fromCompiledCode $ R.rScaleNat
       ]
   , testGroup
       "MultiplicativeGroup"

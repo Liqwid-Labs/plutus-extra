@@ -24,6 +24,7 @@ module Functions.Integer (
   iProjectAbs,
   iAddExtend,
   iRestrictMay,
+  iScaleNat,
   iSignum,
 ) where
 
@@ -41,6 +42,7 @@ import PlutusTx.Numeric.Extra (
   powNat,
   projectAbs,
   restrictMay,
+  scaleNat,
   signum,
  )
 import PlutusTx.Prelude qualified as Plutus
@@ -115,6 +117,9 @@ iAddExtend = $$(compile [||addExtend||])
 
 iRestrictMay :: CompiledCode (Plutus.Integer -> Maybe Natural)
 iRestrictMay = $$(compile [||restrictMay||])
+
+iScaleNat :: CompiledCode (Natural -> Plutus.Integer -> Plutus.Integer)
+iScaleNat = $$(compile [||scaleNat||])
 
 iSignum :: CompiledCode (Plutus.Integer -> Plutus.Integer)
 iSignum = $$(compile [||signum||])
