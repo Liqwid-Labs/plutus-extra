@@ -6,6 +6,18 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Added
 
+* `TestScript` type for wrapping `Validator` and `MintingPilicy`
+* Functions for creating `TestScript`:
+  * `mkTestValidator` for creating `TestScript ('ForSpending d r)`
+  * `mkTestValidatorUnsafe` for creating `TestScript ('ForSpending d r)`
+  * `mkMintingPolicy` for creating `TestScript ('ForMiting r)`
+  * `mkMintingPolicyUnsafe` for creating `TestScript ('ForMiting r)`
+* Functions for creating property based test with parameterized script:
+  * `paramScriptProperty`
+  * `paramScriptPropertyPass` to test the conditions under which a script
+     should always succeed
+  * `paramScriptPropertyFail` to test the conditions under which a script
+     should always succeed
 * ContextBuilder combinators:
   * `paysTokensToPubKey`
   * `paysTokensToWallet`
@@ -19,8 +31,14 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
    required by the tested minting policy
 * Example of property based testing of minting policy
 
+
 ### Changed
 
+* `toTestValidator` is moved to module `Test.Tasty.Plutus.TestScript`
+  and returns `WrappedValidator`
+* `toTestMintingPolicy` is moved to module `Test.Tasty.Plutus.TestScript`
+  and returns `WrappedMintingPolicy`
+* `withValidator` and `withMintingPolicy` now accept `TestScript p`
 * `Tokens` type corresponds to some positive number of 'TokenName' belonging
   to the tested minting policy
 * `ItemsForMinting` fields:
@@ -28,7 +46,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   * `mintCB` to `mpCB`
   * `mintOutcome` to `mpOutcome`
   * `mintTokens :: Tokens` to `mpTasks :: NonEmpty MintimngPolicyTask`
-  
+
 ## 5.2 -- 2022-01-10
 
 ### Changes
