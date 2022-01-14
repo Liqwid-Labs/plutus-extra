@@ -1,7 +1,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# OPTIONS_GHC -Wno-all #-}
 
 module Validator (tests) where
 
@@ -18,7 +17,11 @@ import Test.Tasty.Plutus.Context (
   Purpose (ForSpending),
   paysToPubKey,
  )
-import Test.Tasty.Plutus.Script.Property (scriptProperty, scriptPropertyPass, validatorProperty)
+import Test.Tasty.Plutus.Script.Property (
+  paramScriptProperty,
+  scriptProperty,
+  scriptPropertyPass,
+ )
 import Test.Tasty.Plutus.TestData (
   Generator (GenForSpending),
   Methodology (Methodology),
@@ -33,13 +36,12 @@ import Test.Tasty.Plutus.TestData (
   ),
   passIf,
  )
-import Test.Tasty.Plutus.WithScript (
-  TestValidator,
+import Test.Tasty.Plutus.TestScript (
+  TestScript,
   mkTestValidator,
-  mkTestValidatorUnsafe,
   toTestValidator,
-  withValidator,
  )
+import Test.Tasty.Plutus.WithScript (withValidator)
 import Test.Tasty.QuickCheck (
   Gen,
   arbitrary,
@@ -69,11 +71,10 @@ tests =
           GenForSpending genForSimple transformForSimple2
         scriptPropertyPass "Validator succeeds if the sum and product are correct" $
           GenForSpending genForSimple transformForSimple3
-    , validatorProperty
+    , paramScriptProperty
         "Validator checks secret key"
-        genForParam
         (\(secret, _, _) -> paramTestValidator secret)
-        transformForParam
+        $ GenForSpending genForParam transformForParam
     ]
 
 genForSimple :: Methodology (Integer, Integer, Integer, Integer, Value)
@@ -86,7 +87,9 @@ genForSimple = Methodology gen' genericShrink
       pure (i1, i2, iSum, iProd, val)
 
 -- | Creates TestItems with an arbitrary sum used in Redeemer
-transformForSimple1 :: (Integer, Integer, Integer, Integer, Value) -> TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer))
+transformForSimple1 ::
+  (Integer, Integer, Integer, Integer, Value) ->
+  TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer))
 transformForSimple1 (i1, i2, iSum, _, val) =
   ItemsForSpending
     { spendDatum = (i1, i2)
@@ -102,7 +105,9 @@ transformForSimple1 (i1, i2, iSum, _, val) =
     out = if iSum == i1 + i2 then Pass else Fail
 
 -- | Creates TestItems with an arbitrary product used in Redeemer
-transformForSimple2 :: (Integer, Integer, Integer, Integer, Value) -> TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer))
+transformForSimple2 ::
+  (Integer, Integer, Integer, Integer, Value) ->
+  TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer))
 transformForSimple2 (i1, i2, _, iProd, val) =
   ItemsForSpending
     { spendDatum = (i1, i2)
@@ -118,7 +123,9 @@ transformForSimple2 (i1, i2, _, iProd, val) =
     out = passIf $ iProd == i1 * i2
 
 -- | Always creates TestItems with correct sum and product
-transformForSimple3 :: (Integer, Integer, Integer, Integer, Value) -> TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer))
+transformForSimple3 ::
+  (Integer, Integer, Integer, Integer, Value) ->
+  TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer))
 transformForSimple3 (i1, i2, _, _, val) =
   ItemsForSpending
     { spendDatum = (i1, i2)
@@ -140,7 +147,8 @@ transformForSimple3 (i1, i2, _, _, val) =
   To spend some value, locked by the script with two integers
   you must provide the correct pair of sum and product of these integers.
 -}
-simpleValidator :: (Integer, Integer) -> (Integer, Integer) -> ScriptContext -> Bool
+simpleValidator ::
+  (Integer, Integer) -> (Integer, Integer) -> ScriptContext -> Bool
 simpleValidator (i1, i2) (iSum, iProd) _ = correctSum && correctProduct
   where
     correctSum :: Bool
@@ -153,7 +161,8 @@ simpleValidator (i1, i2) (iSum, iProd) _ = correctSum && correctProduct
       traceIfFalse "The product is wrong" $
         iProd == i1 * i2
 
-simpleTestValidator :: TestValidator (Integer, Integer) (Integer, Integer)
+simpleTestValidator ::
+  TestScript ( 'ForSpending (Integer, Integer) (Integer, Integer))
 simpleTestValidator =
   mkTestValidator
     $$(compile [||simpleValidator||])
@@ -169,7 +178,9 @@ genForParam = Methodology gen genericShrink
       pure (i, i', val)
 
 -- | Creates TestItems with an arbitrary sum used in Redeemer
-transformForParam :: (Integer, Integer, Value) -> TestItems ( 'ForSpending () Integer)
+transformForParam ::
+  (Integer, Integer, Value) ->
+  TestItems ( 'ForSpending () Integer)
 transformForParam (secret, guess, val) =
   ItemsForSpending
     { spendDatum = ()
@@ -192,7 +203,7 @@ paramValidator secret _ guess _ = correctGuess
       traceIfFalse "The guess is wrong" $
         guess == secret
 
-paramTestValidator :: Integer -> TestValidator () Integer
+paramTestValidator :: Integer -> TestScript ( 'ForSpending () Integer)
 paramTestValidator secret =
   mkTestValidator
     ($$(compile [||paramValidator||]) `applyCode` liftCode secret)

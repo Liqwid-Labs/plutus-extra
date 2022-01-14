@@ -80,7 +80,7 @@ import Test.Tasty.Plutus.Internal.Run (
     ScriptPassed
   ),
  )
-import Test.Tasty.Plutus.Internal.TestScript (TestMintingPolicy, TestValidator, getTestMintingPolicy, getTestValidator)
+import Test.Tasty.Plutus.Internal.TestScript (TestScript, getTestMintingPolicy, getTestValidator)
 import Test.Tasty.Plutus.Internal.WithScript (
   WithScript (WithMinting, WithSpending),
  )
@@ -203,7 +203,7 @@ data ScriptTest (p :: Purpose) where
     Maybe (Vector Text -> Bool) ->
     TestData ( 'ForSpending d r) ->
     ContextBuilder ( 'ForSpending d r) ->
-    TestValidator d r ->
+    TestScript ( 'ForSpending d r) ->
     ScriptTest ( 'ForSpending d r)
   Minter ::
     forall (r :: Type).
@@ -211,7 +211,7 @@ data ScriptTest (p :: Purpose) where
     Maybe (Vector Text -> Bool) ->
     TestData ( 'ForMinting r) ->
     ContextBuilder ( 'ForMinting r) ->
-    TestMintingPolicy r ->
+    TestScript ( 'ForMinting r) ->
     ScriptTest ( 'ForMinting r)
 
 data UnitEnv (p :: Purpose) = UnitEnv

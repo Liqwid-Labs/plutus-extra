@@ -51,6 +51,7 @@ library
     Test.Tasty.Plutus.Script.Size
     Test.Tasty.Plutus.Script.Unit
     Test.Tasty.Plutus.TestData
+    Test.Tasty.Plutus.TestScript
     Test.Tasty.Plutus.WithScript
 
   other-modules:

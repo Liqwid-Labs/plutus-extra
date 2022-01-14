@@ -8,7 +8,7 @@ import Data.Sequence (Seq)
 import Test.Tasty.Plutus.Internal.Context (
   Purpose (ForMinting, ForSpending),
  )
-import Test.Tasty.Plutus.Internal.TestScript (TestMintingPolicy, TestValidator)
+import Test.Tasty.Plutus.Internal.TestScript (TestScript)
 import Test.Tasty.Providers (TestTree)
 
 {- | Provides a monadic API for composing tests against the same validator or
@@ -30,11 +30,11 @@ import Test.Tasty.Providers (TestTree)
 data WithScript (p :: Purpose) (a :: Type) where
   WithSpending ::
     forall (a :: Type) (d :: Type) (r :: Type).
-    RWS (TestValidator d r) (Seq TestTree) () a ->
+    RWS (TestScript ( 'ForSpending d r)) (Seq TestTree) () a ->
     WithScript ( 'ForSpending d r) a
   WithMinting ::
     forall (a :: Type) (r :: Type).
-    RWS (TestMintingPolicy r) (Seq TestTree) () a ->
+    RWS (TestScript ( 'ForMinting r)) (Seq TestTree) () a ->
     WithScript ( 'ForMinting r) a
 
 -- | @since 1.0
@@ -71,14 +71,14 @@ instance Monad (WithScript ( 'ForMinting r)) where
     ys
 
 -- | @since 3.0
-instance MonadReader (TestValidator d r) (WithScript ( 'ForSpending d r)) where
+instance MonadReader (TestScript ( 'ForSpending d r)) (WithScript ( 'ForSpending d r)) where
   {-# INLINEABLE ask #-}
   ask = WithSpending ask
   {-# INLINEABLE local #-}
   local f (WithSpending comp) = WithSpending . local f $ comp
 
 -- | @since 3.0
-instance MonadReader (TestMintingPolicy r) (WithScript ( 'ForMinting r)) where
+instance MonadReader (TestScript ( 'ForMinting r)) (WithScript ( 'ForMinting r)) where
   {-# INLINEABLE ask #-}
   ask = WithMinting ask
   {-# INLINEABLE local #-}

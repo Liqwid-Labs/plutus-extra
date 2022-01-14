@@ -36,12 +36,12 @@ import Test.Tasty.Plutus.TestData (
   mintTokens,
   passIf,
  )
-import Test.Tasty.Plutus.WithScript (
-  TestMintingPolicy,
+import Test.Tasty.Plutus.TestScript (
+  TestScript,
   mkTestMintingPolicy,
   toTestMintingPolicy,
-  withMintingPolicy,
  )
+import Test.Tasty.Plutus.WithScript (withMintingPolicy)
 import Test.Tasty.QuickCheck (
   Gen,
   arbitrary,
@@ -128,7 +128,7 @@ myMintingPolicy secret key _ = correctKey
       traceIfFalse "The provided key is wrong" $
         secret == key
 
-myMintingPolicyScript :: TestMintingPolicy Integer
+myMintingPolicyScript :: TestScript ( 'ForMinting Integer)
 myMintingPolicyScript =
   mkTestMintingPolicy
     $$(compile [||myMintingPolicy secretKey||])

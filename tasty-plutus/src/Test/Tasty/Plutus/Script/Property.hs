@@ -35,15 +35,10 @@ module Test.Tasty.Plutus.Script.Property (
   scriptPropertyFail,
   scriptPropertyPass,
 
-  -- * For testing parameterized Validators
-  validatorProperty,
-  validatorPropertyPass,
-  validatorPropertyFail,
-
-  -- * For testing parameterized MintingPolicy
-  mintingPolicyProperty,
-  mintingPolicyPropertyPass,
-  mintingPolicyPropertyFail,
+  -- * For testing parameterized scripts
+  paramScriptProperty,
+  paramScriptPropertyFail,
+  paramScriptPropertyPass,
 ) where
 
 import Control.Monad.RWS.Strict (tell)
@@ -107,8 +102,7 @@ import Test.Tasty.Plutus.Internal.Run (
   ),
  )
 import Test.Tasty.Plutus.Internal.TestScript (
-  TestMintingPolicy,
-  TestValidator,
+  TestScript,
   getTestMintingPolicy,
   getTestValidator,
  )
@@ -219,71 +213,12 @@ scriptPropertyPass ::
   WithScript p ()
 scriptPropertyPass = mkScriptPropertyWith OutcomeAlwaysPass
 
-{- | Given a 'Methodology' to generate a seed, a functions to create
-a 'TestValidator' as well as a 'TestItems' from the seed, check that:
+{- | Given a 'Generator' containig a way to generate a seed and function
+ to create 'TestItems' as well as a function to create "TestScript' from the seed,
+ check that:
 
- * For any 'TestItems' with Outcome equals 'Pass', the 'TestValidator' succeeds; and
- * For any 'TestItems' with Outcome equals 'Fail', the 'TestValidator' fails.
-
- This will also check /coverage/: specifically, the property will fail unless
- the provided way produces roughly equal numbers of 'Pass' and
- 'Fail'-classified cases.
-
- @since 6.0
--}
-validatorProperty ::
-  forall (a :: Type) (d :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable d, Typeable r) =>
-  String ->
-  Methodology a ->
-  (a -> TestValidator d r) ->
-  (a -> TestItems ( 'ForSpending d r)) ->
-  TestTree
-validatorProperty = mkValidatorPropertyWith OutcomeDependent
-
-{- | Given a 'Methodology' to generate a seed, a functions to create
-a 'TestValidator' as well as a 'TestItems' from the seed, check that:
-
- * For any 'TestItems' the 'TestValidator' always succeeds.
-
- This test ignores 'Outcome' from 'TestItems' and changes it to 'Pass'
-
- @since 6.0
--}
-validatorPropertyPass ::
-  forall (a :: Type) (d :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable d, Typeable r) =>
-  String ->
-  Methodology a ->
-  (a -> TestValidator d r) ->
-  (a -> TestItems ( 'ForSpending d r)) ->
-  TestTree
-validatorPropertyPass = mkValidatorPropertyWith OutcomeAlwaysPass
-
-{- | Given a 'Methodology' to generate a seed, a functions to create
-a 'TestValidator' as well as a 'TestItems' from the seed, check that:
-
- * For any 'TestItems' the 'TestValidator' always fails.
-
- This test ignores 'Outcome' from 'TestItems' and changes it to 'Fail'
-
- @since 6.0
--}
-validatorPropertyFail ::
-  forall (a :: Type) (d :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable d, Typeable r) =>
-  String ->
-  Methodology a ->
-  (a -> TestValidator d r) ->
-  (a -> TestItems ( 'ForSpending d r)) ->
-  TestTree
-validatorPropertyFail = mkValidatorPropertyWith OutcomeAlwaysFail
-
-{- | Given a 'Methodology' to generate a seed, a functions to create
-a 'TestMintingPolicy' as well as a 'TestItems' from the seed, check that:
-
- * For any 'TestItems' with Outcome equals 'Pass', the 'TestMitingPolicy' succeeds; and
- * For any 'TestItems' with Outcome equals 'Fail', the 'TestMitingPolicy' fails.
+ * For any 'TestItems' with Outcome equals 'Pass', the 'TestScript' succeeds; and
+ * For any 'TestItems' with Outcome equals 'Fail', the 'TestScript' fails.
 
  This will also check /coverage/: specifically, the property will fail unless
  the provided way produces roughly equal numbers of 'Pass' and
@@ -291,53 +226,61 @@ a 'TestMintingPolicy' as well as a 'TestItems' from the seed, check that:
 
  @since 6.0
 -}
-mintingPolicyProperty ::
-  forall (a :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable r) =>
+paramScriptProperty ::
+  forall (a :: Type) (p :: Purpose).
+  (Show a, Typeable a, Typeable p) =>
+  -- | Property name
   String ->
-  Methodology a ->
-  (a -> TestMintingPolicy r) ->
-  (a -> TestItems ( 'ForMinting r)) ->
+  -- | The way to create 'TestScript' from the seed
+  (a -> TestScript p) ->
+  -- | Data generator
+  Generator a p ->
   TestTree
-mintingPolicyProperty = mkMintingPolicyPropertyWith OutcomeDependent
+paramScriptProperty = mkParamScriptPropertyWith OutcomeDependent
 
-{- | Given a 'Methodology' to generate a seed, a functions to create
-a 'TestMintingPolicy' as well as a 'TestItems' from the seed, check that:
+{- | Given a 'Generator' containig a way to generate a seed and function
+ to create 'TestItems' as well as a function to create "TestScript' from the seed,
+ check that:
 
- * For any 'TestItems' the 'TestMintingPolicy' always succeeds.
+ * For any 'TestItems' the 'TestScript' always succeeds.
 
  This test ignores 'Outcome' from 'TestItems' and changes it to 'Pass'
 
  @since 6.0
 -}
-mintingPolicyPropertyPass ::
-  forall (a :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable r) =>
+paramScriptPropertyPass ::
+  forall (a :: Type) (p :: Purpose).
+  (Show a, Typeable a, Typeable p) =>
+  -- | Property name
   String ->
-  Methodology a ->
-  (a -> TestMintingPolicy r) ->
-  (a -> TestItems ( 'ForMinting r)) ->
+  -- | The way to create 'TestScript' from the seed
+  (a -> TestScript p) ->
+  -- | Data generator
+  Generator a p ->
   TestTree
-mintingPolicyPropertyPass = mkMintingPolicyPropertyWith OutcomeAlwaysPass
+paramScriptPropertyPass = mkParamScriptPropertyWith OutcomeAlwaysPass
 
-{- | Given a 'Methodology' to generate a seed, a functions to create
-a 'TestMintingPolicy' as well as a 'TestItems' from the seed, check that:
+{- | Given a 'Generator' containig a way to generate a seed and function
+ to create 'TestItems' as well as a function to create "TestScript' from the seed,
+ check that:
 
- * For any 'TestItems' the 'TestMintingPolicy' always fails.
+ * For any 'TestItems' the 'TestScript' always fails.
 
  This test ignores 'Outcome' from 'TestItems' and changes it to 'Fail'
 
  @since 6.0
 -}
-mintingPolicyPropertyFail ::
-  forall (a :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable r) =>
+paramScriptPropertyFail ::
+  forall (a :: Type) (p :: Purpose).
+  (Show a, Typeable a, Typeable p) =>
+  -- | Property name
   String ->
-  Methodology a ->
-  (a -> TestMintingPolicy r) ->
-  (a -> TestItems ( 'ForMinting r)) ->
+  -- | The way to create 'TestScript' from the seed
+  (a -> TestScript p) ->
+  -- | Data generator
+  Generator a p ->
   TestTree
-mintingPolicyPropertyFail = mkMintingPolicyPropertyWith OutcomeAlwaysFail
+paramScriptPropertyFail = mkParamScriptPropertyWith OutcomeAlwaysFail
 
 -- Helpers
 
@@ -366,29 +309,22 @@ mkScriptPropertyWith outKind name generator = case generator of
         . singleTest name
         $ Minter gen shrinker (const mp) fTi outKind
 
-mkValidatorPropertyWith ::
-  forall (a :: Type) (d :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable d, Typeable r) =>
+mkParamScriptPropertyWith ::
+  forall (a :: Type) (p :: Purpose).
+  (Show a, Typeable a, Typeable p) =>
   OutcomeKind ->
   String ->
-  Methodology a ->
-  (a -> TestValidator d r) ->
-  (a -> TestItems ( 'ForSpending d r)) ->
+  (a -> TestScript p) ->
+  Generator a p ->
   TestTree
-mkValidatorPropertyWith out name (Methodology gen shr) fVal fTi =
-  singleTest name $ Spender gen shr fVal fTi out
-
-mkMintingPolicyPropertyWith ::
-  forall (a :: Type) (r :: Type).
-  (Show a, Typeable a, Typeable r) =>
-  OutcomeKind ->
-  String ->
-  Methodology a ->
-  (a -> TestMintingPolicy r) ->
-  (a -> TestItems ( 'ForMinting r)) ->
-  TestTree
-mkMintingPolicyPropertyWith out name (Methodology gen shr) fMp fTi =
-  singleTest name $ Minter gen shr fMp fTi out
+mkParamScriptPropertyWith outKind name fScr generator =
+  case generator of
+    GenForSpending (Methodology gen shr) fTi ->
+      singleTest name $
+        Spender gen shr fScr fTi outKind
+    GenForMinting (Methodology gen shr) fTi ->
+      singleTest name $
+        Minter gen shr fScr fTi outKind
 
 data PropertyTest (a :: Type) (p :: Purpose) where
   Spender ::
@@ -396,7 +332,7 @@ data PropertyTest (a :: Type) (p :: Purpose) where
     Typeable a =>
     Gen a ->
     (a -> [a]) ->
-    (a -> TestValidator d r) ->
+    (a -> TestScript ( 'ForSpending d r)) ->
     (a -> TestItems ( 'ForSpending d r)) ->
     OutcomeKind ->
     PropertyTest a ( 'ForSpending d r)
@@ -405,7 +341,7 @@ data PropertyTest (a :: Type) (p :: Purpose) where
     Typeable a =>
     Gen a ->
     (a -> [a]) ->
-    (a -> TestMintingPolicy r) ->
+    (a -> TestScript ( 'ForMinting r)) ->
     (a -> TestItems ( 'ForMinting r)) ->
     OutcomeKind ->
     PropertyTest a ( 'ForMinting r)
@@ -489,7 +425,7 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
 spenderProperty ::
   forall (a :: Type) (d :: Type) (r :: Type).
   OptionSet ->
-  (a -> TestValidator d r) ->
+  (a -> TestScript ( 'ForSpending d r)) ->
   (a -> TestItems ( 'ForSpending d r)) ->
   OutcomeKind ->
   a ->
@@ -555,7 +491,7 @@ prettySpender f outKind seed = case f seed of
 minterProperty ::
   forall (a :: Type) (r :: Type).
   OptionSet ->
-  (a -> TestMintingPolicy r) ->
+  (a -> TestScript ( 'ForMinting r)) ->
   (a -> TestItems ( 'ForMinting r)) ->
   OutcomeKind ->
   a ->

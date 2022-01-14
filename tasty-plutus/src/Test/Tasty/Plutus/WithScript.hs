@@ -12,40 +12,19 @@ module Test.Tasty.Plutus.WithScript (
   -- * Environment monad
   WithScript,
 
-  -- * Wrappers for scripts
-  TestMintingPolicy,
-  TestValidator,
-
   -- * Helper functions
   withValidator,
   withMintingPolicy,
-  toTestValidator,
-  toTestMintingPolicy,
-  mkTestMintingPolicy,
-  mkTestMintingPolicyUnsafe,
-  mkTestValidator,
-  mkTestValidatorUnsafe,
 ) where
 
 import Control.Monad.RWS.Strict (evalRWS)
 import Data.Kind (Type)
 import GHC.Exts (toList)
-import PlutusTx.Builtins (BuiltinString, appendString, trace)
-import PlutusTx.IsData.Class (FromData (fromBuiltinData))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Plutus.Internal.Context (
   Purpose (ForMinting, ForSpending),
  )
-import Test.Tasty.Plutus.Internal.TestScript (
-  TestMintingPolicy,
-  TestValidator,
-  WrappedMintingPolicy (WrappedMintingPolicy),
-  WrappedValidator (WrappedValidator),
-  mkTestMintingPolicy,
-  mkTestMintingPolicyUnsafe,
-  mkTestValidator,
-  mkTestValidatorUnsafe,
- )
+import Test.Tasty.Plutus.Internal.TestScript (TestScript)
 import Test.Tasty.Plutus.Internal.WithScript (
   WithScript (WithMinting, WithSpending),
  )
@@ -78,7 +57,7 @@ import Prelude
 withValidator ::
   forall (d :: Type) (r :: Type).
   String ->
-  TestValidator d r ->
+  TestScript ( 'ForSpending d r) ->
   WithScript ( 'ForSpending d r) () ->
   TestTree
 withValidator name val (WithSpending comp) =
@@ -110,105 +89,9 @@ withValidator name val (WithSpending comp) =
 withMintingPolicy ::
   forall (r :: Type).
   String ->
-  TestMintingPolicy r ->
+  TestScript ( 'ForMinting r) ->
   WithScript ( 'ForMinting r) () ->
   TestTree
 withMintingPolicy name mp (WithMinting comp) =
   case evalRWS comp mp () of
     ((), tests) -> testGroup name . toList $ tests
-
-{- | A wrapper for validators. Use this to construct 'TestValidator's suitable for
- passing to 'withValidator'.
-
- = Usage
-
- > testValidator :: TestValidator SomeType SomeOtherType
- > testValidator =
- >  mkTestValidator
- >    $$(compile [||myValidator||])
- >    $$(compile [||toTestValidator||])
-
- = Important note
-
- If @myValidator@ requires \'burned in\' arguments, these should be passed via
- 'liftCode' and 'applyCode', rather than as literal arguments inside of
- 'compile':
-
- > testValidatorWithArg :: ArgumentType -> TestValidator SomeType SomeOtherType
- > testValidatorWithArg arg =
- >  mkTestValidator
- >    ( $$(compile [||myValidator||])
- >          `applyCode`
- >          liftCode arg
- >    )
- >    $$(compile [||toTestValidator||])
-
- @since 3.0
--}
-{-# INLINEABLE toTestValidator #-}
-toTestValidator ::
-  forall (datum :: Type) (redeemer :: Type) (ctx :: Type).
-  (FromData datum, FromData redeemer, FromData ctx) =>
-  (datum -> redeemer -> ctx -> Bool) ->
-  WrappedValidator
-toTestValidator f = WrappedValidator $ \d r p ->
-  case fromBuiltinData d of
-    Nothing -> reportParseFailed "Datum"
-    Just d' -> case fromBuiltinData r of
-      Nothing -> reportParseFailed "Redeemer"
-      Just r' -> case fromBuiltinData p of
-        Nothing -> reportParseFailed "ScriptContext"
-        Just p' ->
-          if f d' r' p'
-            then reportPass
-            else reportFail
-
-{- | A wrapper for minting policies. Use this to construct a 'MintingPolicy'
- suitable for passing to 'withMintingPolicy'.
-
- The usage (and caveats) of this function is similar to 'toTestValidator'; see
- its documentation for details.
-
- = Usage
-
- > testMintingPolicy :: TestMintingPolicy SomeType
- > testMintingPolicy =
- >  mkTestMintingPolicy
- >    $$(compile [||myMintingPolicy||])
- >    $$(compile [||toTestMintingPolicy||])
-
- @since 3.0
--}
-{-# INLINEABLE toTestMintingPolicy #-}
-toTestMintingPolicy ::
-  forall (redeemer :: Type) (ctx :: Type).
-  (FromData redeemer, FromData ctx) =>
-  (redeemer -> ctx -> Bool) ->
-  WrappedMintingPolicy
-toTestMintingPolicy f = WrappedMintingPolicy $ \r p ->
-  case fromBuiltinData r of
-    Nothing -> reportParseFailed "Redeemer"
-    Just r' -> case fromBuiltinData p of
-      Nothing -> reportParseFailed "ScriptContext"
-      Just p' ->
-        if f r' p'
-          then reportPass
-          else reportFail
-
--- Helpers
-
-{-# INLINEABLE reportParseFailed #-}
-reportParseFailed :: BuiltinString -> ()
-reportParseFailed what = report ("Parse failed: " `appendString` what)
-
-{-# INLINEABLE reportPass #-}
-reportPass :: ()
-reportPass = report "Pass"
-
-{-# INLINEABLE reportFail #-}
-reportFail :: ()
-reportFail = report "Fail"
-
-{-# INLINEABLE report #-}
-report :: BuiltinString -> ()
-report what = trace ("tasty-plutus: " `appendString` what) ()
