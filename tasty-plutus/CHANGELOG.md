@@ -4,6 +4,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 6.0 -- 2022-01-14
+
 ### Added
 
 * `TestScript` type for wrapping `Validator` and `MintingPilicy`
@@ -30,7 +32,6 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * `MintingPolicyAction` and `MintingPolicyTask` to describe the actions
    required by the tested minting policy
 * Example of property based testing of minting policy
-
 
 ### Changed
 
