@@ -43,7 +43,9 @@ module Test.Tasty.Plutus.Context (
 
   -- ** Paying
   paysToPubKey,
+  paysToPubKeyWithDatum,
   paysToWallet,
+  paysToWalletWithDatum,
   paysLovelaceToPubKey,
   paysLovelaceToWallet,
   paysToSelf,
@@ -51,9 +53,13 @@ module Test.Tasty.Plutus.Context (
 
   -- ** Spending
   spendsFromPubKey,
+  spendsFromPubKeyWithDatum,
   spendsFromWallet,
+  spendsFromWalletWithDatum,
   spendsFromPubKeySigned,
+  spendsFromPubKeyWithDatumSigned,
   spendsFromWalletSigned,
+  spendsFromWalletWithDatumSigned,
   spendsFromOther,
 
   -- ** Minting
@@ -160,7 +166,22 @@ paysToPubKey ::
   Value ->
   ContextBuilder p
 paysToPubKey pkh =
-  output . Output (PubKeyType pkh)
+  output . Output (PubKeyType pkh Nothing)
+
+{- | Indicate that a payment must happen to the given public key, worth the
+ given amount and the given datum attached.
+
+ @since 4.0
+-}
+paysToPubKeyWithDatum ::
+  forall (p :: Purpose) (a :: Type).
+  (ToData a) =>
+  PubKeyHash ->
+  Value ->
+  a ->
+  ContextBuilder p
+paysToPubKeyWithDatum pkh val dt =
+  output $ Output (PubKeyType pkh (Just . toBuiltinData $ dt)) val
 
 {- | Indicate that a payment must happen to the given 'Wallet', worth the
  given amount.
@@ -173,6 +194,20 @@ paysToWallet ::
   Value ->
   ContextBuilder p
 paysToWallet wallet = paysToPubKey (walletPubKeyHash wallet)
+
+{- | Indicate that a payment must happen to the given 'Wallet', worth the
+ given amount and the given datum attached.
+
+ @since 4.0
+-}
+paysToWalletWithDatum ::
+  forall (p :: Purpose) (a :: Type).
+  (ToData a) =>
+  Wallet ->
+  Value ->
+  a ->
+  ContextBuilder p
+paysToWalletWithDatum wallet = paysToPubKeyWithDatum (walletPubKeyHash wallet)
 
 {- | Indicate that a payment must happen to the script being tested, worth
  the given amount.
@@ -235,7 +270,22 @@ spendsFromPubKey ::
   Value ->
   ContextBuilder p
 spendsFromPubKey pkh =
-  input . Input (PubKeyType pkh)
+  input . Input (PubKeyType pkh Nothing)
+
+{- | Indicate that the given amount must be spent from the given public key,
+ with the given datum attached.
+
+ @since 4.0
+-}
+spendsFromPubKeyWithDatum ::
+  forall (p :: Purpose) (a :: Type).
+  (ToData a) =>
+  PubKeyHash ->
+  Value ->
+  a ->
+  ContextBuilder p
+spendsFromPubKeyWithDatum pkh val dt =
+  input $ Input (PubKeyType pkh (Just . toBuiltinData $ dt)) val
 
 {- | As 'spendsFromPubKey', with an added signature.
 
@@ -248,6 +298,19 @@ spendsFromPubKeySigned ::
   ContextBuilder p
 spendsFromPubKeySigned pkh v = spendsFromPubKey pkh v <> signedWith pkh
 
+{- | As 'spendsFromPubKeyWithDatum', with an added signature.
+
+ @since 4.0
+-}
+spendsFromPubKeyWithDatumSigned ::
+  forall (p :: Purpose) (a :: Type).
+  (ToData a) =>
+  PubKeyHash ->
+  Value ->
+  a ->
+  ContextBuilder p
+spendsFromPubKeyWithDatumSigned pkh v dt = spendsFromPubKeyWithDatum pkh v dt <> signedWith pkh
+
 {- | Indicate that the given amount must be spent from the given 'Wallet'.
 
  @since 1.0
@@ -259,6 +322,19 @@ spendsFromWallet ::
   ContextBuilder p
 spendsFromWallet wallet = spendsFromPubKey (walletPubKeyHash wallet)
 
+{- | Indicate that the given amount must be spent from the given 'Wallet'.
+
+ @since 4.0
+-}
+spendsFromWalletWithDatum ::
+  forall (p :: Purpose) (a :: Type).
+  (ToData a) =>
+  Wallet ->
+  Value ->
+  a ->
+  ContextBuilder p
+spendsFromWalletWithDatum wallet = spendsFromPubKeyWithDatum (walletPubKeyHash wallet)
+
 {- | As 'spendsFromWallet', with an added signature.
 
  @since 1.0
@@ -269,6 +345,19 @@ spendsFromWalletSigned ::
   Value ->
   ContextBuilder p
 spendsFromWalletSigned wallet = spendsFromPubKeySigned (walletPubKeyHash wallet)
+
+{- | As 'spendsFromWalletWithDatum', with an added signature.
+
+ @since 4.0
+-}
+spendsFromWalletWithDatumSigned ::
+  forall (p :: Purpose) (a :: Type).
+  (ToData a) =>
+  Wallet ->
+  Value ->
+  a ->
+  ContextBuilder p
+spendsFromWalletWithDatumSigned wallet = spendsFromPubKeyWithDatumSigned (walletPubKeyHash wallet)
 
 {- | Indicate that the given amount must be spent from another script.
 
