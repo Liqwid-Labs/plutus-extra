@@ -171,7 +171,7 @@ paysToPubKey pkh =
 {- | Indicate that a payment must happen to the given public key, worth the
  given amount and the given datum attached.
 
- @since 4.0
+ @since 5.3
 -}
 paysToPubKeyWithDatum ::
   forall (p :: Purpose) (a :: Type).
@@ -198,7 +198,7 @@ paysToWallet wallet = paysToPubKey (walletPubKeyHash wallet)
 {- | Indicate that a payment must happen to the given 'Wallet', worth the
  given amount and the given datum attached.
 
- @since 4.0
+ @since 5.3
 -}
 paysToWalletWithDatum ::
   forall (p :: Purpose) (a :: Type).
@@ -275,7 +275,7 @@ spendsFromPubKey pkh =
 {- | Indicate that the given amount must be spent from the given public key,
  with the given datum attached.
 
- @since 4.0
+ @since 5.3
 -}
 spendsFromPubKeyWithDatum ::
   forall (p :: Purpose) (a :: Type).
@@ -300,7 +300,7 @@ spendsFromPubKeySigned pkh v = spendsFromPubKey pkh v <> signedWith pkh
 
 {- | As 'spendsFromPubKeyWithDatum', with an added signature.
 
- @since 4.0
+ @since 5.3
 -}
 spendsFromPubKeyWithDatumSigned ::
   forall (p :: Purpose) (a :: Type).
@@ -324,7 +324,7 @@ spendsFromWallet wallet = spendsFromPubKey (walletPubKeyHash wallet)
 
 {- | Indicate that the given amount must be spent from the given 'Wallet'.
 
- @since 4.0
+ @since 5.3
 -}
 spendsFromWalletWithDatum ::
   forall (p :: Purpose) (a :: Type).
@@ -348,7 +348,7 @@ spendsFromWalletSigned wallet = spendsFromPubKeySigned (walletPubKeyHash wallet)
 
 {- | As 'spendsFromWalletWithDatum', with an added signature.
 
- @since 4.0
+ @since 5.3
 -}
 spendsFromWalletWithDatumSigned ::
   forall (p :: Purpose) (a :: Type).

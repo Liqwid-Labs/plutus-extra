@@ -95,7 +95,7 @@ data Purpose where
  @since 3.0
 -}
 data ExternalType
-  = -- | @since 4.0
+  = -- | @since 5.3
     PubKeyType PubKeyHash (Maybe BuiltinData)
   | -- | @since 3.0
     ScriptType ValidatorHash BuiltinData
