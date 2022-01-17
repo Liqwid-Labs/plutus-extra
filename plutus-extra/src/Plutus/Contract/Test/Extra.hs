@@ -13,6 +13,8 @@ module Plutus.Contract.Test.Extra (
   dataAtComputedAddressWithState,
   valueAtComputedAddressWithState,
   utxoAtComputedAddressWithState,
+  utxoAtComputedAddress,
+  utxoAtAddress,
   addressValueOptions,
 ) where
 
@@ -27,7 +29,7 @@ import Control.Lens (at, view, (^.))
 import Control.Monad (unless, (>=>))
 import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error)
-import Control.Monad.Freer.Reader (ask)
+import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.Freer.Writer (Writer, tell)
 import Data.Default.Class (Default (def))
 import Data.Foldable (fold)
@@ -52,6 +54,7 @@ import Prelude
 
 --------------------------------------------------------------------------------
 
+import Control.Foldl (generalize)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap (UtxoMap)
@@ -64,7 +67,7 @@ import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorConfig (EmulatorConfi
 import PlutusTx (FromData (fromBuiltinData))
 import PlutusTx.Prelude qualified as P
 import Wallet.Emulator.Chain (ChainEvent (..))
-import Wallet.Emulator.Folds (postMapM)
+import Wallet.Emulator.Folds (EmulatorFoldErr, postMapM)
 import Wallet.Emulator.Folds qualified as Folds
 
 --------------------------------------------------------------------------------
@@ -423,7 +426,7 @@ utxoAtComputedAddressWithState contract inst getter check =
  Boolean value based the address, UTxOs, and data aquired from contract's writer instance.
  The address is computed using data acquired from contract's writer instance.
 
-   @since 2.1
+   @since 4.2
 -}
 utxoAtComputedAddress ::
   forall
@@ -468,6 +471,23 @@ utxoAtComputedAddress contract inst addressGetter cont =
               am = foldl' (flip step) (AM.addAddress addr mempty) chainEvents
               utxoMap = view (AM.fundsAt addr) am
           cont w addr utxoMap
+
+{- | Extract UTxOs at an address and perform a validation computation on it.
+
+  @since 4.2
+-}
+utxoAtAddress ::
+  Ledger.Address ->
+  ( UtxoMap ->
+    Eff
+      '[ Reader InitialDistribution
+       , Error EmulatorFoldErr
+       , Writer (Doc Void)
+       ]
+      Bool
+  ) ->
+  TracePredicate
+utxoAtAddress addr = flip postMapM (generalize $ Folds.utxoAtAddress addr)
 
 -- | Get a datum of a given type 'd' out of a Transaction Output.
 getTxOutDatum ::
