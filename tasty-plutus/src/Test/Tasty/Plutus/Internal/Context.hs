@@ -95,8 +95,8 @@ data Purpose where
  @since 3.0
 -}
 data ExternalType
-  = -- | @since 3.0
-    PubKeyType PubKeyHash
+  = -- | @since 5.3
+    PubKeyType PubKeyHash (Maybe BuiltinData)
   | -- | @since 3.0
     ScriptType ValidatorHash BuiltinData
   | -- | @since 3.0
@@ -322,13 +322,13 @@ toInputDatum :: Input -> Maybe (DatumHash, Datum)
 toInputDatum (Input typ _) = case typ of
   ScriptType _ dt -> Just . datumWithHash $ dt
   OwnType dt -> Just . datumWithHash $ dt
-  PubKeyType _ -> Nothing
+  PubKeyType _ dt -> datumWithHash <$> dt
 
 toOutputDatum :: Output -> Maybe (DatumHash, Datum)
 toOutputDatum (Output typ _) = case typ of
   ScriptType _ dt -> Just . datumWithHash $ dt
   OwnType dt -> Just . datumWithHash $ dt
-  PubKeyType _ -> Nothing
+  PubKeyType _ dt -> datumWithHash <$> dt
 
 datumWithHash :: BuiltinData -> (DatumHash, Datum)
 datumWithHash dt = (datumHash dt', dt')
@@ -339,7 +339,7 @@ datumWithHash dt = (datumHash dt', dt')
 createTxInInfo :: TransactionConfig -> (Integer, Input) -> TxInInfo
 createTxInInfo conf (ix, Input typ v) =
   TxInInfo (TxOutRef (testTxId conf) ix) $ case typ of
-    PubKeyType pkh -> TxOut (pubKeyHashAddress pkh) v Nothing
+    PubKeyType pkh dat -> TxOut (pubKeyHashAddress pkh) v $ datumHash . Datum <$> dat
     ScriptType hash dat ->
       TxOut (scriptHashAddress hash) v . justDatumHash $ dat
     OwnType dat ->
@@ -350,7 +350,7 @@ justDatumHash = Just . datumHash . Datum
 
 toTxOut :: ValidatorHash -> Output -> TxOut
 toTxOut valHash (Output typ v) = case typ of
-  PubKeyType pkh -> TxOut (pubKeyHashAddress pkh) v Nothing
+  PubKeyType pkh dat -> TxOut (pubKeyHashAddress pkh) v $ datumHash . Datum <$> dat
   ScriptType hash dat ->
     TxOut (scriptHashAddress hash) v . justDatumHash $ dat
   OwnType dat ->

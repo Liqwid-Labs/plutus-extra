@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               tasty-plutus
-version:            5.1
+version:            5.3
 extra-source-files: CHANGELOG.md
 
 common lang
