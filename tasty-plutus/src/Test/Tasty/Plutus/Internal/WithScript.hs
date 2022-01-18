@@ -15,15 +15,13 @@ import Test.Tasty.Providers (TestTree)
  minting policy. While it has all the capabilities of a monad, you mostly
  won't need them. An example of the intended usage is:
 
- > withValidator "Testing my validator" myValidator $ do
+ > withTestScript "Testing my validator" myValidator $ do
  >    shouldValidate "Valid case" validData validContext
  >    shouldn'tValidate "Invalid context" validData invalidContext
  >    shouldn'tValidate "Invalid data" invalidData validContext
  >    shouldn'tValidate "Everything is bad" invalidData invalidContext
  >    scriptProperty "Some property" myGenerator mkContext
  >    ...
-
- 'withMintingPolicy' works similarly.
 
  @since 3.0
 -}

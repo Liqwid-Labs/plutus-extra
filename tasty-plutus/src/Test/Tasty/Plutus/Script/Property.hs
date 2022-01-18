@@ -12,13 +12,15 @@
 
  = Example usage
 
- > myProperties :: TestTree
- > myProperties = withValidator "Property testing my spending" myValidator $ do
+ > validatorProperties :: TestTree
+ > validatorProperties = withTestScript "Property testing my spending" myValidator $ do
  >   scriptProperty "Some spending property" $ GenForSpending gen' transform'
- >   scriptProperty "Some minting property" $ GenForMinting gen'' transform''
  >   scriptPropertyPass "Validator succeeds" $ GenForSpending genPass transformPass
- >   scriptPropertyFail "MintingPolicy fails" $ GenForMinting genFail transformFail
  >   ...
+ > mintingProperties :: TestTree
+ > mintingProperties = withTestScript "Property testing my minting" myMintingPolicy $ do
+ >   scriptProperty "Some minting property" $ GenForMinting gen'' transform''
+ >   scriptPropertyFail "MintingPolicy fails" $ GenForMinting genFail transformFail
 
  A small example of using can be found
  <https://github.com/Liqwid-Labs/plutus-extra/tasty-plutus/test/Properties/Main.hs here>

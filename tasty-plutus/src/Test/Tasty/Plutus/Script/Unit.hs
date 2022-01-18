@@ -12,8 +12,8 @@
 
  = Example usage
 
- > myTests :: TestTree
- > myTests = withValidator "Testing my spending" myValidator $ do
+ > validatorTests :: TestTree
+ > validatorTests = withTestScript "Testing my spending" myValidator $ do
  >    shouldValidate "Valid case" validData validContext
  >    shouldn'tValidate "Invalid context" validData invalidContext
  >    shouldn'tValidate "Invalid data" invalidData validContext

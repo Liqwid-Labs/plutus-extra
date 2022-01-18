@@ -40,7 +40,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   and returns `WrappedValidator`
 * `toTestMintingPolicy` is moved to module `Test.Tasty.Plutus.TestScript`
   and returns `WrappedMintingPolicy`
-* `withValidator` and `withMintingPolicy` now accept `TestScript p`
+* `withValidator` and `withMintingPolicy` are merged into `withTestScript`
 * `Tokens` type corresponds to some positive number of 'TokenName' belonging
   to the tested minting policy
 * `ItemsForMinting` fields:

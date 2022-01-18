@@ -41,7 +41,7 @@ import Test.Tasty.Plutus.TestScript (
   mkTestValidator,
   toTestValidator,
  )
-import Test.Tasty.Plutus.WithScript (withValidator)
+import Test.Tasty.Plutus.WithScript (withTestScript)
 import Test.Tasty.QuickCheck (
   Gen,
   arbitrary,
@@ -64,7 +64,7 @@ tests :: TestTree
 tests =
   testGroup
     "Validator tests"
-    [ withValidator "With simple TestValidator:" simpleTestValidator $ do
+    [ withTestScript "With simple TestValidator:" simpleTestValidator $ do
         scriptProperty "Validator checks the sum of the inputs" $
           GenForSpending genForSimple transformForSimple1
         scriptProperty "Validator checks the product of the inputs" $

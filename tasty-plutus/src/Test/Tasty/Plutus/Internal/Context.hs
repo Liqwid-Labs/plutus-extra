@@ -302,7 +302,7 @@ compileMinting conf cb toks =
      > , (context1 <> context2, "Missing context 3")
      > ]
 
-     This can then be run in a `withValidator` block
+     This can then be run in a `withTestScript` block
      like so:
 
      > mapM_ (\(ctx,str) -> shouldn'tValidate str input ctx) convertedContexts

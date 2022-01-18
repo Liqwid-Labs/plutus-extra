@@ -41,7 +41,7 @@ import Test.Tasty.Plutus.TestScript (
   mkTestMintingPolicy,
   toTestMintingPolicy,
  )
-import Test.Tasty.Plutus.WithScript (withMintingPolicy)
+import Test.Tasty.Plutus.WithScript (withTestScript)
 import Test.Tasty.QuickCheck (
   Gen,
   arbitrary,
@@ -61,7 +61,7 @@ import Wallet.Emulator.Wallet (fromWalletNumber, walletPubKeyHash)
 
 tests :: TestTree
 tests =
-  withMintingPolicy "myMintinPolicy:" myMintingPolicyScript $ do
+  withTestScript "myMintinPolicy:" myMintingPolicyScript $ do
     scriptProperty "MintingPolicy checks the secret" $
       GenForMinting gen1 transform1
     scriptPropertyPass "MintingPolicy always succeeds if the key is correct" $

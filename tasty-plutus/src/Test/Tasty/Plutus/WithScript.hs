@@ -13,30 +13,27 @@ module Test.Tasty.Plutus.WithScript (
   WithScript,
 
   -- * Helper functions
-  withValidator,
-  withMintingPolicy,
+  withTestScript,
 ) where
 
-import Control.Monad.RWS.Strict (evalRWS)
-import Data.Kind (Type)
+import Control.Monad.RWS.Strict (RWS, evalRWS)
+import Data.Sequence (Seq)
 import GHC.Exts (toList)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Plutus.Internal.Context (
-  Purpose (ForMinting, ForSpending),
- )
+import Test.Tasty.Plutus.Internal.Context (Purpose)
 import Test.Tasty.Plutus.Internal.TestScript (TestScript)
 import Test.Tasty.Plutus.Internal.WithScript (
   WithScript (WithMinting, WithSpending),
  )
 import Prelude
 
-{- | Given the name for the tests, a 'TestValidator', and a collection of
- spending-related tests, execute all of them as a 'TestTree'.
+{- | Given the name for the tests, a 'TestScript', and a collection of
+ tests, execute all of them as a 'TestTree'.
 
  = Usage
 
- > myTests :: TestTree
- > myTests = withValidator "Testing my spending" myTestValidator $ do
+ > validatorTests :: TestTree
+ > validatorTests = withTestScript "Testing my validator" myTestValidator $ do
  >    shouldValidate "Valid case" validData validContext
  >    shouldn'tValidate "Invalid context" validData invalidContext
  >    shouldn'tValidate "Invalid data" invalidData validContext
@@ -45,32 +42,8 @@ import Prelude
  >    shouldn'tValidateTracing "Oh damn" tracePred invalidData validContext
  >    scriptProperty "Some property" myGenerator mkContext
  >    ...
-
- = Important note
-
- Unless your 'TestValidator' has been prepared using 'toTestValidator', this will
- likely not behave as intended. We use 'WrappedValidator' to prevent
- other wrapper functions from being used.
-
- @since 6.0
--}
-withValidator ::
-  forall (d :: Type) (r :: Type).
-  String ->
-  TestScript ( 'ForSpending d r) ->
-  WithScript ( 'ForSpending d r) () ->
-  TestTree
-withValidator name val (WithSpending comp) =
-  case evalRWS comp val () of
-    ((), tests) -> testGroup name . toList $ tests
-
-{- | Given the name for the tests, a 'TestMintingPolicy', and a collection of
- minting-related tests, execute all of them as a 'TestTree'.
-
- = Usage
-
- > myTests :: TestTree
- > myTests = withMintingPolicy "Testing my minting" myTestMintingPolicy $ do
+ >  mintingPolicyTests :: TestTree
+ >  mintingPolicyTests = withTestScript "Testing my minting" myTestMintingPolicy $ do
  >    shouldValidate "Valid case" validData validContext
  >    shouldn'tValidate "Invalid context" validData invalidContext
  >    shouldn'tValidate "Invalid data" invalidData validContext
@@ -80,18 +53,23 @@ withValidator name val (WithSpending comp) =
 
  = Important note
 
- Unless your 'TestMintingPolicy' has been prepared using 'toTestMintingPolicy',
- this will likely not behave as intended. We use 'WrappedMintingPolicy' to prevent
- other wrapper functions from being used.
+ Unless your 'TestScript' has been prepared using 'toTestValidator'
+ or 'toTestMintingPolicy', this will likely not behave as intended.
+ We use 'WrappedValidator' to prevent other wrapper functions from being used.
 
  @since 6.0
 -}
-withMintingPolicy ::
-  forall (r :: Type).
+withTestScript ::
+  forall (p :: Purpose).
   String ->
-  TestScript ( 'ForMinting r) ->
-  WithScript ( 'ForMinting r) () ->
+  TestScript p ->
+  WithScript p () ->
   TestTree
-withMintingPolicy name mp (WithMinting comp) =
-  case evalRWS comp mp () of
-    ((), tests) -> testGroup name . toList $ tests
+withTestScript name ts = \case
+  WithSpending comp -> go comp
+  WithMinting comp -> go comp
+  where
+    go :: RWS (TestScript p) (Seq TestTree) () () -> TestTree
+    go rws =
+      let ((), tests) = evalRWS rws ts ()
+       in testGroup name . toList $ tests
