@@ -4,7 +4,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## 5.3 -- 2022-01-17
 
-### Changes
+### Added
 
 * Added `paysToPubKeyWithDatum`, `paysToWalletWithDatum` including a Datum for pub key outputs and
   `spendsFromPubKeyWithDatum`, `spendsFromPubKeyWithDatumSigned`, `spendsFromWalletWithDatum`,
@@ -12,7 +12,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## 5.2 -- 2022-01-10
 
-### Changes
+### Changed
 
 * `toTestValidator` and `toTestMintingPolicy` now accepts any `FromData` as the script context.
 
