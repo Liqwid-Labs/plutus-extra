@@ -153,11 +153,11 @@ import Text.Show.Pretty (ppDoc)
 import Type.Reflection (Typeable)
 import Prelude
 
-{- | Given a 'Generator' containig a way to generate a seed,
+{- | Given a 'Generator' containing a way to generate a seed,
 and a function to create 'TestItems' from the seed, check that:
 
- * For any 'TestItems' with Outcome equals 'Pass', the script succeeds; and
- * For any 'TestItems' with Outcome equals 'Fail', the script fails.
+ * For any 'TestItems' where the 'Outcome' is 'Pass', the script succeeds; and
+ * For any 'TestItems' where the 'Outcome' is 'Fail', the script fails.
 
  This will also check /coverage/: specifically, the property will fail unless
  the provided way produces roughly equal numbers of 'Pass' and
@@ -175,12 +175,12 @@ scriptProperty ::
   WithScript p ()
 scriptProperty = mkScriptPropertyWith OutcomeDependent
 
-{- | Given a 'Generator' containig a way to generate a seed,
+{- | Given a 'Generator' containing a way to generate a seed,
 and a function to create 'TestItems' from the seed, check that:
 
  * For any 'TestItems' the script always fails.
 
- This test ignores 'Outcome' from 'TestItems' and changes it to 'Fail'
+ This test ignores the 'Outcome' from 'TestItems' and changes it to 'Fail'
 
  @since 5.0
 -}
@@ -194,12 +194,12 @@ scriptPropertyFail ::
   WithScript p ()
 scriptPropertyFail = mkScriptPropertyWith OutcomeAlwaysFail
 
-{- | Given a 'Generator' containig a way to generate a seed,
+{- | Given a 'Generator' containing a way to generate a seed,
 and a function to create 'TestItems' from the seed, check that:
 
  * For any 'TestItems' the script always succeeds.
 
- This test ignores 'Outcome' from 'TestItems' and changes it to 'Pass'
+ This test ignores the 'Outcome' from 'TestItems' and changes it to 'Pass'
 
  @since 5.0
 -}
@@ -213,12 +213,12 @@ scriptPropertyPass ::
   WithScript p ()
 scriptPropertyPass = mkScriptPropertyWith OutcomeAlwaysPass
 
-{- | Given a 'Generator' containig a way to generate a seed and function
- to create 'TestItems' as well as a function to create "TestScript' from the seed,
+{- | Given a 'Generator' containing a way to generate a seed and function
+ to create 'TestItems', as well as a function to create 'TestScript' from the seed,
  check that:
 
- * For any 'TestItems' with Outcome equals 'Pass', the 'TestScript' succeeds; and
- * For any 'TestItems' with Outcome equals 'Fail', the 'TestScript' fails.
+ * For any 'TestItems' where the 'Outcome' is 'Pass', the 'TestScript' succeeds; and
+ * For any 'TestItems' where the 'Outcome' is 'Fail', the 'TestScript' fails.
 
  This will also check /coverage/: specifically, the property will fail unless
  the provided way produces roughly equal numbers of 'Pass' and
@@ -238,13 +238,13 @@ paramScriptProperty ::
   TestTree
 paramScriptProperty = mkParamScriptPropertyWith OutcomeDependent
 
-{- | Given a 'Generator' containig a way to generate a seed and function
- to create 'TestItems' as well as a function to create "TestScript' from the seed,
+{- | Given a 'Generator' containing a way to generate a seed and function
+ to create 'TestItems', as well as a function to create 'TestScript' from the seed,
  check that:
 
  * For any 'TestItems' the 'TestScript' always succeeds.
 
- This test ignores 'Outcome' from 'TestItems' and changes it to 'Pass'
+ This test ignores the 'Outcome' from 'TestItems' and changes it to 'Pass'
 
  @since 6.0
 -}
@@ -260,13 +260,13 @@ paramScriptPropertyPass ::
   TestTree
 paramScriptPropertyPass = mkParamScriptPropertyWith OutcomeAlwaysPass
 
-{- | Given a 'Generator' containig a way to generate a seed and function
- to create 'TestItems' as well as a function to create "TestScript' from the seed,
+{- | Given a 'Generator' containing a way to generate a seed and function
+ to create 'TestItems', as well as a function to create 'TestScript' from the seed,
  check that:
 
  * For any 'TestItems' the 'TestScript' always fails.
 
- This test ignores 'Outcome' from 'TestItems' and changes it to 'Fail'
+ This test ignores the 'Outcome' from 'TestItems' and changes it to 'Fail'
 
  @since 6.0
 -}

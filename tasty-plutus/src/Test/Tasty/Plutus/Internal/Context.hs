@@ -114,10 +114,10 @@ data ExternalType
 
 {- | Different types of value:
 
-  `TokensValue` is only used within `ContextBuilder ('ForMinting r)`
+  'TokensValue' is only used within @ContextBuilder ('ForMinting r)@
   for representing classes, belonging to the tested MintingPolicy.
 
-  In all other cases `GeneralValue` is used.
+  In all other cases 'GeneralValue' is used.
 
  @since 6.0
 -}
@@ -128,6 +128,8 @@ data ValueType
     TokensValue TokenName Positive
   deriving stock
     ( -- | @since 6.0
+      Eq
+    , -- | @since 6.0
       Show
     )
 
@@ -136,7 +138,7 @@ data ValueType
  @since 1.0
 -}
 data Input
-  = -- | @since 3.0
+  = -- | @since 6.0
     Input ExternalType ValueType
   deriving stock
     ( -- | @since 1.0
@@ -148,14 +150,14 @@ data Input
  @since 1.0
 -}
 data Output
-  = -- | @since 3.0
+  = -- | @since 6.0
     Output ExternalType ValueType
   deriving stock
     ( -- | @since 1.0
       Show
     )
 
-{- | 'Value' minted with minting policy other than the tested one.
+{- | A 'Value' minted with a minting policy other than the one being tested.
  Do not use this for tokens being minted by the tested minting policy.
 
  = Note

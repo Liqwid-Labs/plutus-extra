@@ -31,11 +31,11 @@ import Test.Tasty.Plutus.Internal.Context (Purpose (ForMinting, ForSpending))
 {- | Typed wrapper for the 'Validator' and 'MintingPolicy' used to match
  the datum and redeemer types of the 'Validator' and the data passed to it.
 
- We don't expose constructors. To create you need to use helper functions
+ We don't expose constructors. To create a 'TestScript', use helper functions,
  such as 'mkTestValidator' and 'mkTestMintingPolicy'. In case you intend
  to test something tricky, you can use 'mkTestValidatorUnsafe'
  and 'mkTestMintingPolicyUnsafe' to create a 'TestScript'
- that accepts datum and/or redeemer inconsistent with its internal type.
+ that accepts a datum and/or redeemer inconsistent with its internal type.
 
  @since 6.0
 -}
@@ -56,7 +56,7 @@ deriving stock instance Show (TestScript p)
 
 {- | A wrapper for an untyped 'Validator'. This is similar
  to 'WrappedValidatorType' from the Plutus 'Ledger.Typed.Scripts' module.
- It`s aim is to force you to use 'toTestValidator' to create a 'TestValidator'.
+ Its aim is to force you to use 'toTestValidator' to create a 'TestValidator'.
 
  @since 6.0
 -}
@@ -70,7 +70,7 @@ getWrappedValidator (WrappedValidator v) = v
 
 {- | A wrapper for an untyped 'MintingPolicy'. This is similar
  to 'WrappedMintingPolicyType' from the Plutus 'Ledger.Typed.Scripts' module.
- It`s aim is to force you to use 'toTestMintingPolicy' to create
+ Its aim is to force you to use 'toTestMintingPolicy' to create
  a 'TestMintingPolicy'.
 
  @since 6.0
@@ -83,8 +83,8 @@ getWrappedMintingPolicy ::
   WrappedMintingPolicy -> (BuiltinData -> BuiltinData -> ())
 getWrappedMintingPolicy (WrappedMintingPolicy mp) = mp
 
-{- | 'mkTestValidator' provide the way for creating 'TestScript' with
- the given 'Validator', parameterized with proper datum and redeemer types.
+{- | Create a 'TestScript' with the given 'Validator', parameterized
+ with proper datum and redeemer types.
 
   = Usage
 
@@ -107,12 +107,15 @@ mkTestValidator v wr =
       applyCode $$(compile [||getWrappedValidator||]) $
         wr `applyCode` v
 
-{- | 'mkTestValidatorUnsafe' provide the way for creating 'TestScript' with
- the given 'Validator', parameterized with any datum and redeemer types.
- You can use it in case you going to test something tricky and need to break
- types compatibility.
+{- | As 'mkTestValidator', but without any guarantees of consistency regarding
+ datum and redeemer types. You can use this in case you need to test something
+ tricky, and the 'mkTestValidator' restrictions make this impossible.
 
-  = Usage
+ = Note
+
+ This is not safe and may result in an error when the script is run.
+
+ = Usage
 
  > myValidator :: SomeDatumType -> SomeRedeemerType -> ScriptContext -> Bool
  > myValidator d r ctx = ...
@@ -137,8 +140,8 @@ mkTestValidatorUnsafe v wr =
       applyCode $$(compile [||getWrappedValidator||]) $
         wr `applyCode` v
 
-{- | 'mkTestMintingPolicy' provide the way for creating 'TestScript' with
- the given 'MintingPolicy', parameterized with proper redeemer type.
+{- | Create a 'TestScript' with the given 'MintingPolicy', parameterized
+ with proper redeemer type.
 
   = Usage
 
@@ -161,10 +164,13 @@ mkTestMintingPolicy mp wr =
       applyCode $$(compile [||getWrappedMintingPolicy||]) $
         wr `applyCode` mp
 
-{- | 'mkTestMintingPolicyUnsafe' provide the way for creating 'TestScript' with
- the given 'MintingPolicy', parameterized with any redeemer type.
- You can use it in case you going to test something tricky
- and need to break types compatibility.
+{- | As 'mkTestMintingPolicy', but without any guarantees of consistency regarding
+ redeemer type. You can use this in case you need to test something
+ tricky, and the 'mkTestMintingPolicy' restrictions make this impossible.
+
+ = Note
+
+ This is not safe and may result in an error when the script is run.
 
   = Usage
 
@@ -190,7 +196,7 @@ mkTestMintingPolicyUnsafe mp wr =
       applyCode $$(compile [||getWrappedMintingPolicy||]) $
         wr `applyCode` mp
 
-{- | A wrapper for validators. Use this to construct 'TestScript ForSpending'
+{- | A wrapper for validators. Use this to construct @TestScript ForSpending@.
 
  = Usage
 
@@ -238,7 +244,7 @@ toTestValidator f = WrappedValidator $ \d r p ->
             else reportFail
 
 {- | A wrapper for minting policies. Use this to construct
- a 'TestScript ForMinting'.
+ a @TestScript ForMinting@.
 
  The usage (and caveats) of this function is similar to 'toTestValidator'; see
  its documentation for details.

@@ -148,14 +148,14 @@ addDatum ::
   ContextBuilder p
 addDatum = datum . toBuiltinData
 
-{- | Context with minting Value using a MintingPolicy other than the tested one.
+{- | Context with 'Minting' value using a minting policy other than the tested one.
 
  = Note
 
- Do not use this for Value being minted by the tested MintingPolicy;
+ Do not use this for 'Value' being minted by the tested minting policy.
 
- AssetСlasses with CurrencySymbol matching testCurrencySymbol in TransactionConfig
- will be excluded from the resulting ScriptContext
+ Asset classes with 'CurrencySymbol' matching testCurrencySymbol in 'TransactionConfig'
+ will be excluded from the resulting 'ScriptContext'.
 
  @since 3.2
 -}
@@ -180,7 +180,7 @@ paysToPubKey pkh =
   output . Output (PubKeyType pkh) . GeneralValue
 
 {- | Indicate that the given 'Tokens' controlled by the tested minting policy
-must be payed to the given public key.
+must be paid to the given public key.
 
  @since 6.0
 -}
@@ -205,7 +205,7 @@ paysToWallet ::
 paysToWallet wallet = paysToPubKey (walletPubKeyHash wallet)
 
 {- | Indicate that the given 'Tokens' controlled by the tested minting policy
- must be payed to the given 'Wallet'.
+ must be paid to the given 'Wallet'.
 
  @since 6.0
 -}
@@ -219,7 +219,7 @@ paysTokensToWallet wallet = paysTokensToPubKey (walletPubKeyHash wallet)
 {- | Indicate that a payment must happen to the script being tested, worth
  the given amount.
 
- @since 4.0
+ @since 6.0
 -}
 paysToSelf ::
   forall (d :: Type) (r :: Type).
@@ -246,7 +246,7 @@ paysToOther hash v dt =
   output . Output (ScriptType hash . toBuiltinData $ dt) $ GeneralValue v
 
 {- | Indicate that the given 'Tokens' controlled by the tested minting policy
- must be payed to another script.
+ must be paid to another script.
 
  @since 6.0
 -}
@@ -406,7 +406,7 @@ spendsTokensFromOther ::
 spendsTokensFromOther hash (Tokens tn pos) d =
   input . Input (ScriptType hash . toBuiltinData $ d) $ TokensValue tn pos
 
-{- | Indicate that the given 'Value' must be minted with minting policy
+{- | Indicate that the given 'Value' must be minted with a minting policy
  other than the tested one.
 
  @since 3.2

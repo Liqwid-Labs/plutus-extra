@@ -84,7 +84,7 @@ data TestData (p :: Purpose) where
     redeemer ->
     -- | List of tokens to be minted by the script.
     --
-    -- @since 4.1
+    -- @since 6.0
     NonEmpty MintingPolicyTask ->
     TestData ( 'ForMinting redeemer)
 

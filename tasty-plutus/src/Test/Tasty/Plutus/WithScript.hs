@@ -52,7 +52,7 @@ import Prelude
  likely not behave as intended. We use 'WrappedValidator' to prevent
  other wrapper functions from being used.
 
- @since 3.0
+ @since 6.0
 -}
 withValidator ::
   forall (d :: Type) (r :: Type).
@@ -84,7 +84,7 @@ withValidator name val (WithSpending comp) =
  this will likely not behave as intended. We use 'WrappedMintingPolicy' to prevent
  other wrapper functions from being used.
 
- @since 3.0
+ @since 6.0
 -}
 withMintingPolicy ::
   forall (r :: Type).
