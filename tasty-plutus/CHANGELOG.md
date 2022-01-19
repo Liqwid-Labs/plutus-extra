@@ -2,9 +2,64 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## Unreleased
+
+## 6.0 -- 2022-01-19
+
+### Added
+
+* `TestScript` type for wrapping `Validator` and `MintingPilicy`
+* Functions for creating `TestScript`:
+  * `mkTestValidator` for creating `TestScript ('ForSpending d r)`
+  * `mkTestValidatorUnsafe` for creating `TestScript ('ForSpending d r)`
+  * `mkMintingPolicy` for creating `TestScript ('ForMiting r)`
+  * `mkMintingPolicyUnsafe` for creating `TestScript ('ForMiting r)`
+* Functions for creating property based test with parameterized script:
+  * `paramScriptProperty`
+  * `paramScriptPropertyPass` to test the conditions under which a script
+     should always succeed
+  * `paramScriptPropertyFail` to test the conditions under which a script
+     should always succeed
+* ContextBuilder combinators:
+  * `paysTokensToPubKey`
+  * `paysTokensToWallet`
+  * `paysTokensToOther`
+  * `spendsTokensFromPubKey`
+  * `spendsTokensFromWallet`
+  * `spendsTokensFromPubKeySigned`
+  * `spendsTokensFromWalletSigned`
+  * `spendsTokensFromOther`
+* `MintingPolicyAction` and `MintingPolicyTask` to describe the actions
+   required by the tested minting policy
+* Example of property based testing of minting policy
+* `Show` instance for `TestItems`
+
+### Changed
+
+* `toTestValidator` is moved to module `Test.Tasty.Plutus.TestScript`
+  and returns `WrappedValidator`
+* `toTestMintingPolicy` is moved to module `Test.Tasty.Plutus.TestScript`
+  and returns `WrappedMintingPolicy`
+* `withValidator` and `withMintingPolicy` are merged into `withTestScript`
+* `Tokens` type corresponds to some positive number of 'TokenName' belonging
+  to the tested minting policy
+* `ItemsForMinting` fields:
+  * `mintRedeemer` to `mpRedeemer`
+  * `mintCB` to `mpCB`
+  * `mintOutcome` to `mpOutcome`
+  * `mintTokens :: Tokens` to `mpTasks :: NonEmpty MintimngPolicyTask`
+
+## 5.3 -- 2022-01-17
+
+### Added
+
+* Added `paysToPubKeyWithDatum`, `paysToWalletWithDatum` including a Datum for pub key outputs and
+  `spendsFromPubKeyWithDatum`, `spendsFromPubKeyWithDatumSigned`, `spendsFromWalletWithDatum`,
+  `spendsFromWalletWithDatumSigned` for pub key inputs
+
 ## 5.2 -- 2022-01-10
 
-### Changes
+### Changed
 
 * `toTestValidator` and `toTestMintingPolicy` now accepts any `FromData` as the script context.
 
