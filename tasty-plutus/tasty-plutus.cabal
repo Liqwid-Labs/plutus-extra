@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               tasty-plutus
-version:            5.3
+version:            6.0
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -51,39 +51,46 @@ library
     Test.Tasty.Plutus.Script.Size
     Test.Tasty.Plutus.Script.Unit
     Test.Tasty.Plutus.TestData
+    Test.Tasty.Plutus.TestScript
     Test.Tasty.Plutus.WithScript
 
   other-modules:
     Test.Tasty.Plutus.Internal.Context
     Test.Tasty.Plutus.Internal.Env
     Test.Tasty.Plutus.Internal.Feedback
+    Test.Tasty.Plutus.Internal.Minting
     Test.Tasty.Plutus.Internal.Options
     Test.Tasty.Plutus.Internal.Run
+    Test.Tasty.Plutus.Internal.TestScript
     Test.Tasty.Plutus.Internal.WithScript
     Test.Tasty.Plutus.Options.QQ
 
   build-depends:
-    , base               ^>=4.14
-    , bytestring         ^>=0.10.12.0
+    , base                         ^>=4.14
+    , bytestring                   ^>=0.10.12.0
     , cardano-api
-    , containers         ^>=0.6.2.1
-    , mtl                ^>=2.2.2
+    , containers                   ^>=0.6.2.1
+    , mtl                          ^>=2.2.2
     , plutus-contract
+    , plutus-extra                 ^>=4.0
     , plutus-ledger
     , plutus-ledger-api
-    , plutus-numeric     ^>=4.2
-    , plutus-pretty      ^>=2.2
+    , plutus-numeric               ^>=4.2
+    , plutus-pretty                ^>=2.2
     , plutus-tx
-    , pretty             ^>=1.1.3.6
-    , pretty-show        ^>=1.10
-    , QuickCheck         ^>=2.14.2
-    , safe               ^>=0.3.19
-    , serialise          ^>=0.2.3.0
-    , tagged             ^>=0.8.6.1
-    , tasty              ^>=1.4.1
-    , template-haskell   ^>=2.16.0.0
-    , text               ^>=1.2.4.1
-    , vector             ^>=0.12.3.0
+    , plutus-tx-plugin
+    , pretty                       ^>=1.1.3.6
+    , pretty-show                  ^>=1.10
+    , QuickCheck                   ^>=2.14.2
+    , quickcheck-plutus-instances  ^>=1.5
+    , row-types                    ^>=1.0.1
+    , safe                         ^>=0.3.19
+    , serialise                    ^>=0.2.3.0
+    , tagged                       ^>=0.8.6.1
+    , tasty                        ^>=1.4.1
+    , template-haskell             ^>=2.16.0.0
+    , text                         ^>=1.2.4.1
+    , vector                       ^>=0.12.3.0
 
   hs-source-dirs:  src
 
@@ -92,6 +99,9 @@ test-suite properties
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   other-modules:
+    MintingPolicy
+    Validator
+
   hs-source-dirs: test/Properties
   build-depends:
     , base                         ^>=4.14
@@ -99,11 +109,12 @@ test-suite properties
     , plutus-extra                 ^>=4.0
     , plutus-ledger
     , plutus-ledger-api
+    , plutus-numeric               ^>=4.2
     , plutus-tx
     , plutus-tx-plugin
     , quickcheck-plutus-instances  ^>=1.5
     , tasty                        ^>=1.4.1
-    , tasty-plutus
+    , tasty-plutus                 ^>=6.0
     , tasty-quickcheck             ^>=0.10.1.2
 
   ghc-options:    -threaded -rtsopts -with-rtsopts=-N -O1

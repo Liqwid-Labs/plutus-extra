@@ -44,23 +44,31 @@ module Test.Tasty.Plutus.Context (
   -- ** Paying
   paysToPubKey,
   paysToPubKeyWithDatum,
+  paysTokensToPubKey,
   paysToWallet,
   paysToWalletWithDatum,
+  paysTokensToWallet,
   paysLovelaceToPubKey,
   paysLovelaceToWallet,
   paysToSelf,
   paysToOther,
+  paysTokensToOther,
 
   -- ** Spending
   spendsFromPubKey,
   spendsFromPubKeyWithDatum,
-  spendsFromWallet,
-  spendsFromWalletWithDatum,
+  spendsTokensFromPubKey,
   spendsFromPubKeySigned,
   spendsFromPubKeyWithDatumSigned,
+  spendsTokensFromPubKeySigned,
+  spendsFromWallet,
+  spendsFromWalletWithDatum,
+  spendsTokensFromWallet,
   spendsFromWalletSigned,
   spendsFromWalletWithDatumSigned,
+  spendsTokensFromWalletSigned,
   spendsFromOther,
+  spendsTokensFromOther,
 
   -- ** Minting
   mintsValue,
@@ -84,9 +92,11 @@ import Test.Tasty.Plutus.Internal.Context (
   Minting (Mint),
   Output (Output),
   Purpose (ForMinting, ForSpending),
+  ValueType (GeneralValue, TokensValue),
   makeIncompleteContexts,
   outputsToInputs,
  )
+import Test.Tasty.Plutus.Internal.Minting (Tokens (Tokens))
 import Wallet.Emulator.Types (Wallet, walletPubKeyHash)
 
 {- | Single-input context.
@@ -144,7 +154,14 @@ addDatum ::
   ContextBuilder p
 addDatum = datum . toBuiltinData
 
-{- | Context with one minting using a different MintingPolicy.
+{- | Context with 'Minting' value using a minting policy other than the tested one.
+
+ = Note
+
+ Do not use this for 'Value' being minted by the tested minting policy.
+
+ Asset classes with 'CurrencySymbol' matching testCurrencySymbol in 'TransactionConfig'
+ will be excluded from the resulting 'ScriptContext'.
 
  @since 3.2
 -}
@@ -166,7 +183,7 @@ paysToPubKey ::
   Value ->
   ContextBuilder p
 paysToPubKey pkh =
-  output . Output (PubKeyType pkh Nothing)
+  output . Output (PubKeyType pkh Nothing) . GeneralValue
 
 {- | Indicate that a payment must happen to the given public key, worth the
  given amount and the given datum attached.
@@ -181,7 +198,22 @@ paysToPubKeyWithDatum ::
   a ->
   ContextBuilder p
 paysToPubKeyWithDatum pkh val dt =
-  output $ Output (PubKeyType pkh (Just . toBuiltinData $ dt)) val
+  let value = GeneralValue val
+      outType = PubKeyType pkh (Just $ toBuiltinData dt)
+   in output $ Output outType value
+
+{- | Indicate that the given 'Tokens' controlled by the tested minting policy
+must be paid to the given public key.
+
+ @since 6.0
+-}
+paysTokensToPubKey ::
+  forall (r :: Type).
+  PubKeyHash ->
+  Tokens ->
+  ContextBuilder ( 'ForMinting r)
+paysTokensToPubKey pkh (Tokens tn pos) =
+  output . Output (PubKeyType pkh Nothing) $ TokensValue tn pos
 
 {- | Indicate that a payment must happen to the given 'Wallet', worth the
  given amount.
@@ -209,19 +241,31 @@ paysToWalletWithDatum ::
   ContextBuilder p
 paysToWalletWithDatum wallet = paysToPubKeyWithDatum (walletPubKeyHash wallet)
 
+{- | Indicate that the given 'Tokens' controlled by the tested minting policy
+ must be paid to the given 'Wallet'.
+
+ @since 6.0
+-}
+paysTokensToWallet ::
+  forall (r :: Type).
+  Wallet ->
+  Tokens ->
+  ContextBuilder ( 'ForMinting r)
+paysTokensToWallet wallet = paysTokensToPubKey (walletPubKeyHash wallet)
+
 {- | Indicate that a payment must happen to the script being tested, worth
  the given amount.
 
- @since 4.0
+ @since 6.0
 -}
 paysToSelf ::
-  forall (p :: Purpose) (a :: Type).
-  (ToData a) =>
+  forall (d :: Type) (r :: Type).
+  (ToData d) =>
   Value ->
-  a ->
-  ContextBuilder p
+  d ->
+  ContextBuilder ( 'ForSpending d r)
 paysToSelf v dt =
-  output . Output (OwnType . toBuiltinData $ dt) $ v
+  output . Output (OwnType . toBuiltinData $ dt) $ GeneralValue v
 
 {- | Indicate that a payment must happen to another script, worth the
  given amount.
@@ -236,7 +280,22 @@ paysToOther ::
   a ->
   ContextBuilder p
 paysToOther hash v dt =
-  output . Output (ScriptType hash . toBuiltinData $ dt) $ v
+  output . Output (ScriptType hash . toBuiltinData $ dt) $ GeneralValue v
+
+{- | Indicate that the given 'Tokens' controlled by the tested minting policy
+ must be paid to another script.
+
+ @since 6.0
+-}
+paysTokensToOther ::
+  forall (a :: Type) (r :: Type).
+  (ToData a) =>
+  ValidatorHash ->
+  Tokens ->
+  a ->
+  ContextBuilder ( 'ForMinting r)
+paysTokensToOther hash (Tokens tn pos) dt =
+  output . Output (ScriptType hash . toBuiltinData $ dt) $ TokensValue tn pos
 
 {- | As 'paysToPubKey', but using Lovelace.
 
@@ -270,7 +329,7 @@ spendsFromPubKey ::
   Value ->
   ContextBuilder p
 spendsFromPubKey pkh =
-  input . Input (PubKeyType pkh Nothing)
+  input . Input (PubKeyType pkh Nothing) . GeneralValue
 
 {- | Indicate that the given amount must be spent from the given public key,
  with the given datum attached.
@@ -285,7 +344,22 @@ spendsFromPubKeyWithDatum ::
   a ->
   ContextBuilder p
 spendsFromPubKeyWithDatum pkh val dt =
-  input $ Input (PubKeyType pkh (Just . toBuiltinData $ dt)) val
+  let value = GeneralValue val
+      inType = PubKeyType pkh (Just $ toBuiltinData dt)
+   in input $ Input inType value
+
+{- | Indicate that the given 'Tokens' controlled by the tested minting policy
+ must be spent from the given public key.
+
+ @since 6.0
+-}
+spendsTokensFromPubKey ::
+  forall (r :: Type).
+  PubKeyHash ->
+  Tokens ->
+  ContextBuilder ( 'ForMinting r)
+spendsTokensFromPubKey pkh (Tokens tn pos) =
+  input . Input (PubKeyType pkh Nothing) $ TokensValue tn pos
 
 {- | As 'spendsFromPubKey', with an added signature.
 
@@ -296,7 +370,19 @@ spendsFromPubKeySigned ::
   PubKeyHash ->
   Value ->
   ContextBuilder p
-spendsFromPubKeySigned pkh v = spendsFromPubKey pkh v <> signedWith pkh
+spendsFromPubKeySigned pkh v = signedWith pkh <> spendsFromPubKey pkh v
+
+{- | As 'spendsTokensFromPubKey', with an added signature.
+
+ @since 6.0
+-}
+spendsTokensFromPubKeySigned ::
+  forall (r :: Type).
+  PubKeyHash ->
+  Tokens ->
+  ContextBuilder ( 'ForMinting r)
+spendsTokensFromPubKeySigned pkh (Tokens tn pos) =
+  signedWith pkh <> spendsTokensFromPubKey pkh (Tokens tn pos)
 
 {- | As 'spendsFromPubKeyWithDatum', with an added signature.
 
@@ -322,6 +408,18 @@ spendsFromWallet ::
   ContextBuilder p
 spendsFromWallet wallet = spendsFromPubKey (walletPubKeyHash wallet)
 
+{- | Indicate that the given 'Tokens' controlled by the tested minting policy
+ must be spent from the given 'Wallet'
+
+ @since 6.0
+-}
+spendsTokensFromWallet ::
+  forall (r :: Type).
+  Wallet ->
+  Tokens ->
+  ContextBuilder ( 'ForMinting r)
+spendsTokensFromWallet wallet = spendsTokensFromPubKey (walletPubKeyHash wallet)
+
 {- | Indicate that the given amount must be spent from the given 'Wallet'.
 
  @since 5.3
@@ -344,7 +442,20 @@ spendsFromWalletSigned ::
   Wallet ->
   Value ->
   ContextBuilder p
-spendsFromWalletSigned wallet = spendsFromPubKeySigned (walletPubKeyHash wallet)
+spendsFromWalletSigned wallet =
+  spendsFromPubKeySigned (walletPubKeyHash wallet)
+
+{- | As 'spendsTokensFromWallet', with an added signature.
+
+ @since 6.0
+-}
+spendsTokensFromWalletSigned ::
+  forall (r :: Type).
+  Wallet ->
+  Tokens ->
+  ContextBuilder ( 'ForMinting r)
+spendsTokensFromWalletSigned wallet =
+  spendsTokensFromPubKeySigned (walletPubKeyHash wallet)
 
 {- | As 'spendsFromWalletWithDatum', with an added signature.
 
@@ -371,9 +482,25 @@ spendsFromOther ::
   datum ->
   ContextBuilder p
 spendsFromOther hash v d =
-  input . Input (ScriptType hash . toBuiltinData $ d) $ v
+  input . Input (ScriptType hash . toBuiltinData $ d) $ GeneralValue v
 
-{- | Indicate that the given 'Value' must be minted with another MintingPolicy.
+{- | Indicate that the given 'Tokens' controlled by the tested minting policy
+ must be spent from another script.
+
+ @since 6.0
+-}
+spendsTokensFromOther ::
+  forall (datum :: Type) (r :: Type).
+  (ToData datum) =>
+  ValidatorHash ->
+  Tokens ->
+  datum ->
+  ContextBuilder ( 'ForMinting r)
+spendsTokensFromOther hash (Tokens tn pos) d =
+  input . Input (ScriptType hash . toBuiltinData $ d) $ TokensValue tn pos
+
+{- | Indicate that the given 'Value' must be minted with a minting policy
+ other than the tested one.
 
  @since 3.2
 -}

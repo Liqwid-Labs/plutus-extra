@@ -11,8 +11,15 @@
 module Test.Tasty.Plutus.TestData (
   -- * Data type
   TestData (..),
+  Tokens (..),
   Outcome (..),
+  MintingPolicyAction (..),
+  MintingPolicyTask (..),
+
+  -- * Helper functions
   passIf,
+  burnTokens,
+  mintTokens,
 
   -- * QuickCheck support
   Methodology (..),
@@ -20,21 +27,25 @@ module Test.Tasty.Plutus.TestData (
   static,
   Generator (..),
   TestItems (..),
-  Tokens (Tokens, unTokens),
-  token,
 ) where
 
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Semigroup (stimes, stimesIdempotent)
 import Plutus.V1.Ledger.Value (Value)
-import PlutusTx.IsData.Class (FromData, ToData)
+import PlutusTx
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Test.QuickCheck.Gen (Gen)
 import Test.Tasty.Plutus.Context (ContextBuilder)
 import Test.Tasty.Plutus.Internal.Context (
   Purpose (ForMinting, ForSpending),
-  Tokens (Tokens, unTokens),
-  token,
+ )
+import Test.Tasty.Plutus.Internal.Minting (
+  MintingPolicyAction (BurnAction, MintAction),
+  MintingPolicyTask (MPTask),
+  Tokens (Tokens),
+  burnTokens,
+  mintTokens,
  )
 import Prelude
 
@@ -71,10 +82,10 @@ data TestData (p :: Purpose) where
     --
     -- @since 3.0
     redeemer ->
-    -- | The tokens to be minted by the script.
+    -- | List of tokens to be minted by the script.
     --
-    -- @since 4.1
-    Tokens ->
+    -- @since 6.0
+    NonEmpty MintingPolicyTask ->
     TestData ( 'ForMinting redeemer)
 
 {- | Describes whether a case, comprised of a script and a test data for the
@@ -209,15 +220,18 @@ data TestItems (p :: Purpose) where
     ) =>
     { -- | Redeemer provided to the MintingPolicy
       -- @since 5.0
-      mintRedeemer :: redeemer
-    , -- | Tokens minted with the MintingPolicy
-      -- @since 5.0
-      mintTokens :: Tokens
+      mpRedeemer :: redeemer
+    , -- | List of MintingPolicy tasks to mint/burn tokens
+      -- @since 6.0
+      mpTasks :: NonEmpty MintingPolicyTask
     , -- | ContextBuilder used for creating ScriptContext
       -- @since 5.0
-      mintCB :: ContextBuilder ( 'ForMinting redeemer)
+      mpCB :: ContextBuilder ( 'ForMinting redeemer)
     , -- | Result expected from calling the MintingPolicy
       -- | @since 5.0
-      mintOutcome :: Outcome
+      mpOutcome :: Outcome
     } ->
     TestItems ( 'ForMinting redeemer)
+
+-- | @since 6.0
+deriving stock instance Show (TestItems p)

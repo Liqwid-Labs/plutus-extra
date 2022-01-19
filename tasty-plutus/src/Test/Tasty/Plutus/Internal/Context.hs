@@ -1,6 +1,7 @@
 module Test.Tasty.Plutus.Internal.Context (
   Purpose (..),
   ExternalType (..),
+  ValueType (..),
   Input (..),
   Output (..),
   Minting (..),
@@ -8,8 +9,6 @@ module Test.Tasty.Plutus.Internal.Context (
   ContextBuilder (..),
   compileSpending,
   compileMinting,
-  Tokens (Tokens, unTokens),
-  token,
   makeIncompleteContexts,
   outputsToInputs,
 ) where
@@ -17,7 +16,9 @@ module Test.Tasty.Plutus.Internal.Context (
 import Control.Arrow ((***))
 import Data.Bifunctor (first)
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.Map.Strict qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Semigroup (sconcat)
 import Data.Sequence (Seq)
@@ -57,9 +58,14 @@ import Plutus.V1.Ledger.Api (
  )
 import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.Value qualified as Value
-import PlutusTx.AssocMap (Map)
-import PlutusTx.AssocMap qualified as Map
+import Plutus.V1.Ledger.Value.Extra (filterValue)
+import PlutusTx.Positive (Positive, getPositive)
 import PlutusTx.Prelude (length)
+import Test.Tasty.Plutus.Internal.Minting (
+  MintingPolicyAction (BurnAction, MintAction),
+  MintingPolicyTask (MPTask),
+  Tokens (Tokens),
+ )
 import Test.Tasty.Plutus.Options (ScriptInputPosition (Head, Tail))
 import Prelude hiding (length)
 
@@ -106,13 +112,34 @@ data ExternalType
       Show
     )
 
+{- | Different types of value:
+
+  'TokensValue' is only used within @ContextBuilder ('ForMinting r)@
+  for representing classes, belonging to the tested MintingPolicy.
+
+  In all other cases 'GeneralValue' is used.
+
+ @since 6.0
+-}
+data ValueType
+  = -- | @since 6.0
+    GeneralValue Value
+  | -- | @since 6.0
+    TokensValue TokenName Positive
+  deriving stock
+    ( -- | @since 6.0
+      Eq
+    , -- | @since 6.0
+      Show
+    )
+
 {- | An input to a script, consisting of a value and a type.
 
  @since 1.0
 -}
 data Input
-  = -- | @since 3.0
-    Input ExternalType Value
+  = -- | @since 6.0
+    Input ExternalType ValueType
   deriving stock
     ( -- | @since 1.0
       Show
@@ -123,15 +150,20 @@ data Input
  @since 1.0
 -}
 data Output
-  = -- | @since 3.0
-    Output ExternalType Value
+  = -- | @since 6.0
+    Output ExternalType ValueType
   deriving stock
     ( -- | @since 1.0
       Show
     )
 
-{- | A minting result. Do not use this for tokens being minted by the current
- minting policy; pass those as 'Tokens' to the test instead.
+{- | A 'Value' minted with a minting policy other than the one being tested.
+ Do not use this for tokens being minted by the tested minting policy.
+
+ = Note
+
+ Asset classes with 'CurrencySymbol' matching 'testCurrencySymbol' in 'TransactionConfig'
+ will be excluded from the resulting 'ScriptContext'.
 
  @since 3.0
 -}
@@ -197,7 +229,7 @@ compileSpending ::
   datum ->
   Value ->
   ScriptContext
-compileSpending conf cb d val =
+compileSpending conf cb d v =
   ScriptContext go
     . Spending
     . TxOutRef (testTxId conf)
@@ -207,7 +239,7 @@ compileSpending conf cb d val =
     go =
       let dt = toBuiltinData d
           baseInfo = baseTxInfo conf cb
-          inInfo = createTxInInfo conf (0, Input (OwnType dt) val)
+          inInfo = createTxInInfo conf (0, Input (OwnType dt) (GeneralValue v))
           inData = datumWithHash dt
        in baseInfo
             { txInfoInputs = case scriptInputPosition conf of
@@ -220,20 +252,35 @@ compileMinting ::
   forall (r :: Type).
   TransactionConfig ->
   ContextBuilder ( 'ForMinting r) ->
-  Tokens ->
+  NonEmpty MintingPolicyTask ->
   ScriptContext
-compileMinting conf cb (Tokens toks) =
+compileMinting conf cb toks =
   ScriptContext go (Minting sym)
   where
+    sym :: CurrencySymbol
+    sym = testCurrencySymbol conf
+
+    mintingValue :: Value
+    mintingValue =
+      Map.foldMapWithKey (Value.singleton sym)
+        . Map.fromList
+        . map processMPTask
+        . NonEmpty.toList
+        $ toks
+
     go :: TxInfo
     go =
       let baseInfo = baseTxInfo conf cb
        in baseInfo
             { txInfoMint =
-                Value.Value (Map.singleton sym toks) <> txInfoMint baseInfo
+                mintingValue <> txInfoMint baseInfo
             }
-
-    sym = testCurrencySymbol conf
+    processMPTask :: MintingPolicyTask -> (TokenName, Integer)
+    processMPTask (MPTask action (Tokens tn pos)) =
+      let i = case action of
+            MintAction -> getPositive pos
+            BurnAction -> negate $ getPositive pos
+       in (tn, i)
 
 {- | Combine a list of partial contexts that should,
      when combined, validate, but fail when any one
@@ -255,7 +302,7 @@ compileMinting conf cb (Tokens toks) =
      > , (context1 <> context2, "Missing context 3")
      > ]
 
-     This can then be run in a `withValidator` block
+     This can then be run in a `withTestScript` block
      like so:
 
      > mapM_ (\(ctx,str) -> shouldn'tValidate str input ctx) convertedContexts
@@ -270,7 +317,7 @@ makeIncompleteContexts ctxs = map (first sconcat) ctxs2
   where
     ctxs1 = removeContext ctxs
     ctxs2 = mapMaybe nonEmpty1st ctxs1
-    nonEmpty1st :: ([a], b) -> Maybe (NonEmpty.NonEmpty a, b)
+    nonEmpty1st :: ([a], b) -> Maybe (NonEmpty a, b)
     nonEmpty1st (xs, y) = (,y) <$> NonEmpty.nonEmpty xs
 
 {- All context outputs are converted to a list of inputs:
@@ -297,11 +344,12 @@ baseTxInfo ::
   TxInfo
 baseTxInfo conf (ContextBuilder ins outs pkhs dats mints) =
   let valHash = testValidatorHash conf
+      value = foldMap (filterValue filterCS . unMint) mints
    in TxInfo
         { txInfoInputs = createTxInInfo conf <$> indexedInputs
-        , txInfoOutputs = toList . fmap (toTxOut valHash) $ outs
+        , txInfoOutputs = toList . fmap (toTxOut conf valHash) $ outs
         , txInfoFee = testFee conf
-        , txInfoMint = foldMap unMint mints
+        , txInfoMint = value
         , txInfoDCert = []
         , txInfoWdrl = []
         , txInfoValidRange = testTimeRange conf
@@ -316,7 +364,11 @@ baseTxInfo conf (ContextBuilder ins outs pkhs dats mints) =
     indexedInputs :: [(Integer, Input)]
     indexedInputs = zip [1 ..] . toList $ ins
 
+    unMint :: Minting -> Value
     unMint (Mint val) = val
+
+    filterCS :: CurrencySymbol -> TokenName -> Integer -> Bool
+    filterCS cs _ _ = cs /= testCurrencySymbol conf
 
 toInputDatum :: Input -> Maybe (DatumHash, Datum)
 toInputDatum (Input typ _) = case typ of
@@ -337,52 +389,28 @@ datumWithHash dt = (datumHash dt', dt')
     dt' = Datum dt
 
 createTxInInfo :: TransactionConfig -> (Integer, Input) -> TxInInfo
-createTxInInfo conf (ix, Input typ v) =
-  TxInInfo (TxOutRef (testTxId conf) ix) $ case typ of
-    PubKeyType pkh dat -> TxOut (pubKeyHashAddress pkh) v $ datumHash . Datum <$> dat
-    ScriptType hash dat ->
-      TxOut (scriptHashAddress hash) v . justDatumHash $ dat
-    OwnType dat ->
-      TxOut (scriptHashAddress . testValidatorHash $ conf) v . justDatumHash $ dat
+createTxInInfo conf (ix, Input typ valType) =
+  let val = extractValue conf valType
+   in TxInInfo (TxOutRef (testTxId conf) ix) $
+        case typ of
+          PubKeyType pkh dat -> TxOut (pubKeyHashAddress pkh) val $ datumHash . Datum <$> dat
+          ScriptType hash dat ->
+            TxOut (scriptHashAddress hash) val . justDatumHash $ dat
+          OwnType dat ->
+            TxOut (scriptHashAddress . testValidatorHash $ conf) val . justDatumHash $ dat
 
 justDatumHash :: BuiltinData -> Maybe DatumHash
 justDatumHash = Just . datumHash . Datum
 
-toTxOut :: ValidatorHash -> Output -> TxOut
-toTxOut valHash (Output typ v) = case typ of
-  PubKeyType pkh dat -> TxOut (pubKeyHashAddress pkh) v $ datumHash . Datum <$> dat
-  ScriptType hash dat ->
-    TxOut (scriptHashAddress hash) v . justDatumHash $ dat
-  OwnType dat ->
-    TxOut (scriptHashAddress valHash) v . justDatumHash $ dat
-
-{- | Tokens to be minted by minting policy.
-
-  -- This type is 'Semigroup' but not 'Monoid', as a minting policy cannot be
-  -- triggered if no tokens are minted.
-
-  @since 4.1
--}
-newtype Tokens = Tokens {unTokens :: Map TokenName Integer}
-  deriving stock
-    ( -- | @since 4.1
-      Eq
-    , -- | @since 4.1
-      Show
-    )
-
--- | @since 4.1
-instance Semigroup Tokens where
-  Tokens a <> Tokens b = Tokens (Map.unionWith (+) a b)
-
-{- | Helper function to specify tokens to be minted.
-
-  Combine using the 'Semigroup' instance for 'Tokens'.
-
-  @since 4.1
--}
-token :: TokenName -> Integer -> Tokens
-token name = Tokens . Map.singleton name
+toTxOut :: TransactionConfig -> ValidatorHash -> Output -> TxOut
+toTxOut conf valHash (Output typ valType) =
+  let val = extractValue conf valType
+   in case typ of
+        PubKeyType pkh dat -> TxOut (pubKeyHashAddress pkh) val $ datumHash . Datum <$> dat
+        ScriptType hash dat ->
+          TxOut (scriptHashAddress hash) val . justDatumHash $ dat
+        OwnType dat ->
+          TxOut (scriptHashAddress valHash) val . justDatumHash $ dat
 
 -- Helper for makeIncompleteContexts : Take a list
 -- of pairs, and create another list of pairs where
@@ -403,3 +431,12 @@ removeNth :: Integer -> [a] -> ([a], Maybe a)
 removeNth _ [] = ([], Nothing)
 removeNth 0 (x : xs) = (xs, Just x)
 removeNth n (x : xs) = first (x :) $ removeNth (n - 1) xs
+
+extractValue :: TransactionConfig -> ValueType -> Value
+extractValue conf = \case
+  GeneralValue val -> val
+  TokensValue tokenName pos ->
+    Value.singleton
+      (testCurrencySymbol conf)
+      tokenName
+      (getPositive pos)

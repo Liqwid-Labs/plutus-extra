@@ -12,8 +12,8 @@
 
  = Example usage
 
- > myTests :: TestTree
- > myTests = withValidator "Testing my spending" myValidator $ do
+ > validatorTests :: TestTree
+ > validatorTests = withTestScript "Testing my spending" myValidator $ do
  >    shouldValidate "Valid case" validData validContext
  >    shouldn'tValidate "Invalid context" validData invalidContext
  >    shouldn'tValidate "Invalid data" invalidData validContext
@@ -41,15 +41,7 @@ import Data.Text (Text)
 import Data.Vector (Vector)
 import Data.Vector qualified as Vector
 import Plutus.V1.Ledger.Api (ScriptContext)
-import Plutus.V1.Ledger.Scripts (
-  MintingPolicy,
-  ScriptError (
-    EvaluationError,
-    EvaluationException,
-    MalformedScript
-  ),
-  Validator,
- )
+import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError, EvaluationException, MalformedScript))
 import Test.Tasty.Options (
   OptionDescription (Option),
   OptionSet,
@@ -88,6 +80,7 @@ import Test.Tasty.Plutus.Internal.Run (
     ScriptPassed
   ),
  )
+import Test.Tasty.Plutus.Internal.TestScript (TestScript, getTestMintingPolicy, getTestValidator)
 import Test.Tasty.Plutus.Internal.WithScript (
   WithScript (WithMinting, WithSpending),
  )
@@ -210,7 +203,7 @@ data ScriptTest (p :: Purpose) where
     Maybe (Vector Text -> Bool) ->
     TestData ( 'ForSpending d r) ->
     ContextBuilder ( 'ForSpending d r) ->
-    Validator ->
+    TestScript ( 'ForSpending d r) ->
     ScriptTest ( 'ForSpending d r)
   Minter ::
     forall (r :: Type).
@@ -218,7 +211,7 @@ data ScriptTest (p :: Purpose) where
     Maybe (Vector Text -> Bool) ->
     TestData ( 'ForMinting r) ->
     ContextBuilder ( 'ForMinting r) ->
-    MintingPolicy ->
+    TestScript ( 'ForMinting r) ->
     ScriptTest ( 'ForMinting r)
 
 data UnitEnv (p :: Purpose) = UnitEnv
@@ -262,8 +255,8 @@ getScript ::
   SomeScript p
 getScript =
   envScriptTest >>> \case
-    Spender _ _ _ _ val -> SomeSpender val
-    Minter _ _ _ _ mp -> SomeMinter mp
+    Spender _ _ _ _ val -> SomeSpender . getTestValidator $ val
+    Minter _ _ _ _ mp -> SomeMinter . getTestMintingPolicy $ mp
 
 getMPred ::
   forall (p :: Purpose).
