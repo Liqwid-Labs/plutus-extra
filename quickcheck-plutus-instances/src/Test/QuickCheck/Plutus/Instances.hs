@@ -30,7 +30,7 @@ import Data.Maybe (maybeToList)
 import Data.Text (Text)
 import Data.Word (Word8)
 import GHC.Exts qualified as GHC
-import Ledger.Oracle (
+import Plutus.Contract.Oracle (
   Observation (Observation),
   SignedMessage (SignedMessage),
  )

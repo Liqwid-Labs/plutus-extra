@@ -51,6 +51,7 @@ library
 
   build-depends:
     , bytestring            ^>=0.10.12.0
+    , plutus-contract
     , plutus-ledger
     , plutus-ledger-api
     , plutus-tx
