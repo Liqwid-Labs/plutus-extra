@@ -79,8 +79,9 @@ module Test.Tasty.Plutus.Context (
 
 import Data.Kind (Type)
 import Data.Sequence qualified as Seq
+import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
+import Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Ada (lovelaceValueOf)
-import Plutus.V1.Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Scripts (ValidatorHash)
 import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.Builtins (BuiltinData)
@@ -97,7 +98,7 @@ import Test.Tasty.Plutus.Internal.Context (
   outputsToInputs,
  )
 import Test.Tasty.Plutus.Internal.Minting (Tokens (Tokens))
-import Wallet.Emulator.Types (Wallet, walletPubKeyHash)
+import Wallet.Emulator.Types (Wallet, mockWalletPaymentPubKeyHash)
 
 {- | Single-input context.
 
@@ -225,7 +226,8 @@ paysToWallet ::
   Wallet ->
   Value ->
   ContextBuilder p
-paysToWallet wallet = paysToPubKey (walletPubKeyHash wallet)
+paysToWallet wallet =
+  paysToPubKey (walletPubKeyHash wallet)
 
 {- | Indicate that a payment must happen to the given 'Wallet', worth the
  given amount and the given datum attached.
@@ -239,7 +241,8 @@ paysToWalletWithDatum ::
   Value ->
   a ->
   ContextBuilder p
-paysToWalletWithDatum wallet = paysToPubKeyWithDatum (walletPubKeyHash wallet)
+paysToWalletWithDatum wallet =
+  paysToPubKeyWithDatum (walletPubKeyHash wallet)
 
 {- | Indicate that the given 'Tokens' controlled by the tested minting policy
  must be paid to the given 'Wallet'.
@@ -251,7 +254,8 @@ paysTokensToWallet ::
   Wallet ->
   Tokens ->
   ContextBuilder ( 'ForMinting r)
-paysTokensToWallet wallet = paysTokensToPubKey (walletPubKeyHash wallet)
+paysTokensToWallet wallet =
+  paysTokensToPubKey (walletPubKeyHash wallet)
 
 {- | Indicate that a payment must happen to the script being tested, worth
  the given amount.
@@ -395,7 +399,8 @@ spendsFromPubKeyWithDatumSigned ::
   Value ->
   a ->
   ContextBuilder p
-spendsFromPubKeyWithDatumSigned pkh v dt = spendsFromPubKeyWithDatum pkh v dt <> signedWith pkh
+spendsFromPubKeyWithDatumSigned pkh v dt =
+  spendsFromPubKeyWithDatum pkh v dt <> signedWith pkh
 
 {- | Indicate that the given amount must be spent from the given 'Wallet'.
 
@@ -406,7 +411,8 @@ spendsFromWallet ::
   Wallet ->
   Value ->
   ContextBuilder p
-spendsFromWallet wallet = spendsFromPubKey (walletPubKeyHash wallet)
+spendsFromWallet wallet =
+  spendsFromPubKey (walletPubKeyHash wallet)
 
 {- | Indicate that the given 'Tokens' controlled by the tested minting policy
  must be spent from the given 'Wallet'
@@ -418,7 +424,8 @@ spendsTokensFromWallet ::
   Wallet ->
   Tokens ->
   ContextBuilder ( 'ForMinting r)
-spendsTokensFromWallet wallet = spendsTokensFromPubKey (walletPubKeyHash wallet)
+spendsTokensFromWallet wallet =
+  spendsTokensFromPubKey (walletPubKeyHash wallet)
 
 {- | Indicate that the given amount must be spent from the given 'Wallet'.
 
@@ -431,7 +438,8 @@ spendsFromWalletWithDatum ::
   Value ->
   a ->
   ContextBuilder p
-spendsFromWalletWithDatum wallet = spendsFromPubKeyWithDatum (walletPubKeyHash wallet)
+spendsFromWalletWithDatum wallet =
+  spendsFromPubKeyWithDatum (walletPubKeyHash wallet)
 
 {- | As 'spendsFromWallet', with an added signature.
 
@@ -468,7 +476,8 @@ spendsFromWalletWithDatumSigned ::
   Value ->
   a ->
   ContextBuilder p
-spendsFromWalletWithDatumSigned wallet = spendsFromPubKeyWithDatumSigned (walletPubKeyHash wallet)
+spendsFromWalletWithDatumSigned wallet =
+  spendsFromPubKeyWithDatumSigned (walletPubKeyHash wallet)
 
 {- | Indicate that the given amount must be spent from another script.
 
@@ -509,3 +518,8 @@ mintsValue ::
   Value ->
   ContextBuilder p
 mintsValue = minting . Mint
+
+-- Helpers
+
+walletPubKeyHash :: Wallet -> PubKeyHash
+walletPubKeyHash = unPaymentPubKeyHash . mockWalletPaymentPubKeyHash

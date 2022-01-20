@@ -51,11 +51,12 @@ import Test.Tasty.QuickCheck (
 
 --------------------------------------------------------------------------------
 
+import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Plutus.V1.Ledger.Contexts (ScriptContext)
 import PlutusTx.Prelude (traceIfFalse, ($), (==))
 import PlutusTx.TH (compile)
 import Wallet.Emulator.Types (WalletNumber (WalletNumber))
-import Wallet.Emulator.Wallet (fromWalletNumber, walletPubKeyHash)
+import Wallet.Emulator.Wallet (fromWalletNumber, mockWalletPaymentPubKeyHash)
 
 --------------------------------------------------------------------------------
 
@@ -135,10 +136,18 @@ myMintingPolicyScript =
     $$(compile [||toTestMintingPolicy||])
 
 userPKHash1 :: PubKeyHash
-userPKHash1 = walletPubKeyHash $ fromWalletNumber $ WalletNumber 1
+userPKHash1 =
+  unPaymentPubKeyHash
+    . mockWalletPaymentPubKeyHash
+    . fromWalletNumber
+    $ WalletNumber 1
 
 userPKHash2 :: PubKeyHash
-userPKHash2 = walletPubKeyHash $ fromWalletNumber $ WalletNumber 2
+userPKHash2 =
+  unPaymentPubKeyHash
+    . mockWalletPaymentPubKeyHash
+    . fromWalletNumber
+    $ WalletNumber 2
 
 {-# INLINEABLE secretKey #-}
 secretKey :: Integer
