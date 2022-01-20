@@ -33,7 +33,7 @@ tests =
       ( let getValue output =
               case getOutputBus output of
                 Nothing -> Ada.lovelaceValueOf 10
-                Just (Last ac) -> (Value.assetClassValue ac 4 <> Ada.adaValueOf 5)
+                Just (Last ac) -> Value.assetClassValue ac 4 <> Ada.adaValueOf 5
          in walletFundsChange w1 (Ada.adaValueOf $ negate 5)
               .&&. walletFundsChangeWithAccumState initCurrency t1 w2 getValue
       )
