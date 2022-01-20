@@ -30,16 +30,16 @@ tests =
       "AdditiveGroup"
       [ fitsInto "+" [bytes| 159 |] . fromCompiledCode $ NR.nrPlus
       , fitsInto "zero" [bytes| 24 |] . fromCompiledCode $ NR.nrZero
-      , fitsInto "^-" [bytes| 183 |] . fromCompiledCode $ NR.nrMonus
-      , fitsInto "scaleNat" [bytes| 242 |] .fromCompiledCode $ NR.nrScaleNat
+      , fitsInto "^-" [bytes| 184 |] . fromCompiledCode $ NR.nrMonus
+      , fitsInto "scaleNat" [bytes| 243 |] .fromCompiledCode $ NR.nrScaleNat
       ]
   , testGroup
       "MultiplicativeGroup"
       [ fitsInto "*" [bytes| 151 |] . fromCompiledCode $ NR.nrTimes
-      , fitsInto "one" [bytes| 24 |] . fromCompiledCode $ NR.nrOne
-      , fitsInto "/" [bytes| 144 |] . fromCompiledCode $ NR.nrDiv
+      , fitsInto "one" [bytes| 28 |] . fromCompiledCode $ NR.nrOne
+      , fitsInto "/" [bytes| 146 |] . fromCompiledCode $ NR.nrDiv
       , fitsInto "reciprocal" [bytes| 92 |] . fromCompiledCode $ NR.nrRecip
-      , fitsInto "powNat" [bytes| 343 |] . fromCompiledCode $ NR.nrPowNat
+      , fitsInto "powNat" [bytes| 348 |] . fromCompiledCode $ NR.nrPowNat
       , fitsInto "powInteger" [bytes| 357 |] . fromCompiledCode $ NR.nrPowInteger
       ]
   , testGroup

@@ -40,7 +40,7 @@ import PlutusTx.IsData.Class (
  )
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Natural.Internal (Natural (Natural))
-import PlutusTx.Prelude hiding (Rational, (%))
+import PlutusTx.Prelude hiding (Rational)
 import PlutusTx.Rational qualified as Ratio
 import PlutusTx.Rational.Internal (
   Rational (Rational),
@@ -313,10 +313,10 @@ instance
   ToJSON (NatRatioSchema (numerator ':%: denominator))
   where
   toJSON :: NatRatioSchema (numerator ':%: denominator) -> Value
-  toJSON (NatRatioSchema ratio) =
+  toJSON (NatRatioSchema nr) =
     object
-      [ (jsonFieldSym @numerator, toJSON @Natural $ numerator ratio)
-      , (jsonFieldSym @denominator, toJSON @Natural $ denominator ratio)
+      [ (jsonFieldSym @numerator, toJSON @Natural $ numerator nr)
+      , (jsonFieldSym @denominator, toJSON @Natural $ denominator nr)
       ]
 
 -- | @since 2.3
@@ -366,12 +366,12 @@ instance
   ) =>
   PlutusSchema.ToArgument (NatRatioSchema (numerator ':%: denominator))
   where
-  toArgument (NatRatioSchema ratio) =
+  toArgument (NatRatioSchema nr) =
     ratioFixFormArgument @numerator @denominator num denom
     where
       num :: Integer
-      num = coerce . numerator $ ratio
+      num = coerce . numerator $ nr
       denom :: Integer
-      denom = coerce . denominator $ ratio
+      denom = coerce . denominator $ nr
 
 makeLift ''NatRatio

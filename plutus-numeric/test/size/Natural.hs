@@ -31,17 +31,17 @@ tests =
       [ fitsInto "+" [bytes| 12 |] . fromCompiledCode $ Nat.natPlus
       , fitsInto "zero" [bytes| 8 |] . fromCompiledCode $ Nat.natZero
       , fitsInto "^-" [bytes| 44 |] . fromCompiledCode $ Nat.natMonus
-      , fitsInto "scaleNat" [bytes| 107 |] .fromCompiledCode $ Nat.natScaleNat
+      , fitsInto "scaleNat" [bytes| 109 |] .fromCompiledCode $ Nat.natScaleNat
       ]
   , testGroup
       "MultiplicativeMonoid"
       [ fitsInto "*" [bytes| 12 |] . fromCompiledCode $ Nat.natTimes
       , fitsInto "one" [bytes| 8 |] . fromCompiledCode $ Nat.natOne
-      , fitsInto "powNat" [bytes| 216 |] . fromCompiledCode $ Nat.natPowNat
+      , fitsInto "powNat" [bytes| 223 |] . fromCompiledCode $ Nat.natPowNat
       ]
   , testGroup
       "EuclideanClosed"
-      [ fitsInto "divMod" [bytes| 72 |] . fromCompiledCode $ Nat.natDivMod
+      [ fitsInto "divMod" [bytes| 74 |] . fromCompiledCode $ Nat.natDivMod
       ]
   , testGroup
       "Serialization"

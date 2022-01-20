@@ -31,25 +31,25 @@ tests =
       [ fitsInto "+" [bytes| 12 |] . fromCompiledCode $ I.iPlus
       , fitsInto "zero" [bytes| 8 |] . fromCompiledCode $ I.iZero
       , fitsInto "-" [bytes| 12 |] . fromCompiledCode $ I.iMinus
-      , fitsInto "scaleNat" [bytes| 107 |] .fromCompiledCode $ I.iScaleNat
+      , fitsInto "scaleNat" [bytes| 109 |] .fromCompiledCode $ I.iScaleNat
       ]
   , testGroup
       "MultiplicativeMonoid"
       [ fitsInto "*" [bytes| 12 |] . fromCompiledCode $ I.iTimes
       , fitsInto "one" [bytes| 8 |] . fromCompiledCode $ I.iOne
-      , fitsInto "powNat" [bytes| 216 |] . fromCompiledCode $ I.iPowNat
+      , fitsInto "powNat" [bytes| 223 |] . fromCompiledCode $ I.iPowNat
       ]
   , testGroup
       "EuclideanClosed"
-      [ fitsInto "divMod" [bytes| 72 |] . fromCompiledCode $ I.iDivMod
+      [ fitsInto "divMod" [bytes| 74 |] . fromCompiledCode $ I.iDivMod
       ]
   , testGroup
       "IntegralDomain"
-      [ fitsInto "abs" [bytes| 44 |] . fromCompiledCode $ I.iAbs
-      , fitsInto "projectAbs" [bytes| 44 |] . fromCompiledCode $ I.iProjectAbs
+      [ fitsInto "abs" [bytes| 46 |] . fromCompiledCode $ I.iAbs
+      , fitsInto "projectAbs" [bytes| 46 |] . fromCompiledCode $ I.iProjectAbs
       , fitsInto "addExtend" [bytes| 8 |] . fromCompiledCode $ I.iAddExtend
       , fitsInto "restrictMay" [bytes| 58 |] . fromCompiledCode $ I.iRestrictMay
-      , fitsInto "signum" [bytes| 65 |] . fromCompiledCode $ I.iSignum
+      , fitsInto "signum" [bytes| 67 |] . fromCompiledCode $ I.iSignum
       ]
   , testGroup
       "Serialization"

@@ -38,8 +38,8 @@ import PlutusTx.Prelude hiding (
   Rational,
   fromInteger,
   negate,
+  ratio,
   round,
-  (%),
  )
 import PlutusTx.Prelude qualified as Plutus
 import PlutusTx.SchemaUtils (

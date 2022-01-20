@@ -39,7 +39,7 @@ module PlutusTx.Numeric.Extra (
 import Data.Kind (Type)
 import PlutusTx.NatRatio.Internal (NatRatio (NatRatio), nrMonus)
 import PlutusTx.Natural.Internal (Natural (Natural))
-import PlutusTx.Prelude hiding (divMod, even, (%))
+import PlutusTx.Prelude hiding (divMod, even, abs)
 import PlutusTx.Rational qualified as Rational
 import PlutusTx.Rational.Internal (
   Rational (Rational),

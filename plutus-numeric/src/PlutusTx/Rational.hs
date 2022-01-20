@@ -43,7 +43,7 @@ module PlutusTx.Rational (
 ) where
 
 import Data.Ratio qualified as GHC
-import PlutusTx.Prelude hiding (Rational, fromInteger, negate, round)
+import PlutusTx.Prelude hiding (Rational, abs, fromInteger, negate, round)
 import PlutusTx.Prelude qualified as Plutus
 import PlutusTx.Rational.Internal (Rational (Rational))
 import PlutusTx.Rational.Internal qualified as Internal
