@@ -516,14 +516,19 @@ getTxOutDatum _ (Ledger.TxOutTx tx' (Ledger.TxOut _ _ (Just datumHash))) =
 
      @since 3.2
 -}
-addressValueOptions :: [(Ledger.PubKeyHash, Ledger.Value)] -> [(Scripts.ValidatorHash, Ledger.Value, Ledger.Datum)] -> EmulatorConfig
+addressValueOptions ::
+  [(Ledger.PaymentPubKeyHash, Ledger.Value)] ->
+  [(Scripts.ValidatorHash, Ledger.Value, Ledger.Datum)] ->
+  EmulatorConfig
 addressValueOptions walletAllocs validatorAllocs = EmulatorConfig (Right [tx]) def def
   where
     tx :: Ledger.Tx
     tx =
       mempty
         { Ledger.txOutputs =
-            fmap (\(pkh, val) -> Ledger.TxOut (Ledger.pubKeyHashAddress pkh) val Nothing) walletAllocs
+            fmap (\(pkh, val) ->
+                      Ledger.TxOut (Ledger.pubKeyHashAddress pkh Nothing) val Nothing
+                 ) walletAllocs
               <> fmap (\(vh, val, d) -> Ledger.TxOut (Ledger.scriptHashAddress vh) val $ Just $ Scripts.datumHash d) validatorAllocs
         , Ledger.txData =
             Map.fromList $
