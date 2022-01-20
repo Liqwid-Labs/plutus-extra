@@ -12,12 +12,12 @@ import Data.Kind (Type)
 --------------------------------------------------------------------------------
 
 import Ledger qualified
+import Ledger.Ada qualified as Ada
 import Ledger.Constraints qualified as Constraints
 import Plutus.Contract qualified as Contract
 import Plutus.Contract.State (Contract)
 import Plutus.Contracts.Currency qualified as Currency
 import Plutus.PAB.Effects.Contract.Builtin qualified as Builtin
-import Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Value qualified as Value (assetClass, assetClassValue)
 import Wallet.Emulator.Types (Wallet (..))
 import Wallet.Emulator.Wallet qualified as Wallet

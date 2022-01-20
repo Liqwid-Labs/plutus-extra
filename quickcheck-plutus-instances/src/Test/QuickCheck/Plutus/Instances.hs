@@ -30,11 +30,11 @@ import Data.Maybe (maybeToList)
 import Data.Text (Text)
 import Data.Word (Word8)
 import GHC.Exts qualified as GHC
+import Ledger.Scripts (datumHash)
 import Plutus.Contract.Oracle (
   Observation (Observation),
   SignedMessage (SignedMessage),
  )
-import Ledger.Scripts (datumHash)
 import Plutus.V1.Ledger.Address (Address (Address))
 import Plutus.V1.Ledger.Bytes (LedgerBytes (LedgerBytes))
 import Plutus.V1.Ledger.Credential (
