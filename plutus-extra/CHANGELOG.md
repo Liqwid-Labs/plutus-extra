@@ -5,9 +5,17 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 4.2 -- 2022-01-17
+
+### Added
+
+- Plutus.Contract.Test.Extra: `utxoAtComputedAddress` is now exported
+- Plutus.Contract.Test.Extra: `utxoAtAddress` added as a simpler validation
+  function for UTxOs at an address
+
 ## 4.1 -- 2022-01-07
 
-### Added 
+### Added
 
 - Plutus.Contract.Test.Extra: `namedPredicate` to give a name to `TracePredicate`
 
@@ -56,8 +64,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ## 3.0 -- 2021-11-11
 
 ### Changed
-  
-* Plutus upgrade: `plutus` pinned to `3f089ccf0ca746b399c99afe51e063b0640af547`, 
+
+* Plutus upgrade: `plutus` pinned to `3f089ccf0ca746b399c99afe51e063b0640af547`,
   `plutus-apps` pinned to `404af7ac3e27ebcb218c05f79d9a70ca966407c9`
 
 ## 2.2 -- 2021-11-01
