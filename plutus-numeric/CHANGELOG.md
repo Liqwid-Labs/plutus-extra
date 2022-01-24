@@ -15,12 +15,23 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   `plutus-apps` pinned to `34fe6eeff441166fee0cd0ceba68c1439f0e93d2`
 * `PlutusTx.Rational.QQ` is now exposed, exporting its quasiquoters.
 * `RatioSchema` is now exported from `PlutusTx.SchemaUtils`.
+* Sizes for `NatRatio` functions have changed (you may need to update your size
+  tests):
+  * `^-`
+  * `(/)`
+  * `powInteger`
+  * `round`
+  * `properFraction`
+* Plutus `ToSchema` and `ToArgument` use upstream `Rational` instances now; you
+  may need to update your golden tests if you test or use these.
+* `quickcheck-plutus-instances` is now a test dependency.
 
 ### Removed
 
 * The entire `PlutusTx.Rational` module, as the changes it required were
   upstreamed. This includes the `Arbitrary`, `CoArbitrary` and `Function`
-  instances, which can now be found in `quickcheck-plutus-instances`.
+  instances, which can now be found in `quickcheck-plutus-instances`. Also
+  includes the removal of their tests, as they now reside upstream as well.
 
 ## 4.2 -- 2022-01-11
 

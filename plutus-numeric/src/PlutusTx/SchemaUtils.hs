@@ -9,7 +9,7 @@
 -}
 module PlutusTx.SchemaUtils (
   RatioFields ((:%:)),
-  RatioSchema(..), 
+  RatioSchema (..),
   ratioDeclareNamedSchema,
   ratioFixFormArgument,
   ratioFormSchema,
@@ -17,6 +17,15 @@ module PlutusTx.SchemaUtils (
   jsonFieldSym,
 ) where
 
+import Data.Aeson (
+  FromJSON (parseJSON),
+  ToJSON (toJSON),
+  Value,
+  object,
+  withObject,
+  (.:),
+ )
+import Data.Aeson.Types (Parser)
 import Data.Functor.Foldable (Fix (Fix))
 import Data.OpenApi qualified as OpenApi
 import Data.OpenApi.Declare (type Declare)
@@ -25,17 +34,14 @@ import Data.Text (Text, pack)
 import Data.Text qualified as Text
 import GHC.Exts (fromList)
 import GHC.Generics (Generic)
-import Data.Aeson.Types (Parser)
-import Data.Aeson (ToJSON (toJSON), FromJSON (parseJSON), Value, 
-  object, withObject, (.:))
+import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import PlutusTx.Ratio (Rational)
 import PlutusTx.Ratio qualified as Ratio
-import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Schema (
   FormArgumentF (FormObjectF),
   FormSchema (FormSchemaObject),
-  ToArgument(toArgument),
-  ToSchema(toSchema),
+  ToArgument (toArgument),
+  ToSchema (toSchema),
  )
 import Prelude hiding (Rational)
 

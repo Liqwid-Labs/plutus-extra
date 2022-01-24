@@ -1,14 +1,15 @@
 {-# LANGUAGE TemplateHaskell #-}
 
--- |
--- Module: PlutusTx.Rational.QQ
--- Copyright: (C) MLabs 2021
--- License: Apache 2.0
--- Maintainer: Koz Ross <koz@mlabs.city>
--- Portability: GHC only
--- Stability: Experimental
---
--- Several quasiquoters for working with 'Rational's.
+{- |
+ Module: PlutusTx.Rational.QQ
+ Copyright: (C) MLabs 2021
+ License: Apache 2.0
+ Maintainer: Koz Ross <koz@mlabs.city>
+ Portability: GHC only
+ Stability: Experimental
+
+ Several quasiquoters for working with 'Rational's.
+-}
 module PlutusTx.Rational.QQ (
   dec,
   frac,
@@ -49,7 +50,7 @@ dec = QuasiQuoter decExp errorDecPat errorDecType errorDecDeclaration
 
  > [frac| (10, 100) |]
 
- This isn't strictly needed (you can use 'unsafeRatio' instead), but is 
+ This isn't strictly needed (you can use 'unsafeRatio' instead), but is
  left in place for compatibility and clarity.
 
  @since 4.0

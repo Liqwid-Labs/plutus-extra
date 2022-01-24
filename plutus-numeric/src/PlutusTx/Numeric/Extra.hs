@@ -1,6 +1,6 @@
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE Trustworthy #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-specialize #-}
@@ -221,18 +221,24 @@ infixr 8 `powInteger`
 -- | @since 1.0
 instance MultiplicativeGroup Rational where
   {-# INLINEABLE (/) #-}
-  r / r' = r * Ratio.recip r'
+  r / r' =
+    unsafeRatio
+      (Ratio.numerator r * Ratio.denominator r')
+      (Ratio.denominator r * Ratio.numerator r')
   {-# INLINEABLE reciprocal #-}
   reciprocal = Ratio.recip
   {-# INLINEABLE powInteger #-}
   powInteger r i
     | i < zero && Ratio.numerator r == zero = error ()
     | i == zero = one
-    | otherwise = let (i', num, den) = if i < zero then (negate i, Ratio.denominator r, Ratio.numerator r)
-                                                   else (i, Ratio.numerator r, Ratio.denominator r)
-                      newNum = expBySquaring num i'
-                      newDen = expBySquaring den i' in
-                    Ratio.unsafeRatio newNum newDen
+    | otherwise =
+      let (i', num, den) =
+            if i < zero
+              then (negate i, Ratio.denominator r, Ratio.numerator r)
+              else (i, Ratio.numerator r, Ratio.denominator r)
+          newNum = expBySquaring num i'
+          newDen = expBySquaring den i'
+       in Ratio.unsafeRatio newNum newDen
 
 -- | @since 1.0
 instance MultiplicativeGroup NatRatio where
@@ -325,10 +331,12 @@ instance IntegralDomain Rational NatRatio where
   {-# INLINEABLE addExtend #-}
   addExtend (NatRatio r) = r
   {-# INLINEABLE signum #-}
-  signum r = let n = Ratio.numerator r in
-    if | n < zero -> Ratio.fromInteger . negate $ one
-       | n == zero -> zero
-       | otherwise -> one
+  signum r =
+    let n = Ratio.numerator r
+     in if
+            | n < zero -> Ratio.fromInteger . negate $ one
+            | n == zero -> zero
+            | otherwise -> one
 
 {- | Non-operator version of '^-'.
 

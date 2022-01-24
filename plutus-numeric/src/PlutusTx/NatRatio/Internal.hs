@@ -240,20 +240,25 @@ ceiling x =
 -}
 {-# INLINEABLE properFraction #-}
 properFraction :: NatRatio -> (Natural, NatRatio)
-properFraction (NatRatio r) = let (n, d) = Ratio.properFraction r in
-  (Natural n, NatRatio d)
+properFraction (NatRatio r) =
+  let (n, d) = Ratio.properFraction r
+   in (Natural n, NatRatio d)
 
 -- Helper function for monus definition in Numeric.Extra
 {-# INLINEABLE nrMonus #-}
 nrMonus :: NatRatio -> NatRatio -> NatRatio
-nrMonus (NatRatio r) (NatRatio r') = 
+nrMonus (NatRatio r) (NatRatio r') = NatRatio . max zero $ r - r'
+
+{-
+nrMonus (NatRatio r) (NatRatio r') =
   let numR = Ratio.numerator r
       denR = Ratio.denominator r
       numR' = Ratio.numerator r'
       denR' = Ratio.denominator r'
       newNum = max zero ((numR * denR') - (numR' * denR))
-      newDen = denR * denR' 
+      newDen = denR * denR'
     in NatRatio . Ratio.unsafeRatio newNum $ newDen
+-}
 
 {- | Convert a 'NatRatio' to the underlying 'Rational'.
 

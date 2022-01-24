@@ -11,6 +11,8 @@ import PlutusTx.Numeric.Laws (
   scaleNatLaws,
  )
 import PlutusTx.Positive (Positive)
+import PlutusTx.Ratio (Rational)
+import Test.QuickCheck.Plutus.Instances ()
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.Plutus.Laws (
   additiveMonoidLaws,
@@ -26,8 +28,6 @@ import Test.Tasty.Plutus.Laws (
   semiringConsistencyLaws,
  )
 import Test.Tasty.QuickCheck (QuickCheckTests)
-import PlutusTx.Ratio (Rational)
-import Test.QuickCheck.Plutus.Instances ()
 import Prelude hiding (Rational)
 
 main :: IO ()

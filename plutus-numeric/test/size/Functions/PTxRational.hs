@@ -35,13 +35,13 @@ module Functions.PTxRational (
   rProperFraction,
 ) where
 
-import PlutusTx.IsData.Class (fromBuiltinData, toBuiltinData, unsafeFromBuiltinData)
 import PlutusTx.Code (CompiledCode)
+import PlutusTx.IsData.Class (fromBuiltinData, toBuiltinData, unsafeFromBuiltinData)
+import PlutusTx.Natural (Natural)
+import PlutusTx.Numeric.Extra qualified as PlutusNum
 import PlutusTx.Prelude qualified as Plutus
 import PlutusTx.Ratio as PlutusRatio
 import PlutusTx.TH (compile)
-import PlutusTx.Numeric.Extra qualified as PlutusNum
-import PlutusTx.Natural (Natural)
 
 rEq :: CompiledCode (Plutus.Rational -> Plutus.Rational -> Plutus.Bool)
 rEq = $$(compile [||(Plutus.==)||])
