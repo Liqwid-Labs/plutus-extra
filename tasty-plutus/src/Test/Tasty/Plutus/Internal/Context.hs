@@ -199,11 +199,12 @@ data TransactionConfig = TransactionConfig
 -}
 data ContextBuilder (p :: Purpose)
   = ContextBuilder
-      (Seq Input)
-      (Seq Output)
-      (Seq PubKeyHash)
-      (Seq BuiltinData)
-      (Seq Minting)
+    { cbInputs :: Seq Input -- ^ @since 6.0
+    , cbOutputs :: Seq Output -- ^ @since 6.0
+    , cbSignatories :: Seq PubKeyHash -- ^ @since 6.0
+    , cbDatums :: Seq BuiltinData -- ^ @since 6.0
+    , cbMinting :: Seq Minting -- ^ @since 6.0
+    }
 
 -- | @since 1.0
 deriving stock instance Show (ContextBuilder p)

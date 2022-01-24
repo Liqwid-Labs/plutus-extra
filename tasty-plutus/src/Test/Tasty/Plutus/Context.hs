@@ -28,7 +28,7 @@ module Test.Tasty.Plutus.Context (
   Input (..),
   Output (..),
   Minting (..),
-  ContextBuilder,
+  ContextBuilder (..),
 
   -- * Functions
   outputsToInputs,

@@ -6,6 +6,13 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Added
 
+* Record fields for `ContextBuilder`:
+  * `cbInputs`
+  * `cbOutputs`
+  * `cbSignatories`
+  * `cbDatums`
+  * `cbMinting`
+
 * ContextBuilder combinators:
   * `paysTokensToPubKey`
   * `paysTokensToWallet`
