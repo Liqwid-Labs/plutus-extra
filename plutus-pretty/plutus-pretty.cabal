@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-pretty
-version:            2.2
+version:            3.0
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -79,7 +79,7 @@ test-suite script-size
   other-modules:  Test
   build-depends:
     , plutus-ledger-api
-    , plutus-size-check  ^>=1.1
+    , plutus-size-check  ^>=2.0
     , plutus-tx
     , plutus-tx-plugin
 
@@ -93,7 +93,7 @@ test-suite properties
     , plutus-tx
     , pretty-show
     , QuickCheck                   ^>=2.14.2
-    , quickcheck-plutus-instances  ^>=1.5
+    , quickcheck-plutus-instances  ^>=2.0
     , tasty-quickcheck             ^>=0.10.1.2
 
   hs-source-dirs: test/properties

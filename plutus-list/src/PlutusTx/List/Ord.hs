@@ -23,7 +23,7 @@ module PlutusTx.List.Ord (
 ) where
 
 import Data.Kind (Type)
-import PlutusTx.Prelude
+import PlutusTx.Prelude hiding (sort, sortBy)
 import Prelude qualified ()
 
 {- | Checks if the 'Foldable' is sorted with respect to a total order

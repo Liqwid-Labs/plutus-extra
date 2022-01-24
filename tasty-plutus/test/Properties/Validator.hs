@@ -51,12 +51,13 @@ import Test.Tasty.QuickCheck (
 
 --------------------------------------------------------------------------------
 
+import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Plutus.V1.Ledger.Contexts (ScriptContext)
 import PlutusTx (applyCode, liftCode)
 import PlutusTx.Prelude (traceIfFalse, ($), (&&), (*), (+), (==))
 import PlutusTx.TH (compile)
 import Wallet.Emulator.Types (WalletNumber (WalletNumber))
-import Wallet.Emulator.Wallet (fromWalletNumber, walletPubKeyHash)
+import Wallet.Emulator.Wallet (fromWalletNumber, mockWalletPaymentPubKeyHash)
 
 --------------------------------------------------------------------------------
 
@@ -210,4 +211,8 @@ paramTestValidator secret =
     $$(compile [||toTestValidator||])
 
 userPKHash :: PubKeyHash
-userPKHash = walletPubKeyHash $ fromWalletNumber $ WalletNumber 1
+userPKHash =
+  unPaymentPubKeyHash
+    . mockWalletPaymentPubKeyHash
+    . fromWalletNumber
+    $ WalletNumber 1

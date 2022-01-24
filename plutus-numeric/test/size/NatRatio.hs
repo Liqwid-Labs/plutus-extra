@@ -30,17 +30,17 @@ tests =
       "AdditiveGroup"
       [ fitsInto "+" [bytes| 159 |] . fromCompiledCode $ NR.nrPlus
       , fitsInto "zero" [bytes| 24 |] . fromCompiledCode $ NR.nrZero
-      , fitsInto "^-" [bytes| 183 |] . fromCompiledCode $ NR.nrMonus
-      , fitsInto "scaleNat" [bytes| 242 |] .fromCompiledCode $ NR.nrScaleNat
+      , fitsInto "^-" [bytes| 216 |] . fromCompiledCode $ NR.nrMonus
+      , fitsInto "scaleNat" [bytes| 243 |] .fromCompiledCode $ NR.nrScaleNat
       ]
   , testGroup
       "MultiplicativeGroup"
       [ fitsInto "*" [bytes| 151 |] . fromCompiledCode $ NR.nrTimes
-      , fitsInto "one" [bytes| 24 |] . fromCompiledCode $ NR.nrOne
-      , fitsInto "/" [bytes| 144 |] . fromCompiledCode $ NR.nrDiv
+      , fitsInto "one" [bytes| 28 |] . fromCompiledCode $ NR.nrOne
+      , fitsInto "/" [bytes| 197 |] . fromCompiledCode $ NR.nrDiv
       , fitsInto "reciprocal" [bytes| 92 |] . fromCompiledCode $ NR.nrRecip
-      , fitsInto "powNat" [bytes| 343 |] . fromCompiledCode $ NR.nrPowNat
-      , fitsInto "powInteger" [bytes| 357 |] . fromCompiledCode $ NR.nrPowInteger
+      , fitsInto "powNat" [bytes| 348 |] . fromCompiledCode $ NR.nrPowNat
+      , fitsInto "powInteger" [bytes| 518 |] . fromCompiledCode $ NR.nrPowInteger
       ]
   , testGroup
       "Serialization"
@@ -53,8 +53,8 @@ tests =
       [ fitsInto "fromNatural" [bytes| 24 |] . fromCompiledCode $ NR.nrFromNatural
       , fitsInto "numerator" [bytes| 26 |] . fromCompiledCode $ NR.nrNumerator
       , fitsInto "denominator" [bytes| 26 |] . fromCompiledCode $ NR.nrNumerator
-      , fitsInto "round" [bytes| 282 |] . fromCompiledCode $ NR.nrRound
+      , fitsInto "round" [bytes| 339 |] . fromCompiledCode $ NR.nrRound
       , fitsInto "truncate" [bytes| 30 |] . fromCompiledCode $ NR.nrTruncate
-      , fitsInto "properFraction" [bytes| 57 |] . fromCompiledCode $ NR.nrProperFraction
+      , fitsInto "properFraction" [bytes| 79 |] . fromCompiledCode $ NR.nrProperFraction
       ]
   ]

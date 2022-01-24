@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-extra
-version:            4.2
+version:            5.0
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -95,6 +95,7 @@ library
     , plutus-contract
     , plutus-ledger
     , plutus-ledger-api
+    , plutus-ledger-constraints
     , plutus-pab
     , plutus-tx
     , plutus-use-cases

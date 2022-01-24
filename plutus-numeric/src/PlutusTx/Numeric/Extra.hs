@@ -1,4 +1,5 @@
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE Trustworthy #-}
 {-# OPTIONS_GHC -fno-ignore-interface-pragmas #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
@@ -39,13 +40,8 @@ module PlutusTx.Numeric.Extra (
 import Data.Kind (Type)
 import PlutusTx.NatRatio.Internal (NatRatio (NatRatio), nrMonus)
 import PlutusTx.Natural.Internal (Natural (Natural))
-import PlutusTx.Prelude hiding (divMod, even, (%))
-import PlutusTx.Rational qualified as Rational
-import PlutusTx.Rational.Internal (
-  Rational (Rational),
-  rDiv,
-  rPowInteger,
- )
+import PlutusTx.Prelude hiding (abs, divMod, even)
+import PlutusTx.Ratio qualified as Ratio
 import Prelude ()
 
 {- | Raise by a 'Natural' power.
@@ -223,13 +219,26 @@ class (MultiplicativeMonoid a) => MultiplicativeGroup a where
 infixr 8 `powInteger`
 
 -- | @since 1.0
-instance MultiplicativeGroup Rational.Rational where
+instance MultiplicativeGroup Rational where
   {-# INLINEABLE (/) #-}
-  (/) = rDiv
+  r / r' =
+    unsafeRatio
+      (Ratio.numerator r * Ratio.denominator r')
+      (Ratio.denominator r * Ratio.numerator r')
   {-# INLINEABLE reciprocal #-}
-  reciprocal = Rational.recip
+  reciprocal = Ratio.recip
   {-# INLINEABLE powInteger #-}
-  powInteger = rPowInteger
+  powInteger r i
+    | i < zero && Ratio.numerator r == zero = error ()
+    | i == zero = one
+    | otherwise =
+      let (i', num, den) =
+            if i < zero
+              then (negate i, Ratio.denominator r, Ratio.numerator r)
+              else (i, Ratio.numerator r, Ratio.denominator r)
+          newNum = expBySquaring num i'
+          newDen = expBySquaring den i'
+       in Ratio.unsafeRatio newNum newDen
 
 -- | @since 1.0
 instance MultiplicativeGroup NatRatio where
@@ -310,11 +319,11 @@ instance IntegralDomain Integer Natural where
   addExtend (Natural i) = i
 
 -- | @since 1.0
-instance IntegralDomain Rational.Rational NatRatio where
+instance IntegralDomain Rational NatRatio where
   {-# INLINEABLE abs #-}
-  abs = Rational.abs
+  abs = Ratio.abs
   {-# INLINEABLE projectAbs #-}
-  projectAbs = NatRatio . Rational.abs
+  projectAbs = NatRatio . Ratio.abs
   {-# INLINEABLE restrictMay #-}
   restrictMay x
     | x < zero = Nothing
@@ -322,10 +331,12 @@ instance IntegralDomain Rational.Rational NatRatio where
   {-# INLINEABLE addExtend #-}
   addExtend (NatRatio r) = r
   {-# INLINEABLE signum #-}
-  signum (Rational n _)
-    | n < zero = Rational (negate one) one
-    | n == zero = zero
-    | otherwise = one
+  signum r =
+    let n = Ratio.numerator r
+     in if
+            | n < zero -> Ratio.fromInteger . negate $ one
+            | n == zero -> zero
+            | otherwise -> one
 
 {- | Non-operator version of '^-'.
 

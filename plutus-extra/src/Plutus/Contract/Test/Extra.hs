@@ -221,7 +221,7 @@ data CheckedData where
   CheckedDatas :: UtxoMap -> CheckedData
   CheckedValue :: Ledger.Value -> CheckedData
   CheckedUtxos :: UtxoMap -> CheckedData
-  CheckedWriter :: forall w. Pretty w => w -> CheckedData
+  CheckedWriter :: forall w. Show w => w -> CheckedData
 
 instance Pretty CheckedState where
   pretty (CheckedState address datas) =
@@ -240,7 +240,7 @@ instance Pretty CheckedData where
       <+> foldMap viaShow utxos
   pretty (CheckedWriter w) =
     "Contract writer data was"
-      <+> pretty w
+      <+> viaShow w
 
 {- | Check that the funds at a computed address meet some condition.
  The address is computed using data acquired from contract's writer instance.
@@ -279,7 +279,7 @@ valueAtComputedAddress contract inst addressGetter check =
  and data aquired from contract's writer instance meet some condition.
  The address is computed using data acquired from contract's writer instance.
 
-  @since 2.2
+  @since 5.0
 -}
 valueAtComputedAddressWithState ::
   forall
@@ -289,7 +289,7 @@ valueAtComputedAddressWithState ::
     (a :: Type)
     (contract :: Type -> Row Type -> Type -> Type -> Type).
   ( Monoid w
-  , Pretty w
+  , Show w
   , IsContract contract
   ) =>
   -- | The 'IsContract' code
@@ -349,7 +349,7 @@ dataAtComputedAddress contract inst addressGetter check =
  and data aquired from contract's writer instance meet some condition.
  The address is computed using data acquired from contract's writer instance.
 
-  @since 2.1
+  @since 5.0
 -}
 dataAtComputedAddressWithState ::
   forall
@@ -361,7 +361,7 @@ dataAtComputedAddressWithState ::
     (contract :: Type -> Row Type -> Type -> Type -> Type).
   ( FromData datum
   , Monoid w
-  , Pretty w
+  , Show w
   , IsContract contract
   ) =>
   -- | The 'IsContract' code
@@ -397,7 +397,7 @@ showStateIfFailAndReturn datas addr result = do
  and data aquired from contract's writer instance meet some condition.
  The address is computed using data acquired from contract's writer instance.
 
-  @since 2.1
+  @since 5.0
 -}
 utxoAtComputedAddressWithState ::
   forall
@@ -407,7 +407,7 @@ utxoAtComputedAddressWithState ::
     (a :: Type)
     (contract :: Type -> Row Type -> Type -> Type -> Type).
   ( Monoid w
-  , Pretty w
+  , Show w
   , IsContract contract
   ) =>
   contract w s e a ->
@@ -536,14 +536,21 @@ getTxOutDatum _ (Ledger.TxOutTx tx' (Ledger.TxOut _ _ (Just datumHash))) =
 
      @since 3.2
 -}
-addressValueOptions :: [(Ledger.PubKeyHash, Ledger.Value)] -> [(Scripts.ValidatorHash, Ledger.Value, Ledger.Datum)] -> EmulatorConfig
+addressValueOptions ::
+  [(Ledger.PaymentPubKeyHash, Ledger.Value)] ->
+  [(Scripts.ValidatorHash, Ledger.Value, Ledger.Datum)] ->
+  EmulatorConfig
 addressValueOptions walletAllocs validatorAllocs = EmulatorConfig (Right [tx]) def def
   where
     tx :: Ledger.Tx
     tx =
       mempty
         { Ledger.txOutputs =
-            fmap (\(pkh, val) -> Ledger.TxOut (Ledger.pubKeyHashAddress pkh) val Nothing) walletAllocs
+            fmap
+              ( \(pkh, val) ->
+                  Ledger.TxOut (Ledger.pubKeyHashAddress pkh Nothing) val Nothing
+              )
+              walletAllocs
               <> fmap (\(vh, val, d) -> Ledger.TxOut (Ledger.scriptHashAddress vh) val $ Just $ Scripts.datumHash d) validatorAllocs
         , Ledger.txData =
             Map.fromList $
