@@ -4,10 +4,23 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## 5.0 -- 2022-01-21
 
+### Added
+
+* `PlutusTx.Numeric.Orphans` module, containing orphan instances
+  `PlutusTx.Ratio.Rational`.
+
 ### Changed
   
 * Plutus upgrade: `plutus` pinned to `65bad0fd53e432974c3c203b1b1999161b6c2dce`, 
   `plutus-apps` pinned to `34fe6eeff441166fee0cd0ceba68c1439f0e93d2`
+* `PlutusTx.Rational.QQ` is now exposed, exporting its quasiquoters.
+* `RatioSchema` is now exported from `PlutusTx.SchemaUtils`.
+
+### Removed
+
+* The entire `PlutusTx.Rational` module, as the changes it required were
+  upstreamed. This includes the `Arbitrary`, `CoArbitrary` and `Function`
+  instances, which can now be found in `quickcheck-plutus-instances`.
 
 ## 4.2 -- 2022-01-11
 

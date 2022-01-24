@@ -1,7 +1,7 @@
 module Compare.NatRatio (tests) where
 
 import Functions.NatRatio qualified as NR
-import Functions.Rational qualified as R
+import Functions.PTxRational qualified as R
 import Plutus.V1.Ledger.Scripts (fromCompiledCode)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.ExpectedFailure (expectFailBecause)
@@ -18,10 +18,10 @@ tests =
   , testGroup
       "Ord"
       [ fitsUnder "compare" (fromCompiledCode NR.nrCompare) (fromCompiledCode R.rCompare)
-      , fitsUnder "<=" (fromCompiledCode NR.nrLE) (fromCompiledCode R.rLE)
-      , fitsUnder ">=" (fromCompiledCode NR.nrGE) (fromCompiledCode R.rGE)
-      , fitsUnder "<" (fromCompiledCode NR.nrLT) (fromCompiledCode R.rLT)
-      , fitsUnder ">" (fromCompiledCode NR.nrGT) (fromCompiledCode R.rGT)
+      , fitsUnder "<=" (fromCompiledCode NR.nrLE) (fromCompiledCode R.rLeq)
+      , fitsUnder ">=" (fromCompiledCode NR.nrGE) (fromCompiledCode R.rGeq)
+      , fitsUnder "<" (fromCompiledCode NR.nrLT) (fromCompiledCode R.rLt)
+      , fitsUnder ">" (fromCompiledCode NR.nrGT) (fromCompiledCode R.rGt)
       , fitsUnder "min" (fromCompiledCode NR.nrMin) (fromCompiledCode R.rMin)
       , fitsUnder "max" (fromCompiledCode NR.nrMax) (fromCompiledCode R.rMax)
       ]
@@ -29,7 +29,7 @@ tests =
       "Additive"
       [ fitsUnder "+" (fromCompiledCode NR.nrPlus) (fromCompiledCode R.rPlus)
       , fitsUnder "zero" (fromCompiledCode NR.nrZero) (fromCompiledCode R.rZero)
-      , fitsUnder "scaleNat" (fromCompiledCode NR.nrScaleNat) (fromCompiledCode R.rScaleNat)
+      , fitsUnder "scale" (fromCompiledCode NR.nrScaleNat) (fromCompiledCode R.rScale)
       , expectFailBecause "monus is trickier"
           . fitsUnder "^- vs -" (fromCompiledCode NR.nrMonus)
           . fromCompiledCode

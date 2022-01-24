@@ -25,12 +25,23 @@ module Functions.PTxRational (
   rRecip,
   rAbs,
   rHalf,
+  rScale,
+  rDiv,
+  rPowNat,
+  rPowInteger,
+  rToBuiltinData,
+  rFromBuiltinData,
+  rUnsafeFromBuiltinData,
+  rProperFraction,
 ) where
 
+import PlutusTx.IsData.Class (fromBuiltinData, toBuiltinData, unsafeFromBuiltinData)
 import PlutusTx.Code (CompiledCode)
 import PlutusTx.Prelude qualified as Plutus
 import PlutusTx.Ratio as PlutusRatio
 import PlutusTx.TH (compile)
+import PlutusTx.Numeric.Extra qualified as PlutusNum
+import PlutusTx.Natural (Natural)
 
 rEq :: CompiledCode (Plutus.Rational -> Plutus.Rational -> Plutus.Bool)
 rEq = $$(compile [||(Plutus.==)||])
@@ -103,3 +114,27 @@ rAbs = $$(compile [||PlutusRatio.abs||])
 
 rHalf :: CompiledCode Plutus.Rational
 rHalf = $$(compile [||PlutusRatio.half||])
+
+rScale :: CompiledCode (Integer -> Plutus.Rational -> Plutus.Rational)
+rScale = $$(compile [||Plutus.scale||])
+
+rDiv :: CompiledCode (Plutus.Rational -> Plutus.Rational -> Plutus.Rational)
+rDiv = $$(compile [||(PlutusNum./)||])
+
+rPowNat :: CompiledCode (Plutus.Rational -> Natural -> Plutus.Rational)
+rPowNat = $$(compile [||PlutusNum.powNat||])
+
+rPowInteger :: CompiledCode (Plutus.Rational -> Integer -> Plutus.Rational)
+rPowInteger = $$(compile [||PlutusNum.powInteger||])
+
+rToBuiltinData :: CompiledCode (Plutus.Rational -> Plutus.BuiltinData)
+rToBuiltinData = $$(compile [||toBuiltinData||])
+
+rFromBuiltinData :: CompiledCode (Plutus.BuiltinData -> Plutus.Maybe Plutus.Rational)
+rFromBuiltinData = $$(compile [||fromBuiltinData||])
+
+rUnsafeFromBuiltinData :: CompiledCode (Plutus.BuiltinData -> Plutus.Rational)
+rUnsafeFromBuiltinData = $$(compile [||unsafeFromBuiltinData||])
+
+rProperFraction :: CompiledCode (Plutus.Rational -> (Integer, Plutus.Rational))
+rProperFraction = $$(compile [||PlutusRatio.properFraction||])

@@ -11,16 +11,13 @@ import PlutusTx.Numeric.Laws (
   scaleNatLaws,
  )
 import PlutusTx.Positive (Positive)
-import PlutusTx.Rational (Rational)
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.Plutus.Laws (
-  additiveGroupLaws,
   additiveMonoidLaws,
   additiveSemigroupLaws,
   dataLaws,
   jsonLaws,
   laws,
-  moduleScaleLaws,
   multiplicativeMonoidLaws,
   multiplicativeSemigroupLaws,
   plutusEqLaws,
@@ -29,6 +26,8 @@ import Test.Tasty.Plutus.Laws (
   semiringConsistencyLaws,
  )
 import Test.Tasty.QuickCheck (QuickCheckTests)
+import PlutusTx.Ratio (Rational)
+import Test.QuickCheck.Plutus.Instances ()
 import Prelude hiding (Rational)
 
 main :: IO ()
@@ -37,43 +36,32 @@ main =
     [ jsonLaws @Natural
     , jsonLaws @NatRatio
     , jsonLaws @Positive
-    , jsonLaws @Rational
     , dataLaws @Natural
     , dataLaws @NatRatio
     , dataLaws @Positive
-    , dataLaws @Rational
     , plutusEqLaws @Natural
     , plutusEqLawsSubstitution @Natural
     , plutusEqLaws @Positive
     , plutusEqLawsSubstitution @Positive
-    , plutusEqLaws @Rational
-    , plutusEqLawsSubstitution @Rational
     , plutusEqLaws @NatRatio
     , plutusEqLawsSubstitution @NatRatio
     , plutusOrdLaws @Natural
     , plutusOrdLaws @Positive
-    , plutusOrdLaws @Rational
     , plutusOrdLaws @NatRatio
     , additiveSemigroupLaws @Natural
     , additiveSemigroupLaws @Positive
-    , additiveSemigroupLaws @Rational
     , additiveSemigroupLaws @NatRatio
     , additiveMonoidLaws @Natural
-    , additiveMonoidLaws @Rational
     , additiveMonoidLaws @NatRatio
-    , additiveGroupLaws @Rational
     , multiplicativeSemigroupLaws @Natural
     , multiplicativeSemigroupLaws @Positive
-    , multiplicativeSemigroupLaws @Rational
     , multiplicativeSemigroupLaws @NatRatio
     , multiplicativeMonoidLaws @Natural
     , multiplicativeMonoidLaws @Positive
     , multiplicativeMonoidLaws @Rational
     , multiplicativeMonoidLaws @NatRatio
     , semiringConsistencyLaws @Natural
-    , semiringConsistencyLaws @Rational
     , semiringConsistencyLaws @NatRatio
-    , moduleScaleLaws @Integer @Rational
     , laws @Natural "Additive hemigroup" additiveHemigroupLaws
     , laws @NatRatio "Additive hemigroup" additiveHemigroupLaws
     , laws @Natural "EuclideanClosed" euclideanClosedLaws

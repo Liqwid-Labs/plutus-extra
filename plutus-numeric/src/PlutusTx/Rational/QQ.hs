@@ -1,5 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 
+-- |
+-- Module: PlutusTx.Rational.QQ
+-- Copyright: (C) MLabs 2021
+-- License: Apache 2.0
+-- Maintainer: Koz Ross <koz@mlabs.city>
+-- Portability: GHC only
+-- Stability: Experimental
+--
+-- Several quasiquoters for working with 'Rational's.
 module PlutusTx.Rational.QQ (
   dec,
   frac,
@@ -16,7 +25,7 @@ import Language.Haskell.TH.Syntax (
   Q,
   Type,
  )
-import PlutusTx.Rational.Internal ((%))
+import PlutusTx.Ratio (unsafeRatio)
 import Text.Read (readMaybe)
 import Text.Read.Lex (Lexeme (Number), numberToRational)
 import Prelude
@@ -40,6 +49,9 @@ dec = QuasiQuoter decExp errorDecPat errorDecType errorDecDeclaration
 
  > [frac| (10, 100) |]
 
+ This isn't strictly needed (you can use 'unsafeRatio' instead), but is 
+ left in place for compatibility and clarity.
+
  @since 4.0
 -}
 frac :: QuasiQuoter
@@ -55,7 +67,7 @@ decExp s = case parseDecRatioExp s of
     pure $
       UInfixE
         (LitE $ IntegerL n)
-        (VarE '(%))
+        (VarE 'unsafeRatio)
         (LitE $ IntegerL m)
 
 parseDecRatioExp :: String -> Maybe (Integer, Integer)
@@ -86,7 +98,7 @@ fracExp s = case readMaybe @(Integer, Integer) s of
         pure $
           UInfixE
             (LitE $ IntegerL n)
-            (VarE '(%))
+            (VarE 'unsafeRatio)
             (LitE $ IntegerL m)
 
 errorFracPat :: String -> Q Pat

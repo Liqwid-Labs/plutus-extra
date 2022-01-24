@@ -59,8 +59,9 @@ library
     PlutusTx.Numeric.Extra
     PlutusTx.Numeric.Gen
     PlutusTx.Numeric.Laws
+    PlutusTx.Numeric.Orphans
     PlutusTx.Positive
-    PlutusTx.Rational
+    PlutusTx.Rational.QQ
     PlutusTx.SchemaUtils
 
   other-modules:
@@ -70,8 +71,6 @@ library
     PlutusTx.Natural.QQ
     PlutusTx.Positive.Internal
     PlutusTx.Positive.QQ
-    PlutusTx.Rational.Internal
-    PlutusTx.Rational.QQ
 
   build-depends:
     , aeson              ^>=1.5.6.0
@@ -97,7 +96,6 @@ test-suite property
     Suites.Consistency
     Suites.NatRatio
     Suites.Natural
-    Suites.Rational
 
   build-depends:
     , plutus-tx
@@ -114,8 +112,9 @@ test-suite golden
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   build-depends:
-    , plutus-golden  ^>=3.0
+    , plutus-golden                ^>=3.0
     , plutus-tx
+    , quickcheck-plutus-instances  ^>=2.0
 
   hs-source-dirs: test/golden
 
@@ -124,8 +123,10 @@ test-suite laws
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   build-depends:
-    , plutus-laws       ^>=3.0
-    , tasty-quickcheck  ^>=0.10.1.2
+    , plutus-laws                  ^>=3.0
+    , plutus-tx
+    , quickcheck-plutus-instances  ^>=2.0
+    , tasty-quickcheck             ^>=0.10.1.2
 
   hs-source-dirs: test/laws
 
@@ -136,16 +137,13 @@ test-suite size
   other-modules:
     Compare.NatRatio
     Compare.Natural
-    Compare.Rational
     Functions.Integer
     Functions.NatRatio
     Functions.Natural
     Functions.PTxRational
-    Functions.Rational
     Integer
     NatRatio
     Natural
-    Rational
 
   build-depends:
     , plutus-ledger-api
