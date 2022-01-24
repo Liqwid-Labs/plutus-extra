@@ -110,8 +110,8 @@ import Test.QuickCheck.Plutus.Modifiers (
 
 -- | @since 1.0
 instance Arbitrary BuiltinByteString where
-  arbitrary = BuiltinByteString <$> genByteString64
-  shrink (BuiltinByteString bs) = BuiltinByteString <$> shrinkByteString64 bs
+  arbitrary = BuiltinByteString <$> genByteStringUpto 64
+  shrink (BuiltinByteString bs) = BuiltinByteString <$> shrinkByteString bs
 
 -- | @since 1.0
 instance CoArbitrary BuiltinByteString where
@@ -136,19 +136,19 @@ instance Arbitrary Data where
         | s <= 0 =
           oneof
             [ I <$> arbitrary
-            , B <$> genByteString64
+            , B <$> genByteStringUpto 64
             ]
         | otherwise =
           oneof
             [ I <$> arbitrary
-            , B <$> genByteString64
+            , B <$> genByteStringUpto 64
             , List <$> scale (`quot` 2) arbitrary
             , Map <$> scale (`quot` 2) arbitrary
             , Constr <$> genNonNegative <*> scale (`quot` 2) arbitrary
             ]
   shrink = \case
     I i -> I <$> shrink i
-    B bs -> B <$> shrinkByteString64 bs
+    B bs -> B <$> shrinkByteString bs
     List ds -> List <$> shrink ds
     Map keyVals -> Map <$> shrink keyVals
     Constr ix ds -> Constr <$> shrinkNonNegative ix <*> shrink ds
@@ -157,7 +157,7 @@ instance Arbitrary Data where
 instance CoArbitrary Data where
   coarbitrary dat gen = case dat of
     I i -> variant (0 :: Int) . coarbitrary i $ gen
-    B bs -> variant (1 :: Int) . coarbitraryByteString64 bs $ gen
+    B bs -> variant (1 :: Int) . coarbitraryByteString bs $ gen
     List ds -> variant (2 :: Int) . coarbitrary ds $ gen
     Map keyVals -> variant (3 :: Int) . coarbitrary keyVals $ gen
     Constr ix ds -> variant (4 :: Int) . coarbitrary ix . coarbitrary ds $ gen
@@ -216,7 +216,9 @@ instance Function LedgerBytes where
       into (LedgerBytes bs) = bs
 
 -- | @since 1.0
-deriving via LedgerBytes instance Arbitrary PubKey
+instance Arbitrary PubKey where
+  -- Ed25519
+  arbitrary = PubKey . LedgerBytes . BuiltinByteString <$> genByteString 64
 
 -- | @since 1.0
 deriving via LedgerBytes instance CoArbitrary PubKey
@@ -279,7 +281,8 @@ instance Function BuiltinData where
       into (BuiltinData dat) = dat
 
 -- | @since 1.0
-deriving via BuiltinByteString instance Arbitrary Signature
+instance Arbitrary Signature where
+  arbitrary = Signature . BuiltinByteString <$> genByteString 64
 
 -- | @since 1.0
 deriving via BuiltinByteString instance CoArbitrary Signature
@@ -292,7 +295,8 @@ instance Function Signature where
       into (Signature bs) = bs
 
 -- | @since 1.0
-deriving via BuiltinByteString instance Arbitrary DatumHash
+instance Arbitrary DatumHash where
+  arbitrary = DatumHash . BuiltinByteString <$> genByteString 28
 
 -- | @since 1.0
 deriving via BuiltinByteString instance CoArbitrary DatumHash
@@ -360,7 +364,8 @@ instance
          in SignedMessage sig dh d
 
 -- | @since 1.0
-deriving via BuiltinByteString instance Arbitrary TokenName
+instance Arbitrary TokenName where
+  arbitrary = TokenName . BuiltinByteString <$> genByteStringUpto 32
 
 -- | @since 1.0
 deriving via BuiltinByteString instance CoArbitrary TokenName
@@ -373,7 +378,9 @@ instance Function TokenName where
       into (TokenName tn) = tn
 
 -- | @since 1.0
-deriving via BuiltinByteString instance Arbitrary TxId
+instance Arbitrary TxId where
+  -- Blake2b224?
+  arbitrary = TxId . BuiltinByteString <$> genByteString 28
 
 -- | @since 1.0
 deriving via BuiltinByteString instance CoArbitrary TxId
@@ -386,7 +393,9 @@ instance Function TxId where
       into (TxId bs) = bs
 
 -- | @since 1.0
-deriving via BuiltinByteString instance Arbitrary ValidatorHash
+instance Arbitrary ValidatorHash where
+  -- Blake2b224?
+  arbitrary = ValidatorHash . BuiltinByteString <$> genByteString 28
 
 -- | @since 1.0
 deriving via BuiltinByteString instance CoArbitrary ValidatorHash
@@ -399,7 +408,9 @@ instance Function ValidatorHash where
       into (ValidatorHash bs) = bs
 
 -- | @since 1.0
-deriving via BuiltinByteString instance Arbitrary PubKeyHash
+instance Arbitrary PubKeyHash where
+  -- Blake2b224, apparently
+  arbitrary = PubKeyHash . BuiltinByteString <$> genByteString 28
 
 -- | @since 1.0
 deriving via BuiltinByteString instance CoArbitrary PubKeyHash
@@ -412,7 +423,9 @@ instance Function PubKeyHash where
       into (PubKeyHash bs) = bs
 
 -- | @since 1.0
-deriving via BuiltinByteString instance Arbitrary CurrencySymbol
+instance Arbitrary CurrencySymbol where
+  -- Blake2b224?
+  arbitrary = CurrencySymbol . BuiltinByteString <$> genByteString 28
 
 -- | @since 1.0
 deriving via BuiltinByteString instance CoArbitrary CurrencySymbol
@@ -680,27 +693,28 @@ instance Function Ratio.Rational where
 -- Helpers
 
 -- Generates ByteStrings up to 64 bytes long
-genByteString64 :: Gen ByteString
-genByteString64 = sized go
+genByteStringUpto :: Int -> Gen ByteString
+genByteStringUpto m = sized go
   where
     go :: Int -> Gen ByteString
-    go s = do
-      len <- chooseInt (0, min 64 s)
-      GHC.fromList <$> vectorOf len arbitrary
+    go s = chooseInt (0, min m s) >>= genByteString
 
--- Corresponding shrinker for genByteString64
-shrinkByteString64 :: ByteString -> [ByteString]
-shrinkByteString64 bs = do
+genByteString :: Int -> Gen ByteString
+genByteString l = GHC.fromList <$> vectorOf l arbitrary
+
+-- Corresponding shrinker for genByteString
+shrinkByteString :: ByteString -> [ByteString]
+shrinkByteString bs = do
   xs' <- shrink . GHC.toList $ bs
   pure . GHC.fromList $ xs'
 
--- Corresponding coarbitrary for genByteString64
-coarbitraryByteString64 ::
+-- Corresponding coarbitrary for genByteString
+coarbitraryByteString ::
   forall (b :: Type).
   ByteString ->
   Gen b ->
   Gen b
-coarbitraryByteString64 bs = coarbitrary (GHC.toList bs)
+coarbitraryByteString bs = coarbitrary (GHC.toList bs)
 
 -- Generates 0 or above.
 genNonNegative :: Gen Integer
