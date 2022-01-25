@@ -2,8 +2,10 @@ module Main (main) where
 
 import PlutusTx.NatRatio (NatRatio)
 import PlutusTx.Natural (Natural)
+import PlutusTx.Numeric.Orphans ()
 import PlutusTx.Positive (Positive)
-import PlutusTx.Rational (Rational)
+import PlutusTx.Ratio (Rational)
+import Test.QuickCheck.Plutus.Instances ()
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.Plutus.Golden (goldenData, goldenJSON, goldenToSchema)
 import Prelude hiding (Rational)

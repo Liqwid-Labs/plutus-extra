@@ -4,6 +4,15 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 7.0 -- 2022-01-21
+
+### Changed
+  
+* Plutus upgrade: `plutus` pinned to `65bad0fd53e432974c3c203b1b1999161b6c2dce`, 
+  `plutus-apps` pinned to `34fe6eeff441166fee0cd0ceba68c1439f0e93d2`
+
+## 6.0 -- 2022-01-19
+
 ### Added
 
 * Record fields for `ContextBuilder`:
@@ -13,6 +22,18 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   * `cbDatums`
   * `cbMinting`
 
+* `TestScript` type for wrapping `Validator` and `MintingPilicy`
+* Functions for creating `TestScript`:
+  * `mkTestValidator` for creating `TestScript ('ForSpending d r)`
+  * `mkTestValidatorUnsafe` for creating `TestScript ('ForSpending d r)`
+  * `mkMintingPolicy` for creating `TestScript ('ForMiting r)`
+  * `mkMintingPolicyUnsafe` for creating `TestScript ('ForMiting r)`
+* Functions for creating property based test with parameterized script:
+  * `paramScriptProperty`
+  * `paramScriptPropertyPass` to test the conditions under which a script
+     should always succeed
+  * `paramScriptPropertyFail` to test the conditions under which a script
+     should always succeed
 * ContextBuilder combinators:
   * `paysTokensToPubKey`
   * `paysTokensToWallet`
@@ -25,22 +46,42 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * `MintingPolicyAction` and `MintingPolicyTask` to describe the actions
    required by the tested minting policy
 * Example of property based testing of minting policy
+* `Show` instance for `TestItems`
 
 ### Changed
 
+* `toTestValidator` is moved to module `Test.Tasty.Plutus.TestScript`
+  and returns `WrappedValidator`
+* `toTestMintingPolicy` is moved to module `Test.Tasty.Plutus.TestScript`
+  and returns `WrappedMintingPolicy`
+* `withValidator` and `withMintingPolicy` are merged into `withTestScript`
 * `Tokens` type corresponds to some positive number of 'TokenName' belonging
   to the tested minting policy
 * `ItemsForMinting` fields:
   * `mintRedeemer` to `mpRedeemer`
   * `mintCB` to `mpCB`
   * `mintOutcome` to `mpOutcome`
-  * `mintTokens :: Tokens` to `mpTasks :: NonEmpty MintimngPolicyTask ` 
+  * `mintTokens :: Tokens` to `mpTasks :: NonEmpty MintimngPolicyTask`
+
+## 5.3 -- 2022-01-17
+
+### Added
+
+* Added `paysToPubKeyWithDatum`, `paysToWalletWithDatum` including a Datum for pub key outputs and
+  `spendsFromPubKeyWithDatum`, `spendsFromPubKeyWithDatumSigned`, `spendsFromWalletWithDatum`,
+  `spendsFromWalletWithDatumSigned` for pub key inputs
+
+## 5.2 -- 2022-01-10
+
+### Changed
+
+* `toTestValidator` and `toTestMintingPolicy` now accepts any `FromData` as the script context.
 
 ## 5.1 -- 2021-12-16
 
 ### Changed
 
-* `Purpse` was extended with additional type parameters for additional type safety.
+* `Purpose` was extended with additional type parameters for additional type safety.
 
 ## 5.0 -- 2021-12-10
 
@@ -81,10 +122,10 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ### Changed
 
 * Changed API for testing minting policies:
-  * Replaced `OwnMint` and `OtherMint` constructors to `Minting` with single 
-    `Mint` constructor representing mints of currencies other than that of 
+  * Replaced `OwnMint` and `OtherMint` constructors to `Minting` with single
+    `Mint` constructor representing mints of currencies other than that of
     the policy being tested.
-  * Added a `Tokens` field to `MintingTest`, and a parameter to `GenForMinting` 
+  * Added a `Tokens` field to `MintingTest`, and a parameter to `GenForMinting`
     and `fromArbitraryMinting`.
 * Rename `paysSelf` and `paysOther` into `paysToSelf` and `paysToOther` for
   consistency.

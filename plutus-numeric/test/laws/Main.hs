@@ -8,12 +8,13 @@ import PlutusTx.Numeric.Laws (
   euclideanClosedSignedLaws,
   integralDomainLaws,
   multiplicativeGroupLaws,
+  scaleNatLaws,
  )
 import PlutusTx.Positive (Positive)
-import PlutusTx.Rational (Rational)
+import PlutusTx.Ratio (Rational)
+import Test.QuickCheck.Plutus.Instances ()
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.Plutus.Laws (
-  additiveGroupLaws,
   additiveMonoidLaws,
   additiveSemigroupLaws,
   dataLaws,
@@ -35,41 +36,31 @@ main =
     [ jsonLaws @Natural
     , jsonLaws @NatRatio
     , jsonLaws @Positive
-    , jsonLaws @Rational
     , dataLaws @Natural
     , dataLaws @NatRatio
     , dataLaws @Positive
-    , dataLaws @Rational
     , plutusEqLaws @Natural
     , plutusEqLawsSubstitution @Natural
     , plutusEqLaws @Positive
     , plutusEqLawsSubstitution @Positive
-    , plutusEqLaws @Rational
-    , plutusEqLawsSubstitution @Rational
     , plutusEqLaws @NatRatio
     , plutusEqLawsSubstitution @NatRatio
     , plutusOrdLaws @Natural
     , plutusOrdLaws @Positive
-    , plutusOrdLaws @Rational
     , plutusOrdLaws @NatRatio
     , additiveSemigroupLaws @Natural
     , additiveSemigroupLaws @Positive
-    , additiveSemigroupLaws @Rational
     , additiveSemigroupLaws @NatRatio
     , additiveMonoidLaws @Natural
-    , additiveMonoidLaws @Rational
     , additiveMonoidLaws @NatRatio
-    , additiveGroupLaws @Rational
     , multiplicativeSemigroupLaws @Natural
     , multiplicativeSemigroupLaws @Positive
-    , multiplicativeSemigroupLaws @Rational
     , multiplicativeSemigroupLaws @NatRatio
     , multiplicativeMonoidLaws @Natural
     , multiplicativeMonoidLaws @Positive
     , multiplicativeMonoidLaws @Rational
     , multiplicativeMonoidLaws @NatRatio
     , semiringConsistencyLaws @Natural
-    , semiringConsistencyLaws @Rational
     , semiringConsistencyLaws @NatRatio
     , laws @Natural "Additive hemigroup" additiveHemigroupLaws
     , laws @NatRatio "Additive hemigroup" additiveHemigroupLaws
@@ -79,6 +70,10 @@ main =
     , laws @NatRatio "Multiplicative group" multiplicativeGroupLaws
     , laws @Integer "IntegralDomain" integralDomainLaws
     , laws @Rational "IntegralDomain" integralDomainLaws
+    , laws @Integer "scaleNat" scaleNatLaws
+    , laws @Natural "scaleNat" scaleNatLaws
+    , laws @NatRatio "scaleNat" scaleNatLaws
+    , laws @Rational "scaleNat" scaleNatLaws
     ]
   where
     testMinimum :: QuickCheckTests

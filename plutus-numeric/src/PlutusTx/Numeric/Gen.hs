@@ -20,7 +20,7 @@ import Hedgehog.Gen qualified as Gen
 import PlutusTx.NatRatio.Internal (NatRatio (NatRatio))
 import PlutusTx.Natural.Internal (Natural (Natural))
 import PlutusTx.Numeric.Extra (addExtend)
-import PlutusTx.Rational qualified as Ratio
+import PlutusTx.Ratio qualified as Ratio
 
 {- | Generates a random 'Natural' in the given @[inclusive, inclusive]@ range.
 

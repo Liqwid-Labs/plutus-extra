@@ -10,8 +10,6 @@ import Data.List.NonEmpty (NonEmpty)
 import Prelude hiding (($), (&&), (*), (+), (==))
 
 import Ledger.Crypto (PubKeyHash)
-import Ledger.Typed.Scripts (MintingPolicy)
-import Plutus.V1.Ledger.Scripts (mkMintingPolicyScript)
 import Test.QuickCheck.Plutus.Instances ()
 import Test.Tasty (TestTree)
 import Test.Tasty.Plutus.Context (
@@ -38,7 +36,12 @@ import Test.Tasty.Plutus.TestData (
   mintTokens,
   passIf,
  )
-import Test.Tasty.Plutus.WithScript (toTestMintingPolicy, withMintingPolicy)
+import Test.Tasty.Plutus.TestScript (
+  TestScript,
+  mkTestMintingPolicy,
+  toTestMintingPolicy,
+ )
+import Test.Tasty.Plutus.WithScript (withTestScript)
 import Test.Tasty.QuickCheck (
   Gen,
   arbitrary,
@@ -48,19 +51,18 @@ import Test.Tasty.QuickCheck (
 
 --------------------------------------------------------------------------------
 
+import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Plutus.V1.Ledger.Contexts (ScriptContext)
-import PlutusTx (applyCode)
-import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.Prelude (traceIfFalse, ($), (==))
 import PlutusTx.TH (compile)
 import Wallet.Emulator.Types (WalletNumber (WalletNumber))
-import Wallet.Emulator.Wallet (fromWalletNumber, walletPubKeyHash)
+import Wallet.Emulator.Wallet (fromWalletNumber, mockWalletPaymentPubKeyHash)
 
 --------------------------------------------------------------------------------
 
 tests :: TestTree
 tests =
-  withMintingPolicy "myMintinPolicy:" myMintingPolicyScript $ do
+  withTestScript "myMintinPolicy:" myMintingPolicyScript $ do
     scriptProperty "MintingPolicy checks the secret" $
       GenForMinting gen1 transform1
     scriptPropertyPass "MintingPolicy always succeeds if the key is correct" $
@@ -127,22 +129,25 @@ myMintingPolicy secret key _ = correctKey
       traceIfFalse "The provided key is wrong" $
         secret == key
 
-myMintingPolicyScript :: MintingPolicy
+myMintingPolicyScript :: TestScript ( 'ForMinting Integer)
 myMintingPolicyScript =
-  mkMintingPolicyScript $
-    $$(compile [||wrap||])
-      `applyCode` $$(compile [||myMintingPolicy secretKey||])
-  where
-    wrap ::
-      (Integer -> ScriptContext -> Bool) ->
-      (BuiltinData -> BuiltinData -> ())
-    wrap = toTestMintingPolicy
+  mkTestMintingPolicy
+    $$(compile [||myMintingPolicy secretKey||])
+    $$(compile [||toTestMintingPolicy||])
 
 userPKHash1 :: PubKeyHash
-userPKHash1 = walletPubKeyHash $ fromWalletNumber $ WalletNumber 1
+userPKHash1 =
+  unPaymentPubKeyHash
+    . mockWalletPaymentPubKeyHash
+    . fromWalletNumber
+    $ WalletNumber 1
 
 userPKHash2 :: PubKeyHash
-userPKHash2 = walletPubKeyHash $ fromWalletNumber $ WalletNumber 2
+userPKHash2 =
+  unPaymentPubKeyHash
+    . mockWalletPaymentPubKeyHash
+    . fromWalletNumber
+    $ WalletNumber 2
 
 {-# INLINEABLE secretKey #-}
 secretKey :: Integer

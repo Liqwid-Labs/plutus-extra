@@ -101,8 +101,8 @@ data Purpose where
  @since 3.0
 -}
 data ExternalType
-  = -- | @since 3.0
-    PubKeyType PubKeyHash
+  = -- | @since 5.3
+    PubKeyType PubKeyHash (Maybe BuiltinData)
   | -- | @since 3.0
     ScriptType ValidatorHash BuiltinData
   | -- | @since 3.0
@@ -114,10 +114,10 @@ data ExternalType
 
 {- | Different types of value:
 
-  `TokensValue` is only used within `ContextBuilder ('ForMinting r)`
+  'TokensValue' is only used within @ContextBuilder ('ForMinting r)@
   for representing classes, belonging to the tested MintingPolicy.
 
-  In all other cases `GeneralValue` is used.
+  In all other cases 'GeneralValue' is used.
 
  @since 6.0
 -}
@@ -128,6 +128,8 @@ data ValueType
     TokensValue TokenName Positive
   deriving stock
     ( -- | @since 6.0
+      Eq
+    , -- | @since 6.0
       Show
     )
 
@@ -136,7 +138,7 @@ data ValueType
  @since 1.0
 -}
 data Input
-  = -- | @since 3.0
+  = -- | @since 6.0
     Input ExternalType ValueType
   deriving stock
     ( -- | @since 1.0
@@ -148,14 +150,14 @@ data Input
  @since 1.0
 -}
 data Output
-  = -- | @since 3.0
+  = -- | @since 6.0
     Output ExternalType ValueType
   deriving stock
     ( -- | @since 1.0
       Show
     )
 
-{- | 'Value' minted with minting policy other than the tested one.
+{- | A 'Value' minted with a minting policy other than the one being tested.
  Do not use this for tokens being minted by the tested minting policy.
 
  = Note
@@ -305,7 +307,7 @@ compileMinting conf cb toks =
      > , (context1 <> context2, "Missing context 3")
      > ]
 
-     This can then be run in a `withValidator` block
+     This can then be run in a `withTestScript` block
      like so:
 
      > mapM_ (\(ctx,str) -> shouldn'tValidate str input ctx) convertedContexts
@@ -377,13 +379,13 @@ toInputDatum :: Input -> Maybe (DatumHash, Datum)
 toInputDatum (Input typ _) = case typ of
   ScriptType _ dt -> Just . datumWithHash $ dt
   OwnType dt -> Just . datumWithHash $ dt
-  PubKeyType _ -> Nothing
+  PubKeyType _ dt -> datumWithHash <$> dt
 
 toOutputDatum :: Output -> Maybe (DatumHash, Datum)
 toOutputDatum (Output typ _) = case typ of
   ScriptType _ dt -> Just . datumWithHash $ dt
   OwnType dt -> Just . datumWithHash $ dt
-  PubKeyType _ -> Nothing
+  PubKeyType _ dt -> datumWithHash <$> dt
 
 datumWithHash :: BuiltinData -> (DatumHash, Datum)
 datumWithHash dt = (datumHash dt', dt')
@@ -396,7 +398,7 @@ createTxInInfo conf (ix, Input typ valType) =
   let val = extractValue conf valType
    in TxInInfo (TxOutRef (testTxId conf) ix) $
         case typ of
-          PubKeyType pkh -> TxOut (pubKeyHashAddress pkh) val Nothing
+          PubKeyType pkh dat -> TxOut (pubKeyHashAddress pkh) val $ datumHash . Datum <$> dat
           ScriptType hash dat ->
             TxOut (scriptHashAddress hash) val . justDatumHash $ dat
           OwnType dat ->
@@ -409,7 +411,7 @@ toTxOut :: TransactionConfig -> ValidatorHash -> Output -> TxOut
 toTxOut conf valHash (Output typ valType) =
   let val = extractValue conf valType
    in case typ of
-        PubKeyType pkh -> TxOut (pubKeyHashAddress pkh) val Nothing
+        PubKeyType pkh dat -> TxOut (pubKeyHashAddress pkh) val $ datumHash . Datum <$> dat
         ScriptType hash dat ->
           TxOut (scriptHashAddress hash) val . justDatumHash $ dat
         OwnType dat ->

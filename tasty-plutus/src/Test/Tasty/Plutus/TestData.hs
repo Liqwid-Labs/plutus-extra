@@ -33,7 +33,7 @@ import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Semigroup (stimes, stimesIdempotent)
 import Plutus.V1.Ledger.Value (Value)
-import PlutusTx.IsData.Class (FromData, ToData)
+import PlutusTx
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Test.QuickCheck.Gen (Gen)
 import Test.Tasty.Plutus.Context (ContextBuilder)
@@ -84,7 +84,7 @@ data TestData (p :: Purpose) where
     redeemer ->
     -- | List of tokens to be minted by the script.
     --
-    -- @since 4.1
+    -- @since 6.0
     NonEmpty MintingPolicyTask ->
     TestData ( 'ForMinting redeemer)
 
@@ -233,5 +233,5 @@ data TestItems (p :: Purpose) where
     } ->
     TestItems ( 'ForMinting redeemer)
 
--- | @since 5.0
+-- | @since 6.0
 deriving stock instance Show (TestItems p)
