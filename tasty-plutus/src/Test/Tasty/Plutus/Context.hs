@@ -87,7 +87,7 @@ import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Test.Tasty.Plutus.Internal.Context (
-  ContextBuilder (ContextBuilder),
+  ContextBuilder (..),
   ExternalType (OwnType, PubKeyType, ScriptType),
   Input (Input),
   Minting (Mint),
