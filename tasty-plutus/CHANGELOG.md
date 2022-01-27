@@ -4,6 +4,17 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 7.1 - 2022-01-27
+
+### Added
+
+* Record fields for `ContextBuilder`:
+  * `cbInputs`
+  * `cbOutputs`
+  * `cbSignatories`
+  * `cbDatums`
+  * `cbMinting`
+
 ## 7.0 -- 2022-01-21
 
 ### Changed
@@ -14,13 +25,6 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ## 6.0 -- 2022-01-19
 
 ### Added
-
-* Record fields for `ContextBuilder`:
-  * `cbInputs`
-  * `cbOutputs`
-  * `cbSignatories`
-  * `cbDatums`
-  * `cbMinting`
 
 * `TestScript` type for wrapping `Validator` and `MintingPilicy`
 * Functions for creating `TestScript`:

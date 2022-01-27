@@ -200,15 +200,15 @@ data TransactionConfig = TransactionConfig
  @since 1.0
 -}
 data ContextBuilder (p :: Purpose) = ContextBuilder
-  { -- | @since 6.0
+  { -- | @since 7.1
     cbInputs :: Seq Input
-  , -- | @since 6.0
+  , -- | @since 7.1
     cbOutputs :: Seq Output
-  , -- | @since 6.0
+  , -- | @since 7.1
     cbSignatories :: Seq PubKeyHash
-  , -- | @since 6.0
+  , -- | @since 7.1
     cbDatums :: Seq BuiltinData
-  , -- | @since 6.0
+  , -- | @since 7.1
     cbMinting :: Seq Minting
   }
 
