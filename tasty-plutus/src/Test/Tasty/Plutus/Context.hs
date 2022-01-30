@@ -28,7 +28,7 @@ module Test.Tasty.Plutus.Context (
   Input (..),
   Output (..),
   Minting (..),
-  ContextBuilder,
+  ContextBuilder (..),
 
   -- * Functions
   outputsToInputs,
@@ -87,7 +87,14 @@ import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (ToData (toBuiltinData))
 import Test.Tasty.Plutus.Internal.Context (
-  ContextBuilder (ContextBuilder),
+  ContextBuilder (
+    ContextBuilder,
+    cbDatums,
+    cbInputs,
+    cbMinting,
+    cbOutputs,
+    cbSignatories
+  ),
   ExternalType (OwnType, PubKeyType, ScriptType),
   Input (Input),
   Minting (Mint),
