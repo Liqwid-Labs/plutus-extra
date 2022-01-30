@@ -1,0 +1,85 @@
+{
+    "seed": 123456,
+    "data": [
+        {
+            "numerator": 42400810621202,
+            "denominator": 1525371213785
+        },
+        {
+            "numerator": 46868011572617,
+            "denominator": 9582886259391
+        },
+        {
+            "numerator": 174238326765205,
+            "denominator": 8554814725322
+        },
+        {
+            "numerator": -37191797315050,
+            "denominator": 1831965017997
+        },
+        {
+            "numerator": -16133462263573,
+            "denominator": 1337028587605
+        },
+        {
+            "numerator": 40281374799611,
+            "denominator": 8357768175633
+        },
+        {
+            "numerator": 132442966174454,
+            "denominator": 6464727373171
+        },
+        {
+            "numerator": 186395760277865,
+            "denominator": 8669022927963
+        },
+        {
+            "numerator": -182030704472874,
+            "denominator": 6091636235465
+        },
+        {
+            "numerator": -13300862105617,
+            "denominator": 595902345128
+        },
+        {
+            "numerator": -5940994800834,
+            "denominator": 741561306119
+        },
+        {
+            "numerator": -9852566678889,
+            "denominator": 674268786757
+        },
+        {
+            "numerator": 15181664506717,
+            "denominator": 1158925645364
+        },
+        {
+            "numerator": -57201535238476,
+            "denominator": 5240707217727
+        },
+        {
+            "numerator": 44458586353837,
+            "denominator": 1638715885510
+        },
+        {
+            "numerator": 8206940911583,
+            "denominator": 1266183677780
+        },
+        {
+            "numerator": 70394289005267,
+            "denominator": 3332299245019
+        },
+        {
+            "numerator": -10242516863743,
+            "denominator": 3553588077194
+        },
+        {
+            "numerator": -87524819880039,
+            "denominator": 9842065642649
+        },
+        {
+            "numerator": 1569613399785,
+            "denominator": 2717904496447
+        }
+    ]
+}

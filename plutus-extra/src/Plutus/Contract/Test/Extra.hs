@@ -5,6 +5,7 @@
  'Plutus.Trace.Emulator.EmulatorTrace' monad.
 -}
 module Plutus.Contract.Test.Extra (
+  namedPredicate,
   walletFundsChangeWithAccumState,
   walletFundsExactChangeWithAccumState,
   valueAtComputedAddress,
@@ -12,6 +13,8 @@ module Plutus.Contract.Test.Extra (
   dataAtComputedAddressWithState,
   valueAtComputedAddressWithState,
   utxoAtComputedAddressWithState,
+  utxoAtComputedAddress,
+  utxoAtAddress,
   addressValueOptions,
 ) where
 
@@ -23,10 +26,10 @@ import Control.Foldl qualified as L
 
 import Control.Arrow ((>>>))
 import Control.Lens (at, view, (^.))
-import Control.Monad (unless)
+import Control.Monad (unless, (>=>))
 import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error)
-import Control.Monad.Freer.Reader (ask)
+import Control.Monad.Freer.Reader (Reader, ask)
 import Control.Monad.Freer.Writer (Writer, tell)
 import Data.Default.Class (Default (def))
 import Data.Foldable (fold)
@@ -51,6 +54,7 @@ import Prelude
 
 --------------------------------------------------------------------------------
 
+import Control.Foldl (generalize)
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap (UtxoMap)
@@ -63,10 +67,34 @@ import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorConfig (EmulatorConfi
 import PlutusTx (FromData (fromBuiltinData))
 import PlutusTx.Prelude qualified as P
 import Wallet.Emulator.Chain (ChainEvent (..))
-import Wallet.Emulator.Folds (postMapM)
+import Wallet.Emulator.Folds (EmulatorFoldErr, postMapM)
 import Wallet.Emulator.Folds qualified as Folds
 
 --------------------------------------------------------------------------------
+
+{- | Postcompose Kleisli arrow to FoldM.
+
+ @since 4.1
+-}
+postComposeM ::
+  forall (a :: Type) (b :: Type) (c :: Type) (m :: Type -> Type).
+  Monad m =>
+  (b -> m c) ->
+  L.FoldM m a b ->
+  L.FoldM m a c
+postComposeM q (L.FoldM f g h) = L.FoldM f g (h >=> q)
+
+{- | Give name to a 'TracePredicate'.
+
+ @since 4.1
+-}
+namedPredicate :: String -> TracePredicate -> TracePredicate
+namedPredicate name = postComposeM notify
+  where
+    notify False = False <$ tell message
+    notify b = pure b
+
+    message = "On predicate: " <> viaShow @String @Void name
 
 {- | Check that the funds in the wallet have changed by the given amount, exluding fees.
 
@@ -193,7 +221,7 @@ data CheckedData where
   CheckedDatas :: UtxoMap -> CheckedData
   CheckedValue :: Ledger.Value -> CheckedData
   CheckedUtxos :: UtxoMap -> CheckedData
-  CheckedWriter :: forall w. Pretty w => w -> CheckedData
+  CheckedWriter :: forall w. Show w => w -> CheckedData
 
 instance Pretty CheckedState where
   pretty (CheckedState address datas) =
@@ -212,7 +240,7 @@ instance Pretty CheckedData where
       <+> foldMap viaShow utxos
   pretty (CheckedWriter w) =
     "Contract writer data was"
-      <+> pretty w
+      <+> viaShow w
 
 {- | Check that the funds at a computed address meet some condition.
  The address is computed using data acquired from contract's writer instance.
@@ -251,7 +279,7 @@ valueAtComputedAddress contract inst addressGetter check =
  and data aquired from contract's writer instance meet some condition.
  The address is computed using data acquired from contract's writer instance.
 
-  @since 2.2
+  @since 5.0
 -}
 valueAtComputedAddressWithState ::
   forall
@@ -261,7 +289,7 @@ valueAtComputedAddressWithState ::
     (a :: Type)
     (contract :: Type -> Row Type -> Type -> Type -> Type).
   ( Monoid w
-  , Pretty w
+  , Show w
   , IsContract contract
   ) =>
   -- | The 'IsContract' code
@@ -321,7 +349,7 @@ dataAtComputedAddress contract inst addressGetter check =
  and data aquired from contract's writer instance meet some condition.
  The address is computed using data acquired from contract's writer instance.
 
-  @since 2.1
+  @since 5.0
 -}
 dataAtComputedAddressWithState ::
   forall
@@ -333,7 +361,7 @@ dataAtComputedAddressWithState ::
     (contract :: Type -> Row Type -> Type -> Type -> Type).
   ( FromData datum
   , Monoid w
-  , Pretty w
+  , Show w
   , IsContract contract
   ) =>
   -- | The 'IsContract' code
@@ -369,7 +397,7 @@ showStateIfFailAndReturn datas addr result = do
  and data aquired from contract's writer instance meet some condition.
  The address is computed using data acquired from contract's writer instance.
 
-  @since 2.1
+  @since 5.0
 -}
 utxoAtComputedAddressWithState ::
   forall
@@ -379,7 +407,7 @@ utxoAtComputedAddressWithState ::
     (a :: Type)
     (contract :: Type -> Row Type -> Type -> Type -> Type).
   ( Monoid w
-  , Pretty w
+  , Show w
   , IsContract contract
   ) =>
   contract w s e a ->
@@ -398,7 +426,7 @@ utxoAtComputedAddressWithState contract inst getter check =
  Boolean value based the address, UTxOs, and data aquired from contract's writer instance.
  The address is computed using data acquired from contract's writer instance.
 
-   @since 2.1
+   @since 4.2
 -}
 utxoAtComputedAddress ::
   forall
@@ -443,6 +471,23 @@ utxoAtComputedAddress contract inst addressGetter cont =
               am = foldl' (flip step) (AM.addAddress addr mempty) chainEvents
               utxoMap = view (AM.fundsAt addr) am
           cont w addr utxoMap
+
+{- | Extract UTxOs at an address and perform a validation computation on it.
+
+  @since 4.2
+-}
+utxoAtAddress ::
+  Ledger.Address ->
+  ( UtxoMap ->
+    Eff
+      '[ Reader InitialDistribution
+       , Error EmulatorFoldErr
+       , Writer (Doc Void)
+       ]
+      Bool
+  ) ->
+  TracePredicate
+utxoAtAddress addr = flip postMapM (generalize $ Folds.utxoAtAddress addr)
 
 -- | Get a datum of a given type 'd' out of a Transaction Output.
 getTxOutDatum ::
@@ -491,14 +536,21 @@ getTxOutDatum _ (Ledger.TxOutTx tx' (Ledger.TxOut _ _ (Just datumHash))) =
 
      @since 3.2
 -}
-addressValueOptions :: [(Ledger.PubKeyHash, Ledger.Value)] -> [(Scripts.ValidatorHash, Ledger.Value, Ledger.Datum)] -> EmulatorConfig
+addressValueOptions ::
+  [(Ledger.PaymentPubKeyHash, Ledger.Value)] ->
+  [(Scripts.ValidatorHash, Ledger.Value, Ledger.Datum)] ->
+  EmulatorConfig
 addressValueOptions walletAllocs validatorAllocs = EmulatorConfig (Right [tx]) def def
   where
     tx :: Ledger.Tx
     tx =
       mempty
         { Ledger.txOutputs =
-            fmap (\(pkh, val) -> Ledger.TxOut (Ledger.pubKeyHashAddress pkh) val Nothing) walletAllocs
+            fmap
+              ( \(pkh, val) ->
+                  Ledger.TxOut (Ledger.pubKeyHashAddress pkh Nothing) val Nothing
+              )
+              walletAllocs
               <> fmap (\(vh, val, d) -> Ledger.TxOut (Ledger.scriptHashAddress vh) val $ Just $ Scripts.datumHash d) validatorAllocs
         , Ledger.txData =
             Map.fromList $

@@ -130,7 +130,7 @@ instance Enum Natural where
 -- | @since 1.0
 instance Arbitrary Natural where
   arbitrary = Natural . Prelude.abs Prelude.<$> arbitrary
-  shrink (Natural i) = Natural Prelude.<$> (Prelude.filter (> 0) . shrink $ i)
+  shrink (Natural i) = Natural Prelude.<$> (Prelude.filter (>= 0) . shrink $ i)
 
 -- | @since 2.2
 instance Function Natural where

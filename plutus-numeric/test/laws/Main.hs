@@ -8,11 +8,13 @@ import PlutusTx.Numeric.Laws (
   euclideanClosedSignedLaws,
   integralDomainLaws,
   multiplicativeGroupLaws,
+  scaleNatLaws,
  )
-import PlutusTx.Rational (Rational)
+import PlutusTx.Positive (Positive)
+import PlutusTx.Ratio (Rational)
+import Test.QuickCheck.Plutus.Instances ()
 import Test.Tasty (adjustOption, defaultMain, testGroup)
 import Test.Tasty.Plutus.Laws (
-  additiveGroupLaws,
   additiveMonoidLaws,
   additiveSemigroupLaws,
   dataLaws,
@@ -33,34 +35,32 @@ main =
   defaultMain . adjustOption (max testMinimum) . testGroup "Laws" $
     [ jsonLaws @Natural
     , jsonLaws @NatRatio
-    , jsonLaws @Rational
+    , jsonLaws @Positive
     , dataLaws @Natural
     , dataLaws @NatRatio
-    , dataLaws @Rational
+    , dataLaws @Positive
     , plutusEqLaws @Natural
     , plutusEqLawsSubstitution @Natural
-    , plutusEqLaws @Rational
-    , plutusEqLawsSubstitution @Rational
+    , plutusEqLaws @Positive
+    , plutusEqLawsSubstitution @Positive
     , plutusEqLaws @NatRatio
     , plutusEqLawsSubstitution @NatRatio
     , plutusOrdLaws @Natural
-    , plutusOrdLaws @Rational
+    , plutusOrdLaws @Positive
     , plutusOrdLaws @NatRatio
     , additiveSemigroupLaws @Natural
-    , additiveSemigroupLaws @Rational
+    , additiveSemigroupLaws @Positive
     , additiveSemigroupLaws @NatRatio
     , additiveMonoidLaws @Natural
-    , additiveMonoidLaws @Rational
     , additiveMonoidLaws @NatRatio
-    , additiveGroupLaws @Rational
     , multiplicativeSemigroupLaws @Natural
-    , multiplicativeSemigroupLaws @Rational
+    , multiplicativeSemigroupLaws @Positive
     , multiplicativeSemigroupLaws @NatRatio
     , multiplicativeMonoidLaws @Natural
+    , multiplicativeMonoidLaws @Positive
     , multiplicativeMonoidLaws @Rational
     , multiplicativeMonoidLaws @NatRatio
     , semiringConsistencyLaws @Natural
-    , semiringConsistencyLaws @Rational
     , semiringConsistencyLaws @NatRatio
     , laws @Natural "Additive hemigroup" additiveHemigroupLaws
     , laws @NatRatio "Additive hemigroup" additiveHemigroupLaws
@@ -70,6 +70,10 @@ main =
     , laws @NatRatio "Multiplicative group" multiplicativeGroupLaws
     , laws @Integer "IntegralDomain" integralDomainLaws
     , laws @Rational "IntegralDomain" integralDomainLaws
+    , laws @Integer "scaleNat" scaleNatLaws
+    , laws @Natural "scaleNat" scaleNatLaws
+    , laws @NatRatio "scaleNat" scaleNatLaws
+    , laws @Rational "scaleNat" scaleNatLaws
     ]
   where
     testMinimum :: QuickCheckTests

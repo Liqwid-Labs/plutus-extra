@@ -6,7 +6,6 @@ module PlutusTx.Skeleton.String (
 ) where
 
 import PlutusTx.Prelude
-import PlutusTx.Ratio (abs)
 
 -- Slow digit-by-digit converter, to make _sure_ we're safe on-chain.
 {-# INLINEABLE intToString #-}

@@ -17,7 +17,7 @@ import Language.Haskell.TH.Syntax (
   Type,
  )
 import PlutusTx.NatRatio.Internal (NatRatio (NatRatio))
-import PlutusTx.Rational.Internal ((%))
+import PlutusTx.Ratio (unsafeRatio)
 import Text.Read (readMaybe)
 import Text.Read.Lex (Lexeme (Number), numberToRational)
 import Prelude
@@ -57,7 +57,7 @@ decExp s = case parseDecRatioExp s of
       AppE (ConE 'NatRatio) $
         UInfixE
           (LitE $ IntegerL n)
-          (VarE '(%))
+          (VarE 'unsafeRatio)
           (LitE $ IntegerL m)
 
 parseDecRatioExp :: String -> Maybe (Integer, Integer)
@@ -89,7 +89,7 @@ fracExp s = case readMaybe @(Integer, Integer) s of
           AppE (ConE 'NatRatio) $
             UInfixE
               (LitE $ IntegerL n)
-              (VarE '(%))
+              (VarE 'unsafeRatio)
               (LitE $ IntegerL m)
 
 errorFracPat :: String -> Q Pat

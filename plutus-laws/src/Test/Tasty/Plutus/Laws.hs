@@ -69,6 +69,8 @@ module Test.Tasty.Plutus.Laws (
   multiplicativeMonoidLaws,
   semiringConsistencyLaws,
   semiringConsistencyLawsWith,
+  moduleScaleLaws,
+  moduleScaleLawsWith,
 
   -- ** Your own laws
 
@@ -1211,6 +1213,89 @@ semiringConsistencyLawsWith gen shr =
     rightDistr :: Triple a -> Property
     rightDistr (Triple x y z) =
       (x PlutusTx.+ y) PlutusTx.* z === (x PlutusTx.* z) PlutusTx.+ (y PlutusTx.* z)
+
+{- | Checks that 'PlutusTx.Numeric.scale' for 'Module s v' obeys the laws:
+
+ > scale x (r1 + r2) = scale x r1 + scale x r2
+ > scale x (scale y r) = scale (x * y) r
+ > scale one r = r
+ > scale zero r = zero
+
+ @since 2.4
+-}
+moduleScaleLaws ::
+  forall (s :: Type) (v :: Type).
+  ( Typeable s
+  , Typeable v
+  , Eq v
+  , PlutusTx.Module s v
+  , Arbitrary s
+  , Arbitrary v
+  , Show s
+  , Show v
+  ) =>
+  TestTree
+moduleScaleLaws = moduleScaleLawsWith @s @v arbitrary shrink arbitrary shrink
+
+{- | As 'moduleScaleLaws', but with an explicit generator and shrinker.
+
+ @since 2.4
+-}
+moduleScaleLawsWith ::
+  forall (s :: Type) (v :: Type).
+  ( Typeable s
+  , Typeable v
+  , Eq v
+  , PlutusTx.Module s v
+  , Show s
+  , Show v
+  ) =>
+  Gen s ->
+  (s -> [s]) ->
+  Gen v ->
+  (v -> [v]) ->
+  TestTree
+moduleScaleLawsWith genS shrS genV shrV =
+  testProperties
+    ("Scale laws for 'Module " <> typeName @s <> " " <> typeName @v <> "'")
+    [
+      ( "scale x (r1 + r2) = scale x r1 + scale x r2"
+      , forAllShrinkShow gen1 shr1 ppShow prop1
+      )
+    ,
+      ( "scale x (scale y r) = scale (x * y) r"
+      , forAllShrinkShow gen2 shr2 ppShow prop2
+      )
+    ,
+      ( "scale one r = r"
+      , forAllShrinkShow genV shrV ppShow prop3
+      )
+    ,
+      ( "scale zero r = zero"
+      , forAllShrinkShow genV shrV ppShow prop4
+      )
+    ]
+  where
+    prop1 :: (s, v, v) -> Property
+    prop1 (s, v1, v2) =
+      PlutusTx.scale s (v1 PlutusTx.+ v2)
+        === PlutusTx.scale s v1 PlutusTx.+ PlutusTx.scale s v2
+    prop2 :: (s, s, v) -> Property
+    prop2 (s1, s2, v) =
+      PlutusTx.scale s1 (PlutusTx.scale s2 v)
+        === PlutusTx.scale (s1 PlutusTx.* s2) v
+    prop3 :: v -> Property
+    prop3 v = PlutusTx.scale PlutusTx.one v === v
+    prop4 :: v -> Property
+    prop4 v = PlutusTx.scale PlutusTx.zero v === PlutusTx.zero
+    gen1 :: Gen (s, v, v)
+    gen1 = (,,) <$> genS <*> genV <*> genV
+    shr1 :: (s, v, v) -> [(s, v, v)]
+    shr1 (s, v1, v2) = (,,) <$> shrS s <*> shrV v1 <*> shrV v2
+    gen2 :: Gen (s, s, v)
+    gen2 = (,,) <$> genS <*> genS <*> genV
+    shr2 :: (s, s, v) -> [(s, s, v)]
+    shr2 (s1, s2, v) = (,,) <$> shrS s1 <*> shrS s2 <*> shrV v
 
 -- Helpers
 

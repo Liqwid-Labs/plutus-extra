@@ -12,13 +12,15 @@
 
  = Example usage
 
- > myProperties :: TestTree
- > myProperties = withValidator "Property testing my spending" myValidator $ do
+ > validatorProperties :: TestTree
+ > validatorProperties = withTestScript "Property testing my spending" myValidator $ do
  >   scriptProperty "Some spending property" $ GenForSpending gen' transform'
- >   scriptProperty "Some minting property" $ GenForMinting gen'' transform''
  >   scriptPropertyPass "Validator succeeds" $ GenForSpending genPass transformPass
- >   scriptPropertyFail "MintingPolicy fails" $ GenForMinting genFail transformFail
  >   ...
+ > mintingProperties :: TestTree
+ > mintingProperties = withTestScript "Property testing my minting" myMintingPolicy $ do
+ >   scriptProperty "Some minting property" $ GenForMinting gen'' transform''
+ >   scriptPropertyFail "MintingPolicy fails" $ GenForMinting genFail transformFail
 
  A small example of using can be found
  <https://github.com/Liqwid-Labs/plutus-extra/tasty-plutus/test/Properties/Main.hs here>
@@ -34,6 +36,11 @@ module Test.Tasty.Plutus.Script.Property (
   scriptProperty,
   scriptPropertyFail,
   scriptPropertyPass,
+
+  -- * For testing parameterized scripts
+  paramScriptProperty,
+  paramScriptPropertyFail,
+  paramScriptPropertyPass,
 ) where
 
 import Control.Monad.RWS.Strict (MonadReader (ask), tell)
@@ -44,15 +51,7 @@ import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Plutus.V1.Ledger.Contexts (ScriptContext)
-import Plutus.V1.Ledger.Scripts (
-  MintingPolicy,
-  ScriptError (
-    EvaluationError,
-    EvaluationException,
-    MalformedScript
-  ),
-  Validator,
- )
+import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError, EvaluationException, MalformedScript))
 import Test.QuickCheck (
   Args (maxSize, maxSuccess),
   Gen,
@@ -66,6 +65,7 @@ import Test.QuickCheck (
   quickCheckWithResult,
   stdArgs,
  )
+import Test.Tasty (TestTree)
 import Test.Tasty.Options (OptionDescription (Option), OptionSet, lookupOption)
 import Test.Tasty.Plutus.Internal.Context (
   ContextBuilder,
@@ -103,6 +103,11 @@ import Test.Tasty.Plutus.Internal.Run (
     ScriptPassed
   ),
  )
+import Test.Tasty.Plutus.Internal.TestScript (
+  TestScript,
+  getTestMintingPolicy,
+  getTestValidator,
+ )
 import Test.Tasty.Plutus.Internal.WithScript (
   WithScript (WithMinting, WithSpending),
  )
@@ -122,10 +127,10 @@ import Test.Tasty.Plutus.TestData (
   TestItems (
     ItemsForMinting,
     ItemsForSpending,
-    mintCB,
-    mintOutcome,
-    mintRedeemer,
-    mintTokens,
+    mpCB,
+    mpOutcome,
+    mpRedeemer,
+    mpTasks,
     spendCB,
     spendDatum,
     spendOutcome,
@@ -150,11 +155,11 @@ import Text.Show.Pretty (ppDoc)
 import Type.Reflection (Typeable)
 import Prelude
 
-{- | Given a 'Generator' containig a way to generate a seed,
+{- | Given a 'Generator' containing a way to generate a seed,
 and a function to create 'TestItems' from the seed, check that:
 
- * For any 'TestItems' with Outcome equals 'Pass', the script succeeds; and
- * For any 'TestItems' with Outcome equals 'Fail', the script fails.
+ * For any 'TestItems' where the 'Outcome' is 'Pass', the script succeeds; and
+ * For any 'TestItems' where the 'Outcome' is 'Fail', the script fails.
 
  This will also check /coverage/: specifically, the property will fail unless
  the provided way produces roughly equal numbers of 'Pass' and
@@ -172,12 +177,12 @@ scriptProperty ::
   WithScript p ()
 scriptProperty = mkScriptPropertyWith OutcomeDependent
 
-{- | Given a 'Generator' containig a way to generate a seed,
+{- | Given a 'Generator' containing a way to generate a seed,
 and a function to create 'TestItems' from the seed, check that:
 
  * For any 'TestItems' the script always fails.
 
- This test ignores 'Outcome' from 'TestItems' and changes it to 'Fail'
+ This test ignores the 'Outcome' from 'TestItems' and changes it to 'Fail'
 
  @since 5.0
 -}
@@ -191,12 +196,12 @@ scriptPropertyFail ::
   WithScript p ()
 scriptPropertyFail = mkScriptPropertyWith OutcomeAlwaysFail
 
-{- | Given a 'Generator' containig a way to generate a seed,
+{- | Given a 'Generator' containing a way to generate a seed,
 and a function to create 'TestItems' from the seed, check that:
 
  * For any 'TestItems' the script always succeeds.
 
- This test ignores 'Outcome' from 'TestItems' and changes it to 'Pass'
+ This test ignores the 'Outcome' from 'TestItems' and changes it to 'Pass'
 
  @since 5.0
 -}
@@ -210,6 +215,75 @@ scriptPropertyPass ::
   WithScript p ()
 scriptPropertyPass = mkScriptPropertyWith OutcomeAlwaysPass
 
+{- | Given a 'Generator' containing a way to generate a seed and function
+ to create 'TestItems', as well as a function to create 'TestScript' from the seed,
+ check that:
+
+ * For any 'TestItems' where the 'Outcome' is 'Pass', the 'TestScript' succeeds; and
+ * For any 'TestItems' where the 'Outcome' is 'Fail', the 'TestScript' fails.
+
+ This will also check /coverage/: specifically, the property will fail unless
+ the provided way produces roughly equal numbers of 'Pass' and
+ 'Fail'-classified cases.
+
+ @since 6.0
+-}
+paramScriptProperty ::
+  forall (a :: Type) (p :: Purpose).
+  (Show a, Typeable a, Typeable p) =>
+  -- | Property name
+  String ->
+  -- | The way to create 'TestScript' from the seed
+  (a -> TestScript p) ->
+  -- | Data generator
+  Generator a p ->
+  TestTree
+paramScriptProperty = mkParamScriptPropertyWith OutcomeDependent
+
+{- | Given a 'Generator' containing a way to generate a seed and function
+ to create 'TestItems', as well as a function to create 'TestScript' from the seed,
+ check that:
+
+ * For any 'TestItems' the 'TestScript' always succeeds.
+
+ This test ignores the 'Outcome' from 'TestItems' and changes it to 'Pass'
+
+ @since 6.0
+-}
+paramScriptPropertyPass ::
+  forall (a :: Type) (p :: Purpose).
+  (Show a, Typeable a, Typeable p) =>
+  -- | Property name
+  String ->
+  -- | The way to create 'TestScript' from the seed
+  (a -> TestScript p) ->
+  -- | Data generator
+  Generator a p ->
+  TestTree
+paramScriptPropertyPass = mkParamScriptPropertyWith OutcomeAlwaysPass
+
+{- | Given a 'Generator' containing a way to generate a seed and function
+ to create 'TestItems', as well as a function to create 'TestScript' from the seed,
+ check that:
+
+ * For any 'TestItems' the 'TestScript' always fails.
+
+ This test ignores the 'Outcome' from 'TestItems' and changes it to 'Fail'
+
+ @since 6.0
+-}
+paramScriptPropertyFail ::
+  forall (a :: Type) (p :: Purpose).
+  (Show a, Typeable a, Typeable p) =>
+  -- | Property name
+  String ->
+  -- | The way to create 'TestScript' from the seed
+  (a -> TestScript p) ->
+  -- | Data generator
+  Generator a p ->
+  TestTree
+paramScriptPropertyFail = mkParamScriptPropertyWith OutcomeAlwaysFail
+
 -- Helpers
 
 mkScriptPropertyWith ::
@@ -222,37 +296,54 @@ mkScriptPropertyWith ::
   Generator a p ->
   WithScript p ()
 mkScriptPropertyWith outKind name generator = case generator of
-  GenForSpending (Methodology gen shrinker) f ->
+  GenForSpending (Methodology gen shrinker) fTi ->
     WithSpending $ do
       val <- ask
       tell
         . Seq.singleton
         . singleTest name
-        $ Spender val gen shrinker f outKind
-  GenForMinting (Methodology gen shrinker) f ->
+        $ Spender gen shrinker (const val) fTi outKind
+  GenForMinting (Methodology gen shrinker) fTi ->
     WithMinting $ do
       mp <- ask
       tell
         . Seq.singleton
         . singleTest name
-        $ Minter mp gen shrinker f outKind
+        $ Minter gen shrinker (const mp) fTi outKind
+
+mkParamScriptPropertyWith ::
+  forall (a :: Type) (p :: Purpose).
+  (Show a, Typeable a, Typeable p) =>
+  OutcomeKind ->
+  String ->
+  (a -> TestScript p) ->
+  Generator a p ->
+  TestTree
+mkParamScriptPropertyWith outKind name fScr generator =
+  case generator of
+    GenForSpending (Methodology gen shr) fTi ->
+      singleTest name $
+        Spender gen shr fScr fTi outKind
+    GenForMinting (Methodology gen shr) fTi ->
+      singleTest name $
+        Minter gen shr fScr fTi outKind
 
 data PropertyTest (a :: Type) (p :: Purpose) where
   Spender ::
     forall (a :: Type) (d :: Type) (r :: Type).
     Typeable a =>
-    Validator ->
     Gen a ->
     (a -> [a]) ->
+    (a -> TestScript ( 'ForSpending d r)) ->
     (a -> TestItems ( 'ForSpending d r)) ->
     OutcomeKind ->
     PropertyTest a ( 'ForSpending d r)
   Minter ::
     forall (a :: Type) (r :: Type).
     Typeable a =>
-    MintingPolicy ->
     Gen a ->
     (a -> [a]) ->
+    (a -> TestScript ( 'ForMinting r)) ->
     (a -> TestItems ( 'ForMinting r)) ->
     OutcomeKind ->
     PropertyTest a ( 'ForMinting r)
@@ -315,12 +406,12 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
     where
       go :: Property
       go = case vt of
-        Spender val gen shrinker f out ->
-          forAllShrinkShow gen shrinker (prettySpender f out) $
-            spenderProperty opts val f out
-        Minter mp gen shrinker f out ->
-          forAllShrinkShow gen shrinker (prettyMinter f out) $
-            minterProperty opts mp f out
+        Spender gen shrinker fVal fTi out ->
+          forAllShrinkShow gen shrinker (prettySpender fTi out) $
+            spenderProperty opts fVal fTi out
+        Minter gen shrinker fMp fTi out ->
+          forAllShrinkShow gen shrinker (prettyMinter fTi out) $
+            minterProperty opts fMp fTi out
   testOptions =
     Tagged
       [ Option @Fee Proxy
@@ -336,12 +427,12 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
 spenderProperty ::
   forall (a :: Type) (d :: Type) (r :: Type).
   OptionSet ->
-  Validator ->
+  (a -> TestScript ( 'ForSpending d r)) ->
   (a -> TestItems ( 'ForSpending d r)) ->
   OutcomeKind ->
   a ->
   Property
-spenderProperty opts val f outKind seed = case f seed of
+spenderProperty opts fVal fTi outKind seed = case fTi seed of
   ItemsForSpending
     { spendDatum = d :: datum
     , spendRedeemer = r :: redeemer
@@ -350,7 +441,7 @@ spenderProperty opts val f outKind seed = case f seed of
     , spendOutcome = outcome
     } ->
       let td = SpendingTest d r v
-          script = SomeSpender val
+          script = SomeSpender . getTestValidator $ fVal seed
           outcome' = adjustOutcome outKind outcome
           env =
             PropertyEnv
@@ -402,20 +493,20 @@ prettySpender f outKind seed = case f seed of
 minterProperty ::
   forall (a :: Type) (r :: Type).
   OptionSet ->
-  MintingPolicy ->
+  (a -> TestScript ( 'ForMinting r)) ->
   (a -> TestItems ( 'ForMinting r)) ->
   OutcomeKind ->
   a ->
   Property
-minterProperty opts mp f outKind seed = case f seed of
+minterProperty opts fMp fTi outKind seed = case fTi seed of
   ItemsForMinting
-    { mintRedeemer = r
-    , mintTokens = toks
-    , mintCB = cb
-    , mintOutcome = outcome
+    { mpRedeemer = r
+    , mpTasks = toks
+    , mpCB = cb
+    , mpOutcome = outcome
     } ->
       let td = MintingTest r toks
-          script = SomeMinter mp
+          script = SomeMinter . getTestMintingPolicy $ fMp seed
           outcome' = adjustOutcome outKind outcome
           env =
             PropertyEnv
@@ -439,10 +530,10 @@ prettyMinter ::
   String
 prettyMinter f outKind seed = case f seed of
   ItemsForMinting
-    { mintRedeemer = r :: redeemer
-    , mintTokens = ts
-    , mintCB = cb
-    , mintOutcome = outcome
+    { mpRedeemer = r :: redeemer
+    , mpTasks = ts
+    , mpCB = cb
+    , mpOutcome = outcome
     } ->
       let outcome' :: Outcome
           outcome' = adjustOutcome outKind outcome
@@ -452,7 +543,7 @@ prettyMinter f outKind seed = case f seed of
               $+$ ppDoc seed
               $+$ "Redeemer"
               $+$ ppDoc @redeemer r
-              $+$ "Tokens"
+              $+$ "MintingPolicyTasks"
               $+$ ppDoc ts
               $+$ "ContextBuilder"
               $+$ ppDoc cb
