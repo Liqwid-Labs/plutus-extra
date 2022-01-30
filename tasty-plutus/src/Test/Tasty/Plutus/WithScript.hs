@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE Trustworthy #-}
 
 {- |
@@ -21,6 +22,7 @@ import Data.Sequence (Seq)
 import GHC.Exts (toList)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Plutus.Internal.Context (Purpose)
+import Test.Tasty.Plutus.Internal.DumpScript (dumpScript)
 import Test.Tasty.Plutus.Internal.TestScript (TestScript)
 import Test.Tasty.Plutus.Internal.WithScript (
   WithScript (WithMinting, WithSpending),
@@ -29,9 +31,7 @@ import Prelude
 
 {- | Given the name for the tests, a 'TestScript', and a collection of
  tests, execute all of them as a 'TestTree'.
-
  = Usage
-
  > validatorTests :: TestTree
  > validatorTests = withTestScript "Testing my validator" myTestValidator $ do
  >    shouldValidate "Valid case" validData validContext
@@ -50,13 +50,10 @@ import Prelude
  >    shouldn'tValidate "Everything is bad" invalidData invalidContext
  >    scriptProperty "Some property" myGenerator mkContext
  >    ...
-
  = Important note
-
  Unless your 'TestScript' has been prepared using 'toTestValidator'
  or 'toTestMintingPolicy', this will likely not behave as intended.
  We use 'WrappedValidator' to prevent other wrapper functions from being used.
-
  @since 6.0
 -}
 withTestScript ::
@@ -72,4 +69,4 @@ withTestScript name ts = \case
     go :: RWS (TestScript p) (Seq TestTree) () () -> TestTree
     go rws =
       let ((), tests) = evalRWS rws ts ()
-       in testGroup name . toList $ tests
+       in testGroup name . (dumpScript name ts :) . toList $ tests

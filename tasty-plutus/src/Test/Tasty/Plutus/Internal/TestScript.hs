@@ -42,17 +42,18 @@ import Test.Tasty.Plutus.Internal.Context (Purpose (ForMinting, ForSpending))
 data TestScript (p :: Purpose) where
   -- | since 6.0
   TestValidator ::
-    forall (d :: Type) (r :: Type).
-    {getTestValidator :: Validator} ->
+    forall (d :: Type) (r :: Type) (datum :: Type) (redeemer :: Type) (ctx :: Type).
+    { getTestValidatorCode :: CompiledCode (datum -> redeemer -> ctx -> Bool)
+    , getTestValidator :: Validator
+    } ->
     TestScript ( 'ForSpending d r)
   -- | since 6.0
   TestMintingPolicy ::
-    forall (r :: Type).
-    {getTestMintingPolicy :: MintingPolicy} ->
+    forall (r :: Type) (redeemer :: Type) (ctx :: Type).
+    { getTestMintingPolicyCode :: CompiledCode (redeemer -> ctx -> Bool)
+    , getTestMintingPolicy :: MintingPolicy
+    } ->
     TestScript ( 'ForMinting r)
-
--- | @since 6.0
-deriving stock instance Show (TestScript p)
 
 {- | A wrapper for an untyped 'Validator'. This is similar
  to 'WrappedValidatorType' from the Plutus 'Ledger.Typed.Scripts' module.
@@ -102,7 +103,7 @@ mkTestValidator ::
   CompiledCode ((datum -> redeemer -> ctx -> Bool) -> WrappedValidator) ->
   TestScript ( 'ForSpending datum redeemer)
 mkTestValidator v wr =
-  TestValidator $
+  TestValidator v $
     mkValidatorScript $
       applyCode $$(compile [||getWrappedValidator||]) $
         wr `applyCode` v
@@ -135,7 +136,7 @@ mkTestValidatorUnsafe ::
   CompiledCode ((datum -> redeemer -> ctx -> Bool) -> WrappedValidator) ->
   TestScript ( 'ForSpending d r)
 mkTestValidatorUnsafe v wr =
-  TestValidator $
+  TestValidator v $
     mkValidatorScript $
       applyCode $$(compile [||getWrappedValidator||]) $
         wr `applyCode` v
@@ -159,7 +160,7 @@ mkTestMintingPolicy ::
   CompiledCode ((redeemer -> ctx -> Bool) -> WrappedMintingPolicy) ->
   TestScript ( 'ForMinting redeemer)
 mkTestMintingPolicy mp wr =
-  TestMintingPolicy $
+  TestMintingPolicy mp $
     mkMintingPolicyScript $
       applyCode $$(compile [||getWrappedMintingPolicy||]) $
         wr `applyCode` mp
@@ -191,7 +192,7 @@ mkTestMintingPolicyUnsafe ::
   CompiledCode ((redeemer -> ctx -> Bool) -> WrappedMintingPolicy) ->
   TestScript ( 'ForMinting r)
 mkTestMintingPolicyUnsafe mp wr =
-  TestMintingPolicy $
+  TestMintingPolicy mp $
     mkMintingPolicyScript $
       applyCode $$(compile [||getWrappedMintingPolicy||]) $
         wr `applyCode` mp

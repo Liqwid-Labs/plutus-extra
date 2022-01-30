@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               tasty-plutus
-version:            7.0
+version:            7.1
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -56,6 +56,7 @@ library
 
   other-modules:
     Test.Tasty.Plutus.Internal.Context
+    Test.Tasty.Plutus.Internal.DumpScript
     Test.Tasty.Plutus.Internal.Env
     Test.Tasty.Plutus.Internal.Feedback
     Test.Tasty.Plutus.Internal.Minting
@@ -70,8 +71,10 @@ library
     , bytestring                   ^>=0.10.12.0
     , cardano-api
     , containers                   ^>=0.6.2.1
+    , filepath                     ^>=1.4.2
     , mtl                          ^>=2.2.2
     , plutus-contract
+    , plutus-core
     , plutus-extra                 ^>=5.0
     , plutus-ledger
     , plutus-ledger-api
@@ -114,7 +117,7 @@ test-suite properties
     , plutus-tx-plugin
     , quickcheck-plutus-instances  ^>=2.0
     , tasty                        ^>=1.4.1
-    , tasty-plutus                 ^>=7.0
+    , tasty-plutus                 ^>=7.1
     , tasty-quickcheck             ^>=0.10.1.2
 
   ghc-options:    -threaded -rtsopts -with-rtsopts=-N -O1

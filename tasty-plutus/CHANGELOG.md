@@ -4,7 +4,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
-## 7.1 - 2022-01-27
+## 7.2 - 2022-01-30
 
 ### Added
 
@@ -14,6 +14,14 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   * `cbSignatories`
   * `cbDatums`
   * `cbMinting`
+
+## 7.1 -- 2022-01-30
+
+### Added
+
+* Options `--dump-plutus-ir`, `--dump-plutus-typed-core` and
+  `-dump-plutus-untyped-core` respectively for specifying path to dump PIR,
+  TPLC and UPLC to. If unspecified then nothing will be dumped.
 
 ## 7.0 -- 2022-01-21
 

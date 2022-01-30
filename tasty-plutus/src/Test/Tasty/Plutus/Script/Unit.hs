@@ -41,7 +41,13 @@ import Data.Text (Text)
 import Data.Vector (Vector)
 import Data.Vector qualified as Vector
 import Plutus.V1.Ledger.Api (ScriptContext)
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError, EvaluationException, MalformedScript))
+import Plutus.V1.Ledger.Scripts (
+  ScriptError (
+    EvaluationError,
+    EvaluationException,
+    MalformedScript
+  ),
+ )
 import Test.Tasty.Options (
   OptionDescription (Option),
   OptionSet,
@@ -80,7 +86,11 @@ import Test.Tasty.Plutus.Internal.Run (
     ScriptPassed
   ),
  )
-import Test.Tasty.Plutus.Internal.TestScript (TestScript, getTestMintingPolicy, getTestValidator)
+import Test.Tasty.Plutus.Internal.TestScript (
+  TestScript,
+  getTestMintingPolicy,
+  getTestValidator,
+ )
 import Test.Tasty.Plutus.Internal.WithScript (
   WithScript (WithMinting, WithSpending),
  )
@@ -119,13 +129,7 @@ shouldValidate ::
   TestData p ->
   ContextBuilder p ->
   WithScript p ()
-shouldValidate name td cb = case td of
-  SpendingTest {} -> WithSpending $ do
-    tt <- asks (singleTest name . Spender Pass Nothing td cb)
-    tell . Seq.singleton $ tt
-  MintingTest {} -> WithMinting $ do
-    tt <- asks (singleTest name . Minter Pass Nothing td cb)
-    tell . Seq.singleton $ tt
+shouldValidate = addUnitTest Pass Nothing
 
 {- | Specify that, given this test data and context, as well as a predicate on
  the entire trace:
@@ -143,13 +147,7 @@ shouldValidateTracing ::
   TestData p ->
   ContextBuilder p ->
   WithScript p ()
-shouldValidateTracing name f td cb = case td of
-  SpendingTest {} -> WithSpending $ do
-    tt <- asks (singleTest name . Spender Pass (Just f) td cb)
-    tell . Seq.singleton $ tt
-  MintingTest {} -> WithMinting $ do
-    tt <- asks (singleTest name . Minter Pass (Just f) td cb)
-    tell . Seq.singleton $ tt
+shouldValidateTracing name f = addUnitTest Pass (Just f) name
 
 {- | Specify that, given this test data and context, the validation should fail.
 
@@ -162,13 +160,7 @@ shouldn'tValidate ::
   TestData p ->
   ContextBuilder p ->
   WithScript p ()
-shouldn'tValidate name td cb = case td of
-  SpendingTest {} -> WithSpending $ do
-    tt <- asks (singleTest name . Spender Fail Nothing td cb)
-    tell . Seq.singleton $ tt
-  MintingTest {} -> WithMinting $ do
-    tt <- asks (singleTest name . Minter Fail Nothing td cb)
-    tell . Seq.singleton $ tt
+shouldn'tValidate = addUnitTest Fail Nothing
 
 {- | Specify that, given this test data and context, as well as a predicate on
  the entire trace:
@@ -186,15 +178,26 @@ shouldn'tValidateTracing ::
   TestData p ->
   ContextBuilder p ->
   WithScript p ()
-shouldn'tValidateTracing name f td cb = case td of
-  SpendingTest {} -> WithSpending $ do
-    tt <- asks (singleTest name . Spender Fail (Just f) td cb)
-    tell . Seq.singleton $ tt
-  MintingTest {} -> WithMinting $ do
-    tt <- asks (singleTest name . Minter Fail (Just f) td cb)
-    tell . Seq.singleton $ tt
+shouldn'tValidateTracing name f = addUnitTest Fail (Just f) name
 
 -- Helpers
+
+addUnitTest ::
+  forall (p :: Purpose).
+  (Typeable p) =>
+  Outcome ->
+  Maybe (Vector Text -> Bool) ->
+  String ->
+  TestData p ->
+  ContextBuilder p ->
+  WithScript p ()
+addUnitTest out trace name td cb = case td of
+  SpendingTest {} -> WithSpending $ do
+    tt <- asks (singleTest name . Spender out trace td cb)
+    tell . Seq.singleton $ tt
+  MintingTest {} -> WithMinting $ do
+    tt <- asks (singleTest name . Minter out trace td cb)
+    tell . Seq.singleton $ tt
 
 data ScriptTest (p :: Purpose) where
   Spender ::
