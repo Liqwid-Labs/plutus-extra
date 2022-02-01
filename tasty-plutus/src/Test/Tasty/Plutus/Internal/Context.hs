@@ -119,17 +119,17 @@ data ExternalType
 
   In all other cases 'GeneralValue' is used.
 
- @since 6.0
+ @since 7.3
 -}
 data ValueType
-  = -- | @since 6.0
+  = -- | @since 7.3
     GeneralValue Value
-  | -- | @since 6.0
+  | -- | @since 7.3
     TokensValue TokenName Positive
   deriving stock
-    ( -- | @since 6.0
+    ( -- | @since 7.3
       Eq
-    , -- | @since 6.0
+    , -- | @since 7.3
       Show
     )
 
