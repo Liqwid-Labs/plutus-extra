@@ -195,23 +195,6 @@ instance IsOption PlutusTracing where
   showDefaultValue = const . Just $ "Only on failure"
   optionCLParser = mkFlagCLParser mempty Always
 
-{- | Where to place the script input in 'txInfoInputs' when generating a
- 'ScriptContext'.
-
- The default value is 'Head' (meaning \'the first item in the list\'). The
- option is controlled purely by a flag; if you want to change to 'Tail'
- (meaning \'the last item in the list\'), pass @--input-last@.
-
- @since 3.4
--}
-data ScriptInputPosition = Head | Tail
-  deriving stock
-    ( -- | @since 3.4
-      Eq
-    , -- | @since 3.4
-      Show
-    )
-
 -- | @since 3.4
 instance IsOption ScriptInputPosition where
   defaultValue = Head

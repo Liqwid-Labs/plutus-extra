@@ -1,14 +1,14 @@
 {-# LANGUAGE Trustworthy #-}
 
 {- |
- Module: Test.Tasty.Plutus.TestData
- Copyright: (C) MLabs 2021
+ Module: Test.Plutus.ScriptContext.TestData
+ Copyright: (C) MLabs 2022
  License: Apache 2.0
  Maintainer: Koz Ross <koz@mlabs.city>
  Portability: GHC only
  Stability: Experimental
 -}
-module Test.Tasty.Plutus.TestData (
+module Test.Plutus.ScriptContext.TestData (
   -- * Data type
   TestData (..),
   Tokens (..),

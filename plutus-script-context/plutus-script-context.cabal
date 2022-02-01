@@ -1,5 +1,5 @@
 cabal-version:      3.0
-name:               tasty-plutus
+name:               plutus-script-context
 version:            1.0
 extra-source-files: CHANGELOG.md
 
@@ -45,26 +45,12 @@ common lang
 library
   import:          lang
   exposed-modules:
-    Test.Tasty.Plutus.Context
-    Test.Tasty.Plutus.Options
-    Test.Tasty.Plutus.Script.Property
-    Test.Tasty.Plutus.Script.Size
-    Test.Tasty.Plutus.Script.Unit
-    Test.Tasty.Plutus.TestData
-    Test.Tasty.Plutus.TestScript
-    Test.Tasty.Plutus.WithScript
+    -- Test.Plutus.ScriptContext.Context
+    -- Test.Plutus.ScriptContext.TestData
 
   other-modules:
-    Test.Tasty.Plutus.Internal.Context
-    Test.Tasty.Plutus.Internal.DumpScript
-    Test.Tasty.Plutus.Internal.Env
-    Test.Tasty.Plutus.Internal.Feedback
-    Test.Tasty.Plutus.Internal.Minting
-    Test.Tasty.Plutus.Internal.Options
-    Test.Tasty.Plutus.Internal.Run
-    Test.Tasty.Plutus.Internal.TestScript
-    Test.Tasty.Plutus.Internal.WithScript
-    Test.Tasty.Plutus.Options.QQ
+    Test.Plutus.ScriptContext.Internal.Context
+    Test.Plutus.ScriptContext.Internal.Minting
 
   build-depends:
     , base                         ^>=4.14
@@ -73,6 +59,10 @@ library
     , containers                   ^>=0.6.2.1
     , plutus-contract
     , plutus-core
+    , plutus-extra
+    , plutus-numeric
+    , quickcheck-plutus-instances
+    , QuickCheck
     , plutus-ledger
     , plutus-ledger-api
     , plutus-pretty                ^>=3.0

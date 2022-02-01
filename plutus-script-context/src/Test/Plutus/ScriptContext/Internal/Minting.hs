@@ -1,4 +1,4 @@
-module Test.Tasty.Plutus.Internal.Minting (
+module Test.Plutus.ScriptContext.Internal.Minting (
   -- * Types
   MintingPolicyTask (..),
   MintingPolicyAction (..),

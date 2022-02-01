@@ -1,8 +1,8 @@
 {-# LANGUAGE Trustworthy #-}
 
 {- |
- Module: Test.Tasty.Plutus.Context
- Copyright: (C) MLabs 2021
+ Module: Test.Plutus.ScriptCnotext.Context
+ Copyright: (C) MLabs 2022
  License: Apache 2.0
  Maintainer: Koz Ross <koz@mlabs.city>
  Portability: GHC only
@@ -17,7 +17,7 @@
  is used to run the test. This is counter-intuitive, and will be fixed in a
  future release.
 -}
-module Test.Tasty.Plutus.Context (
+module Test.Plutus.ScriptContext.Context (
   -- * Types
 
   -- ** Classification and labelling
