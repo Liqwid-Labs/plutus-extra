@@ -4,6 +4,12 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 7.3 - 2022-02-01
+
+### Added
+
+* `ValueType` representing the type of values in script inputs and outputs.
+
 ## 7.2 - 2022-01-30
 
 ### Added

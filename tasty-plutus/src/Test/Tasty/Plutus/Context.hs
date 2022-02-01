@@ -25,6 +25,7 @@ module Test.Tasty.Plutus.Context (
 
   -- ** Building contexts
   ExternalType (..),
+  ValueType (..),
   Input (..),
   Output (..),
   Minting (..),
