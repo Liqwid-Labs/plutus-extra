@@ -1,11 +1,10 @@
 module Test.Plutus.ScriptContext.Internal.Context (
-  TransactionConfig(..),
-  InputPosition(..),
+  TransactionConfig (..),
+  InputPosition (..),
   Purpose (..),
   UTXOType (..),
   ValueType (..),
-  Input (..),
-  Output (..),
+  SideUTXO (..),
   Minting (..),
   ContextBuilder (..),
   defTransactionConfig,
@@ -20,7 +19,6 @@ import Data.Map.Strict qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import Ledger.Scripts (datumHash)
-import Plutus.V1.Ledger.Interval (Interval, always)
 import Plutus.V1.Ledger.Address (pubKeyHashAddress, scriptHashAddress)
 import Plutus.V1.Ledger.Api (
   BuiltinData,
@@ -54,14 +52,15 @@ import Plutus.V1.Ledger.Api (
   ),
   TxOut (
     TxOut,
-    txOutValue,
+    txOutAddress,
     txOutDatumHash,
-    txOutAddress
+    txOutValue
   ),
   TxOutRef (TxOutRef),
   ValidatorHash,
   Value,
  )
+import Plutus.V1.Ledger.Interval (Interval, always)
 import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Value.Extra (filterValue)
@@ -160,72 +159,55 @@ data ValueType
 
  @since 1.0
 -}
-data Input =
-  -- | @since
-  Input
-    { inType :: UTXOType
-    , inValue :: ValueType
-    }
+data SideUTXO = -- | @since
+  SideUTXO
+  { sUtxoType :: UTXOType
+  , sUtxoValue :: ValueType
+  }
   deriving stock
     ( -- | @since 1.0
       Show
     )
 
 {- | An transaction input from the validated address, consisting of a value
- and a type. 'ValidatorInput' is a side input and it will not be validated.
+ and a type. 'ValidatorInput' is a side input and it won't be validated.
 
  @since 1.0
 -}
-data ValidatorInput (p :: Purpose) where
-  -- | @since 1.0
-  ValidatorInput ::
-    forall (datum :: Type) (redeemer :: Type).
-    (FromData datum, ToData datum) =>
-    datum ->
-    Value ->
-    ValidatorInput ( 'ForSpending datum redeemer) 
+data ValidatorUTXO (datum :: Type) = -- | @since 1.0
+  (ToData datum) =>
+  ValidatorUTXO
+  { vUtxoDatum :: datum
+  , vUtxoValue :: Value
+  }
 
 -- | @since 1.0
-deriving stock instance
-  (Show d, Show r) => Show (ValidatorInput ( 'ForSpending d r))
-
-instance Show (ValidatorInput ( 'ForMinting r)) where
-  show = const "ValidatorInput ( 'ForMinting r)"
-
-{- | An transaction output, consisting of a value and a type.
-
- @since 1.0
--}
-data Output =
-  -- | @since 1.0 
-  Output
-    { outType :: UTXOType
-    , outValue :: ValueType
-    }
-  deriving stock
-    ( -- | @since 1.0
-      Show
-    )
+deriving stock instance (Show d) => Show (ValidatorUTXO d)
 
 {- | An transaction output to the validated address.
 
  @since 1.0
 -}
-data ValidatorOutput (p :: Purpose) where
+data ValidatorUTXOs (p :: Purpose) where
   -- | @since 1.0
-  ValidatorOutput ::
+  NoValidatorUTXOs :: ValidatorUTXOs p
+  -- | @since 1.0
+  ValidatorUTXOs ::
     forall (datum :: Type) (redeemer :: Type).
-    (FromData datum, ToData datum) =>
-    datum ->
-    Value ->
-    ValidatorOutput ( 'ForSpending datum redeemer)
+    (FromData datum, ToData datum, Show datum) =>
+    Map.Map Text (ValidatorUTXO datum) ->
+    ValidatorUTXOs ( 'ForSpending datum redeemer)
 
 -- | @since 1.0
-deriving stock instance
-  (Show d, Show r) => Show (ValidatorOutput ( 'ForSpending d r))
+deriving stock instance Show (ValidatorUTXOs p)
 
-instance Show (ValidatorOutput ( 'ForMinting r)) where
-  show = const "ValidatorOutput ( 'ForMinting r)"
+instance Semigroup (ValidatorUTXOs p) where
+  NoValidatorUTXOs <> x = x
+  x <> NoValidatorUTXOs = x
+  (ValidatorUTXOs m1) <> (ValidatorUTXOs m2) = ValidatorUTXOs $ m1 <> m2
+
+instance Monoid (ValidatorUTXOs p) where
+  mempty = NoValidatorUTXOs
 
 {- | A 'Value' minted with a minting policy other than the one being tested.
  Do not use this for tokens being minted by the tested minting policy.
@@ -274,29 +256,29 @@ data InputPosition = Head | Tail
 -}
 data ContextBuilder (p :: Purpose) = ContextBuilder
   { -- | @since 1.0
-    cbInputs :: Map.Map Text Input
+    cbInputs :: Map.Map Text SideUTXO
   , -- | @since 1.0
-    cbOutputs :: Map.Map Text Output
+    cbOutputs :: Map.Map Text SideUTXO
   , -- | @since 1.0
     cbSignatories :: Map.Map Text PubKeyHash
   , -- | @since 1.0
     cbDatums :: Map.Map Text BuiltinData
   , -- | @since 1.0
     cbMinting :: Map.Map Text Minting
-  , cbValidatorInputs :: Maybe (Map.Map Text (ValidatorInput p))
-  , cbValidatorOutputs :: Maybe (Map.Map Text (ValidatorOutput p))
+  , -- | @since 1.0
+    cbValidatorInputs :: ValidatorUTXOs p
+  , -- | @since 1.0
+    cbValidatorOutputs :: ValidatorUTXOs p
   }
 
 -- | @since 1.0
-deriving stock instance
-  (Show (ValidatorInput p), Show (ValidatorOutput p)) =>
-  Show (ContextBuilder p)
+deriving stock instance Show (ContextBuilder p)
 
 -- | @since 1.0
 instance Semigroup (ContextBuilder p) where
   {-# INLINEABLE (<>) #-}
-  (ContextBuilder is os pkhs ds ms vis vos) <>
-    (ContextBuilder is' os' pkhs' ds' ms' vis' vos') =
+  (ContextBuilder is os pkhs ds ms vis vos)
+    <> (ContextBuilder is' os' pkhs' ds' ms' vis' vos') =
       ContextBuilder
         (is <> is')
         (os <> os')
@@ -382,8 +364,8 @@ baseTxInfo ::
 baseTxInfo conf (ContextBuilder ins outs pkhs dats mints vins vouts) =
   let value = foldMap (filterValue filterCS . unMint) mints
    in TxInfo
-        { txInfoInputs = createTxInInfos conf (Map.elems ins) (fmap Map.elems vins)
-        , txInfoOutputs = createTxOutInfos conf (Map.elems outs) (fmap Map.elems vouts)
+        { txInfoInputs = createTxInInfos conf (Map.elems ins) vins
+        , txInfoOutputs = createTxOuts conf (Map.elems outs) vouts
         , txInfoFee = testFee conf
         , txInfoMint = value
         , txInfoDCert = []
@@ -391,10 +373,10 @@ baseTxInfo conf (ContextBuilder ins outs pkhs dats mints vins vouts) =
         , txInfoValidRange = testTimeRange conf
         , txInfoSignatories = Map.elems pkhs
         , txInfoData =
-            (validatorInputsToDatum vins)
-              <> (validatorOutputsToDatum vouts)
-              <> (mapMaybe inputToDatum . Map.elems $ ins)
-              <> (mapMaybe outputToDatum . Map.elems $ outs)
+            (validatorUtxosToDatum vins)
+              <> (validatorUtxosToDatum vouts)
+              <> (mapMaybe sideUtxoToDatum . Map.elems $ ins)
+              <> (mapMaybe sideUtxoToDatum . Map.elems $ outs)
               <> (fmap datumWithHash . Map.elems $ dats)
         , txInfoId = TxId "testTx"
         }
@@ -405,30 +387,19 @@ baseTxInfo conf (ContextBuilder ins outs pkhs dats mints vins vouts) =
     filterCS :: CurrencySymbol -> TokenName -> Integer -> Bool
     filterCS cs _ _ = cs /= testCurrencySymbol conf
 
-inputToDatum :: Input -> Maybe (DatumHash, Datum)
-inputToDatum (Input typ _) = case typ of
+sideUtxoToDatum :: SideUTXO -> Maybe (DatumHash, Datum)
+sideUtxoToDatum (SideUTXO typ _) = case typ of
   ScriptUTXO _ dt -> Just . datumWithHash $ dt
   PubKeyUTXO _ dt -> datumWithHash <$> dt
 
-validatorInputsToDatum ::
+validatorUtxosToDatum ::
   forall (p :: Purpose).
-  Maybe (Map.Map Text (ValidatorInput p)) -> [(DatumHash, Datum)]
-validatorInputsToDatum Nothing = []
-validatorInputsToDatum (Just m) =
-  map (\(ValidatorInput dt _) -> datumWithHash . toBuiltinData $ dt) $ Map.elems m
-
-validatorOutputsToDatum ::
-  forall (p :: Purpose).
-  Maybe (Map.Map Text (ValidatorOutput p)) ->
+  ValidatorUTXOs p ->
   [(DatumHash, Datum)]
-validatorOutputsToDatum Nothing = []
-validatorOutputsToDatum (Just m) =
-  map (\(ValidatorOutput dt _) -> datumWithHash . toBuiltinData $ dt) $ Map.elems m
-
-outputToDatum :: Output -> Maybe (DatumHash, Datum)
-outputToDatum (Output typ _) = case typ of
-  ScriptUTXO _ dt -> Just . datumWithHash $ dt
-  PubKeyUTXO _ dt -> datumWithHash <$> dt
+validatorUtxosToDatum = \case
+  NoValidatorUTXOs -> []
+  ValidatorUTXOs m ->
+    map (\(ValidatorUTXO dt _) -> datumWithHash . toBuiltinData $ dt) $ Map.elems m
 
 datumWithHash :: BuiltinData -> (DatumHash, Datum)
 datumWithHash dt = (datumHash dt', dt')
@@ -436,48 +407,58 @@ datumWithHash dt = (datumHash dt', dt')
     dt' :: Datum
     dt' = Datum dt
 
-inputToTxOut :: TransactionConfig -> Input -> TxOut
-inputToTxOut conf (Input typ valType) =
+sideUtxoToTxOut :: TransactionConfig -> SideUTXO -> TxOut
+sideUtxoToTxOut conf (SideUTXO typ valType) =
   let val = extractValue conf valType
    in case typ of
         PubKeyUTXO pkh dat -> TxOut (pubKeyHashAddress pkh) val $ datumHash . Datum <$> dat
         ScriptUTXO hash dat ->
           TxOut (scriptHashAddress hash) val . justDatumHash $ dat
 
-validatorInputToTxOut ::
-  forall (p :: Purpose).
+validatorUtxoToTxOut ::
+  forall (d :: Type).
   TransactionConfig ->
-  ValidatorInput p ->
+  ValidatorUTXO d ->
   TxOut
-validatorInputToTxOut conf = \case
-  ValidatorInput dat val ->
-    TxOut
-      { txOutAddress = scriptHashAddress $ testValidatorHash conf
-      , txOutValue = val
-      , txOutDatumHash = justDatumHash $ toBuiltinData dat
-      }
+validatorUtxoToTxOut conf (ValidatorUTXO dat val) =
+  TxOut
+    { txOutAddress = scriptHashAddress $ testValidatorHash conf
+    , txOutValue = val
+    , txOutDatumHash = justDatumHash $ toBuiltinData dat
+    }
 
 createTxInInfos ::
   forall (p :: Purpose).
   TransactionConfig ->
-  [Input] ->
-  Maybe [ValidatorInput p] ->
+  [SideUTXO] ->
+  ValidatorUTXOs p ->
   [TxInInfo]
-createTxInInfos conf ins mb = 
-  let validatorHashAddress = scriptHashAddress $ testValidatorHash conf
-      txOuts = 
-        filter ((/= validatorHashAddress) . txOutAddress)
-          $ inputToTxOut conf <$> ins
-      mbTxOuts = maybe [] (fmap $ validatorInputToTxOut conf) mb
-      allTxOuts = mbTxOuts <> txOuts
-      txOutRefs = map (TxOutRef (testTxId conf)) [1..]
+createTxInInfos conf sideUtxos valUtxos =
+  let allTxOuts = createTxOuts conf sideUtxos valUtxos
+      txOutRefs = map (TxOutRef (testTxId conf)) [1 ..]
    in zipWith TxInInfo txOutRefs allTxOuts
+
+createTxOuts ::
+  forall (p :: Purpose).
+  TransactionConfig ->
+  [SideUTXO] ->
+  ValidatorUTXOs p ->
+  [TxOut]
+createTxOuts conf sideUtxos valUtxos =
+  let validatorHashAddress = scriptHashAddress $ testValidatorHash conf
+      sideTxOuts =
+        filter ((/= validatorHashAddress) . txOutAddress) $
+          sideUtxoToTxOut conf <$> sideUtxos
+      valTxOuts = case valUtxos of
+        NoValidatorUTXOs -> []
+        ValidatorUTXOs m -> fmap (validatorUtxoToTxOut conf) $ Map.elems m
+   in valTxOuts <> sideTxOuts
 
 createOwnTxInInfo :: TransactionConfig -> BuiltinData -> Value -> TxInInfo
 createOwnTxInInfo conf dat val =
   TxInInfo
     { txInInfoOutRef = (TxOutRef (testTxId conf) 0)
-    , txInInfoResolved = 
+    , txInInfoResolved =
         TxOut
           { txOutAddress = scriptHashAddress $ testValidatorHash conf
           , txOutValue = val
@@ -487,42 +468,6 @@ createOwnTxInInfo conf dat val =
 
 justDatumHash :: BuiltinData -> Maybe DatumHash
 justDatumHash = Just . datumHash . Datum
-
-outputToTxOut :: TransactionConfig -> Output -> TxOut
-outputToTxOut conf (Output typ valType) =
-  let val = extractValue conf valType
-   in case typ of
-        PubKeyUTXO pkh dat ->
-          TxOut (pubKeyHashAddress pkh) val (datumHash . Datum <$> dat)
-        ScriptUTXO hash dat ->
-          TxOut (scriptHashAddress hash) val (justDatumHash dat)
-
-validatorOutputToTxOut ::
-  forall (p :: Purpose).
-  TransactionConfig ->
-  ValidatorOutput p ->
-  TxOut
-validatorOutputToTxOut conf = \case
-  ValidatorOutput dat val ->
-    TxOut
-      { txOutAddress = scriptHashAddress $ testValidatorHash conf
-      , txOutValue = val
-      , txOutDatumHash = justDatumHash $ toBuiltinData dat
-      }
-
-createTxOutInfos ::
-  forall (p :: Purpose).
-  TransactionConfig ->
-  [Output] ->
-  Maybe [ValidatorOutput p] ->
-  [TxOut]
-createTxOutInfos conf outs mb =
-  let validatorHashAddress = scriptHashAddress $ testValidatorHash conf
-      txOuts =
-        filter ((/= validatorHashAddress) . txOutAddress)
-          $ outputToTxOut conf <$> outs
-      mbTxOuts = maybe [] (fmap $ validatorOutputToTxOut conf) mb
-   in mbTxOuts <> txOuts
 
 extractValue :: TransactionConfig -> ValueType -> Value
 extractValue conf = \case
