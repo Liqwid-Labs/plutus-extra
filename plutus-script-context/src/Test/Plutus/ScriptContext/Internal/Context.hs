@@ -1,12 +1,13 @@
 module Test.Plutus.ScriptContext.Internal.Context (
+  TransactionConfig(..),
   Purpose (..),
   UTXOType (..),
   ValueType (..),
   Input (..),
   Output (..),
   Minting (..),
-  TransactionConfig (..),
   ContextBuilder (..),
+  defTransactionConfig,
   compileSpending,
   compileMinting,
 ) where
@@ -18,6 +19,7 @@ import Data.Map.Strict qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import Ledger.Scripts (datumHash)
+import Plutus.V1.Ledger.Interval (Interval, always)
 import Plutus.V1.Ledger.Address (pubKeyHashAddress, scriptHashAddress)
 import Plutus.V1.Ledger.Api (
   BuiltinData,
@@ -25,7 +27,6 @@ import Plutus.V1.Ledger.Api (
   Datum (Datum),
   DatumHash,
   FromData,
-  Interval,
   PubKeyHash,
   ScriptContext (ScriptContext),
   ScriptPurpose (Minting, Spending),
@@ -70,6 +71,27 @@ import Test.Plutus.ScriptContext.Internal.Minting (
   Tokens (Tokens),
  )
 import Prelude hiding (length)
+
+data TransactionConfig = TransactionConfig
+  { testFee :: Value
+  , testTimeRange :: Interval POSIXTime
+  , testTxId :: TxId
+  , testCurrencySymbol :: CurrencySymbol
+  , testValidatorHash :: ValidatorHash
+  , scriptInputPosition :: ScriptInputPosition
+  }
+  deriving stock (Show)
+
+defTransactionConfig :: TransactionConfig
+defTransactionConfig =
+  TransactionConfig
+    { testFee = mempty
+    , testTimeRange = always
+    , testTxId = TxId "abcd"
+    , testCurrencySymbol = "ff"
+    , testValidatorHash = "90ab"
+    , scriptInputPosition = Head
+    }
 
 {- | Describes what kind of script this is meant to test. Directly
  corresponds to 'ScriptPurpose'.
@@ -228,16 +250,6 @@ data ScriptInputPosition = Head | Tail
     , -- | @since 1.0
       Show
     )
-
-data TransactionConfig = TransactionConfig
-  { testFee :: Value
-  , testTimeRange :: Interval POSIXTime
-  , testTxId :: TxId
-  , testCurrencySymbol :: CurrencySymbol
-  , testValidatorHash :: ValidatorHash
-  , scriptInputPosition :: ScriptInputPosition
-  }
-  deriving stock (Show)
 
 {- | A way to incrementally build up a script context.
 
