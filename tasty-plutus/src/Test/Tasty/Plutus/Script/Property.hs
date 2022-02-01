@@ -67,7 +67,7 @@ import Test.QuickCheck (
  )
 import Test.Tasty (TestTree)
 import Test.Tasty.Options (OptionDescription (Option), OptionSet, lookupOption)
-import Test.Tasty.Plutus.Internal.Context (
+import Test.Plutus.ScriptContext.Internal.Context (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
   TransactionConfig,

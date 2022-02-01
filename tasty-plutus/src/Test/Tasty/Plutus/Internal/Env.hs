@@ -25,23 +25,25 @@ import Plutus.V1.Ledger.Api (
 import Plutus.V1.Ledger.Scripts (Context (Context), ScriptError)
 import Test.Tasty.Options (OptionSet, lookupOption)
 
-import Test.Tasty.Plutus.Internal.Context (
+import Test.Plutus.ScriptContext.Internal.Context (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
   TransactionConfig (TransactionConfig),
+  InputPosition,
   compileMinting,
   compileSpending,
-  scriptInputPosition,
+  testInputPosition,
   testCurrencySymbol,
   testFee,
   testTimeRange,
   testTxId,
   testValidatorHash,
+  testInputPosition,
  )
 import Test.Tasty.Plutus.Internal.Run (ScriptResult, testMintingPolicyScript, testValidatorScript)
 import Test.Tasty.Plutus.Options (
   Fee (Fee),
-  ScriptInputPosition,
+  ScriptInputPosition (ScriptInputPosition),
   TestCurrencySymbol (TestCurrencySymbol),
   TestTxId (TestTxId),
   TestValidatorHash (TestValidatorHash),
@@ -71,7 +73,7 @@ prepareConf getOpts env =
     , testTxId = testTxId'
     , testCurrencySymbol = testCurrencySymbol'
     , testValidatorHash = testValidatorHash'
-    , scriptInputPosition = scriptInputPosition'
+    , testInputPosition = inputPosition'
     }
   where
     opts :: OptionSet
@@ -86,8 +88,8 @@ prepareConf getOpts env =
     TestCurrencySymbol testCurrencySymbol' = lookupOption opts
     testValidatorHash' :: ValidatorHash
     TestValidatorHash testValidatorHash' = lookupOption opts
-    scriptInputPosition' :: ScriptInputPosition
-    scriptInputPosition' = lookupOption opts
+    inputPosition' :: InputPosition
+    ScriptInputPosition inputPosition' = lookupOption opts
 
 getScriptContext ::
   forall (a :: Type) (p :: Purpose).

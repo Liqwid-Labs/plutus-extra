@@ -53,7 +53,7 @@ import Test.Tasty.Options (
   OptionSet,
   lookupOption,
  )
-import Test.Tasty.Plutus.Internal.Context (
+import Test.Plutus.ScriptContext.Internal.Context (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
   TransactionConfig,

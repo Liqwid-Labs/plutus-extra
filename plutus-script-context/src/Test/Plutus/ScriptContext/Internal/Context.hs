@@ -1,5 +1,6 @@
 module Test.Plutus.ScriptContext.Internal.Context (
   TransactionConfig(..),
+  InputPosition(..),
   Purpose (..),
   UTXOType (..),
   ValueType (..),
@@ -78,7 +79,7 @@ data TransactionConfig = TransactionConfig
   , testTxId :: TxId
   , testCurrencySymbol :: CurrencySymbol
   , testValidatorHash :: ValidatorHash
-  , scriptInputPosition :: ScriptInputPosition
+  , testInputPosition :: InputPosition
   }
   deriving stock (Show)
 
@@ -90,7 +91,7 @@ defTransactionConfig =
     , testTxId = TxId "abcd"
     , testCurrencySymbol = "ff"
     , testValidatorHash = "90ab"
-    , scriptInputPosition = Head
+    , testInputPosition = Head
     }
 
 {- | Describes what kind of script this is meant to test. Directly
@@ -186,7 +187,10 @@ data ValidatorInput (p :: Purpose) where
 
 -- | @since 1.0
 deriving stock instance
-  (Show datum) => Show (ValidatorInput ( 'ForSpending datum redeemer))
+  (Show d, Show r) => Show (ValidatorInput ( 'ForSpending d r))
+
+instance Show (ValidatorInput ( 'ForMinting r)) where
+  show = const "ValidatorInput ( 'ForMinting r)"
 
 {- | An transaction output, consisting of a value and a type.
 
@@ -217,8 +221,11 @@ data ValidatorOutput (p :: Purpose) where
     ValidatorOutput ( 'ForSpending datum redeemer)
 
 -- | @since 1.0
-deriving stock instance (Show datum) =>
-  Show (ValidatorOutput ( 'ForSpending datum redeemer))
+deriving stock instance
+  (Show d, Show r) => Show (ValidatorOutput ( 'ForSpending d r))
+
+instance Show (ValidatorOutput ( 'ForMinting r)) where
+  show = const "ValidatorOutput ( 'ForMinting r)"
 
 {- | A 'Value' minted with a minting policy other than the one being tested.
  Do not use this for tokens being minted by the tested minting policy.
@@ -238,12 +245,12 @@ data Minting
       Show
     )
 
-{- | Where to place the script input in 'txInfoInputs' when generating a
+{- | Where to place the validated input in 'txInfoInputs' when generating a
  'ScriptContext'.
 
  @since 1.0
 -}
-data ScriptInputPosition = Head | Tail
+data InputPosition = Head | Tail
   deriving stock
     ( -- | @since 1.0
       Eq
@@ -325,7 +332,7 @@ compileSpending conf cb d v =
           inInfo = createOwnTxInInfo conf dt v
           inData = datumWithHash dt
        in baseInfo
-            { txInfoInputs = case scriptInputPosition conf of
+            { txInfoInputs = case testInputPosition conf of
                 Head -> inInfo : txInfoInputs baseInfo
                 Tail -> txInfoInputs baseInfo <> [inInfo]
             , txInfoData = inData : txInfoData baseInfo

@@ -21,7 +21,7 @@ import Control.Monad.RWS.Strict (RWS, evalRWS)
 import Data.Sequence (Seq)
 import GHC.Exts (toList)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Plutus.Internal.Context (Purpose)
+import Test.Plutus.ScriptContext.Internal.Context (Purpose)
 import Test.Tasty.Plutus.Internal.DumpScript (dumpScript)
 import Test.Tasty.Plutus.Internal.TestScript (TestScript)
 import Test.Tasty.Plutus.Internal.WithScript (

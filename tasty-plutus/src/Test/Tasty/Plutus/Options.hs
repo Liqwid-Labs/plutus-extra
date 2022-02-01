@@ -47,6 +47,9 @@ import Test.Tasty.Options (
   ),
   mkFlagCLParser,
  )
+import Test.Plutus.ScriptContext.Internal.Context (
+  InputPosition (Head, Tail),
+ )
 import Test.Tasty.Plutus.Internal.Options (
   PropertyMaxSize,
   PropertyTestCount,
@@ -195,11 +198,24 @@ instance IsOption PlutusTracing where
   showDefaultValue = const . Just $ "Only on failure"
   optionCLParser = mkFlagCLParser mempty Always
 
+{- | Where to place the script input in 'txInfoInputs' when generating a
+ 'ScriptContext'.
+
+ @since 1.0
+-}
+newtype ScriptInputPosition = ScriptInputPosition InputPosition
+  deriving
+    ( -- | @since 1.0
+      Eq
+    , -- | @since 1.0
+      Show
+    ) via InputPosition
+
 -- | @since 3.4
 instance IsOption ScriptInputPosition where
-  defaultValue = Head
-  parseValue = const (Just Tail)
+  defaultValue = ScriptInputPosition Head
+  parseValue = const (Just $ ScriptInputPosition Tail)
   optionName = Tagged "input-last"
   optionHelp = Tagged "Place the script input last in txInfoInputs."
   showDefaultValue = const . Just $ "Place the script input first."
-  optionCLParser = mkFlagCLParser mempty Tail
+  optionCLParser = mkFlagCLParser mempty $ ScriptInputPosition Tail

@@ -36,11 +36,11 @@ import Plutus.V1.Ledger.Value (Value)
 import PlutusTx
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Test.QuickCheck.Gen (Gen)
-import Test.Tasty.Plutus.Context (ContextBuilder)
-import Test.Tasty.Plutus.Internal.Context (
+import Test.Plutus.ScriptContext.Internal.Context (ContextBuilder)
+import Test.Plutus.ScriptContext.Internal.Context (
   Purpose (ForMinting, ForSpending),
  )
-import Test.Tasty.Plutus.Internal.Minting (
+import Test.Plutus.ScriptContext.Internal.Minting (
   MintingPolicyAction (BurnAction, MintAction),
   MintingPolicyTask (MPTask),
   Tokens (Tokens),

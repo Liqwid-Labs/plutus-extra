@@ -23,7 +23,7 @@ import Test.Tasty.Options (
   OptionSet,
   lookupOption,
  )
-import Test.Tasty.Plutus.Internal.Context (Purpose)
+import Test.Plutus.ScriptContext.Internal.Context (Purpose)
 import Test.Tasty.Plutus.Internal.Options (
   DumpPath (DumpPath, NoDumpPath),
   DumpPlutusCore (DumpPlutusCore),

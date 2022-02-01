@@ -47,10 +47,10 @@ library
   exposed-modules:
     -- Test.Plutus.ScriptContext.Context
     -- Test.Plutus.ScriptContext.TestData
-
-  other-modules:
     Test.Plutus.ScriptContext.Internal.Context
     Test.Plutus.ScriptContext.Internal.Minting
+
+  other-modules:
 
   build-depends:
     , base                         ^>=4.14
