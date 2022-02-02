@@ -1,15 +1,25 @@
 module Test.Plutus.ScriptContext.Internal.Context (
+  -- * Types
   TransactionConfig (..),
   InputPosition (..),
   Purpose (..),
   UTXOType (..),
   ValueType (..),
   SideUTXO (..),
+  ValidatorUTXO (..),
+  ValidatorUTXOs (..),
+  TestUTXO (..),
   Minting (..),
   ContextBuilder (..),
-  defTransactionConfig,
+
+  -- * Utilities functions
   compileSpending,
   compileMinting,
+
+  -- * Utilities with default config
+  defTransactionConfig,
+  compileSpendingDef,
+  compileMintingDef,
 ) where
 
 import Data.Kind (Type)
@@ -72,6 +82,10 @@ import Test.Plutus.ScriptContext.Internal.Minting (
  )
 import Prelude hiding (length)
 
+{- Config with the parameters necessary to build the context.
+
+ @since 1.0
+-}
 data TransactionConfig = TransactionConfig
   { testFee :: Value
   , testTimeRange :: Interval POSIXTime
@@ -82,6 +96,23 @@ data TransactionConfig = TransactionConfig
   }
   deriving stock (Show)
 
+{- | Where to place the validated input in 'txInfoInputs' when generating a
+ 'ScriptContext'.
+
+ @since 1.0
+-}
+data InputPosition = Head | Tail
+  deriving stock
+    ( -- | @since 1.0
+      Eq
+    , -- | @since 1.0
+      Show
+    )
+
+{- 'TransactionConfig' passed by default to 'ScriptContext'.
+
+ @since 1.0
+-}
 defTransactionConfig :: TransactionConfig
 defTransactionConfig =
   TransactionConfig
@@ -120,14 +151,16 @@ data Purpose where
     redeemer ->
     Purpose
 
-{- | \'Marker type\' for input and output metadata.
+{- | Represents metadata of UTxO at different types of address.
 
  @since 1.0
 -}
 data UTXOType
-  = -- | @since 1.0
+  = -- | Metadata of an UTxO at a 'PubKeyHash' address
+    -- | @since 1.0
     PubKeyUTXO PubKeyHash (Maybe BuiltinData)
   | -- | @since 1.0
+    -- | Metadata of an UTxO at a 'ValidatorHash' address
     ScriptUTXO ValidatorHash BuiltinData
   deriving stock
     ( -- | @since 1.0
@@ -155,7 +188,14 @@ data ValueType
       Show
     )
 
-{- | An transaction input, consisting of a value and a type.
+{- | An UTxO involved in a transaction as an input or output.
+
+ = Note
+
+ 'SideUTXO' must not be used to represent a UTxO at the address of
+ the tested validator. To do this, use 'ValidatorUTXO' or 'TestUTXO'.
+ When constructing a context, SideUTXO with the address that matches
+ the 'testValidatorAddress' in the 'TransactionConfig' will be discarded.
 
  @since 1.0
 -}
@@ -169,13 +209,14 @@ data SideUTXO = -- | @since
       Show
     )
 
-{- | An transaction input from the validated address, consisting of a value
- and a type. 'ValidatorInput' is a side input and it won't be validated.
+{- | An UTxO at the tested validator address.
+This UTxO won't be used as 'Spending' in the 'ScriptPurpose'
+of the builded 'ScriptContext'. For the representation of a 'Spending' UTxO
+use 'TestUTXO'.
 
  @since 1.0
 -}
-data ValidatorUTXO (datum :: Type) = -- | @since 1.0
-  (ToData datum) =>
+data ValidatorUTXO (datum :: Type) = (ToData datum) =>
   ValidatorUTXO
   { vUtxoDatum :: datum
   , vUtxoValue :: Value
@@ -184,7 +225,22 @@ data ValidatorUTXO (datum :: Type) = -- | @since 1.0
 -- | @since 1.0
 deriving stock instance (Show d) => Show (ValidatorUTXO d)
 
-{- | An transaction output to the validated address.
+{- | UTxO at the tested validator address. It will be used as 'Spending'
+ in the 'ScriptPurpose' of the builded 'ScriptContext'.
+
+ @since 1.0
+-}
+data TestUTXO (datum :: Type) = (ToData datum) =>
+  TestUTXO
+  { tUtxoData :: Datum
+  , tUtxoValue :: Value
+  }
+
+-- | @since 1.0
+deriving stock instance (Show d) => Show (TestUTXO d)
+
+{- | ValidatorUTXOs represents a set of 'ValidatorUTXO's.
+ It is type compatible with 'ContextBuider'.
 
  @since 1.0
 -}
@@ -201,11 +257,13 @@ data ValidatorUTXOs (p :: Purpose) where
 -- | @since 1.0
 deriving stock instance Show (ValidatorUTXOs p)
 
+-- | @since 1.0
 instance Semigroup (ValidatorUTXOs p) where
   NoValidatorUTXOs <> x = x
   x <> NoValidatorUTXOs = x
   (ValidatorUTXOs m1) <> (ValidatorUTXOs m2) = ValidatorUTXOs $ m1 <> m2
 
+-- | @since 1.0
 instance Monoid (ValidatorUTXOs p) where
   mempty = NoValidatorUTXOs
 
@@ -227,30 +285,17 @@ data Minting
       Show
     )
 
-{- | Where to place the validated input in 'txInfoInputs' when generating a
- 'ScriptContext'.
-
- @since 1.0
--}
-data InputPosition = Head | Tail
-  deriving stock
-    ( -- | @since 1.0
-      Eq
-    , -- | @since 1.0
-      Show
-    )
-
 {- | A way to incrementally build up a script context.
 
- It is tagged with a 'Purpose' as a marker for what kind of script it's
- supposed to be validating.
+ It is tagged with a 'Purpose' as a marker for what kind of 'ScriptPurpose'
+ will be used in the constructed 'ScriptContext'.
 
  You can use the 'Semigroup' instance of this type to build up larger
  contexts. For example:
 
- > let cb = paysToWallet aWallet someValue <>
- >          signedWith aHash <>
- >          tagged aUniqueTag
+ > let cb = paysToWallet "userWalletOut" aWallet someValue <>
+ >          signedWith "userSignature" aHash <>
+ >          tagged "specialTag" aUniqueTag
 
  @since 1.0
 -}
@@ -260,7 +305,7 @@ data ContextBuilder (p :: Purpose) = ContextBuilder
   , -- | @since 1.0
     cbOutputs :: Map.Map Text SideUTXO
   , -- | @since 1.0
-    cbSignatories :: Map.Map Text PubKeyHash
+    cbSignatures :: Map.Map Text PubKeyHash
   , -- | @since 1.0
     cbDatums :: Map.Map Text BuiltinData
   , -- | @since 1.0
@@ -293,15 +338,28 @@ instance Monoid (ContextBuilder p) where
   {-# INLINEABLE mempty #-}
   mempty = ContextBuilder mempty mempty mempty mempty mempty mempty mempty
 
+{- | 'compileSpending' with the default transaction config 'defTransactionConfig'
+
+ @since 1.0
+-}
+compileSpendingDef ::
+  forall (datum :: Type) (redeemer :: Type).
+  ContextBuilder ( 'ForSpending datum redeemer) ->
+  TestUTXO datum ->
+  ScriptContext
+compileSpendingDef = compileSpending defTransactionConfig
+
+{- | Construct 'ScriptContext' with 'Spending' 'ScriptPurpose' from the provided blocks.
+
+ @since 1.0
+-}
 compileSpending ::
   forall (datum :: Type) (redeemer :: Type).
-  (ToData datum) =>
   TransactionConfig ->
   ContextBuilder ( 'ForSpending datum redeemer) ->
-  datum ->
-  Value ->
+  TestUTXO datum ->
   ScriptContext
-compileSpending conf cb d v =
+compileSpending conf cb (TestUTXO d v) =
   ScriptContext go
     . Spending
     . TxOutRef (testTxId conf)
@@ -320,6 +378,21 @@ compileSpending conf cb d v =
             , txInfoData = inData : txInfoData baseInfo
             }
 
+{- | 'compileMinting' with the default transaction config 'defTransactionConfig'
+
+ @since 1.0
+-}
+compileMintingDef ::
+  forall (r :: Type).
+  ContextBuilder ( 'ForMinting r) ->
+  NonEmpty MintingPolicyTask ->
+  ScriptContext
+compileMintingDef = compileMinting defTransactionConfig
+
+{- | Construct 'ScriptContext' with 'Minting' 'ScriptPurpose' from the provided blocks.
+
+ @since 1.0
+-}
 compileMinting ::
   forall (r :: Type).
   TransactionConfig ->
@@ -363,9 +436,11 @@ baseTxInfo ::
   TxInfo
 baseTxInfo conf (ContextBuilder ins outs pkhs dats mints vins vouts) =
   let value = foldMap (filterValue filterCS . unMint) mints
+      insLst = filter (checkSideUtxoAddress conf) . Map.elems $ ins
+      outsLst = filter (checkSideUtxoAddress conf) . Map.elems $ outs
    in TxInfo
-        { txInfoInputs = createTxInInfos conf (Map.elems ins) vins
-        , txInfoOutputs = createTxOuts conf (Map.elems outs) vouts
+        { txInfoInputs = createTxInInfos conf insLst vins
+        , txInfoOutputs = createTxOuts conf outsLst vouts
         , txInfoFee = testFee conf
         , txInfoMint = value
         , txInfoDCert = []
@@ -373,10 +448,10 @@ baseTxInfo conf (ContextBuilder ins outs pkhs dats mints vins vouts) =
         , txInfoValidRange = testTimeRange conf
         , txInfoSignatories = Map.elems pkhs
         , txInfoData =
-            (validatorUtxosToDatum vins)
-              <> (validatorUtxosToDatum vouts)
-              <> (mapMaybe sideUtxoToDatum . Map.elems $ ins)
-              <> (mapMaybe sideUtxoToDatum . Map.elems $ outs)
+            validatorUtxosToDatum vins
+              <> validatorUtxosToDatum vouts
+              <> mapMaybe sideUtxoToDatum insLst
+              <> mapMaybe sideUtxoToDatum outsLst
               <> (fmap datumWithHash . Map.elems $ dats)
         , txInfoId = TxId "testTx"
         }
@@ -386,6 +461,13 @@ baseTxInfo conf (ContextBuilder ins outs pkhs dats mints vins vouts) =
 
     filterCS :: CurrencySymbol -> TokenName -> Integer -> Bool
     filterCS cs _ _ = cs /= testCurrencySymbol conf
+
+checkSideUtxoAddress :: TransactionConfig -> SideUTXO -> Bool
+checkSideUtxoAddress conf (SideUTXO typ _) =
+  let sideAddress = case typ of
+        PubKeyUTXO pkh _ -> pubKeyHashAddress pkh
+        ScriptUTXO hash _ -> scriptHashAddress hash
+   in sideAddress /= scriptHashAddress (testValidatorHash conf)
 
 sideUtxoToDatum :: SideUTXO -> Maybe (DatumHash, Datum)
 sideUtxoToDatum (SideUTXO typ _) = case typ of
@@ -445,10 +527,7 @@ createTxOuts ::
   ValidatorUTXOs p ->
   [TxOut]
 createTxOuts conf sideUtxos valUtxos =
-  let validatorHashAddress = scriptHashAddress $ testValidatorHash conf
-      sideTxOuts =
-        filter ((/= validatorHashAddress) . txOutAddress) $
-          sideUtxoToTxOut conf <$> sideUtxos
+  let sideTxOuts = sideUtxoToTxOut conf <$> sideUtxos
       valTxOuts = case valUtxos of
         NoValidatorUTXOs -> []
         ValidatorUTXOs m -> fmap (validatorUtxoToTxOut conf) $ Map.elems m
@@ -457,7 +536,7 @@ createTxOuts conf sideUtxos valUtxos =
 createOwnTxInInfo :: TransactionConfig -> BuiltinData -> Value -> TxInInfo
 createOwnTxInInfo conf dat val =
   TxInInfo
-    { txInInfoOutRef = (TxOutRef (testTxId conf) 0)
+    { txInInfoOutRef = TxOutRef (testTxId conf) 0
     , txInInfoResolved =
         TxOut
           { txOutAddress = scriptHashAddress $ testValidatorHash conf
