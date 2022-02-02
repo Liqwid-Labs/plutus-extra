@@ -1,23 +1,17 @@
 {-# LANGUAGE Trustworthy #-}
 
 {- |
- Module: Test.Plutus.ScriptCnotext.Context
+ Module: Test.Plutus.ContextBuilder
  Copyright: (C) MLabs 2022
  License: Apache 2.0
  Maintainer: Koz Ross <koz@mlabs.city>
  Portability: GHC only
  Stability: Experimental
 
- An interface for building up Plutus script contexts for testing purposes.
+ An interface for building up Plutus 'ScriptContext' for testing purposes.
 
- = Note on self-spending
-
- Currently, if you need to set up a context for spending from the script itself,
- you need to pass a `Value` to the 'Test.Tasty.Plutus.TestData.TestData' that
- is used to run the test. This is counter-intuitive, and will be fixed in a
- future release.
 -}
-module Test.Plutus.ScriptContext.Context (
+module Test.Plutus.ContextBuilder (
   -- * Types
 
   -- ** Classification and labelling

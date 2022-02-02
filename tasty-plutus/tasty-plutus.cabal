@@ -80,7 +80,7 @@ library
     , plutus-ledger-api
     , plutus-numeric               ^>=5.0
     , plutus-pretty                ^>=3.0
-    , plutus-script-context        ^>=1.0
+    , plutus-context-builder        ^>=1.0
     , plutus-tx
     , plutus-tx-plugin
     , pretty                       ^>=1.1.3.6

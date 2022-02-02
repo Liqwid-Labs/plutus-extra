@@ -41,19 +41,19 @@ ifdef FLAGS
 GHC_FLAGS = --ghc-options "$(FLAGS)"
 endif
 
-build: requires_nix_shell plutus-script-context.cabal
+build: requires_nix_shell plutus-context-builder.cabal
 	cabal v2-build $(GHC_FLAGS)
 
-watch: requires_nix_shell plutus-script-context.cabal
-	while sleep 1; do find plutus-script-context.cabal src test | entr -cd make build; done
+watch: requires_nix_shell plutus-context-builder.cabal
+	while sleep 1; do find plutus-context-builder.cabal src test | entr -cd make build; done
 
-test: requires_nix_shell plutus-script-context.cabal
+test: requires_nix_shell plutus-context-builder.cabal
 	cabal v2-test
 
-ghci: requires_nix_shell plutus-script-context.cabal
+ghci: requires_nix_shell plutus-context-builder.cabal
 	cabal v2-repl $(GHC_FLAGS)
 
-coverage: plutus-script-context.cabal
+coverage: plutus-context-builder.cabal
 	nix-build --arg doCoverage true -A projectCoverageReport
 
 # Source dirs to run fourmolu on

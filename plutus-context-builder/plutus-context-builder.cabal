@@ -1,5 +1,5 @@
 cabal-version:      3.0
-name:               plutus-script-context
+name:               plutus-context-builder
 version:            1.0
 extra-source-files: CHANGELOG.md
 
@@ -45,12 +45,11 @@ common lang
 library
   import:          lang
   exposed-modules:
-    -- Test.Plutus.ScriptContext.Context
-    -- Test.Plutus.ScriptContext.TestData
-    Test.Plutus.ScriptContext.Internal.Context
-    Test.Plutus.ScriptContext.Internal.Minting
+    Test.Plutus.ContextBuilder
 
   other-modules:
+    Test.Plutus.ContextBuilder.Internal
+    Test.Plutus.ContextBuilder.Minting
 
   build-depends:
     , base                         ^>=4.14

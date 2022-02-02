@@ -1,4 +1,4 @@
-module Test.Plutus.ScriptContext.Internal.Context (
+module Test.Plutus.ContextBuilder.Internal (
   -- * Types
   TransactionConfig (..),
   InputPosition (..),
@@ -75,7 +75,7 @@ import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Value.Extra (filterValue)
 import PlutusTx.Positive (Positive, getPositive)
-import Test.Plutus.ScriptContext.Internal.Minting (
+import Test.Plutus.ContextBuilder.Minting (
   MintingPolicyAction (BurnAction, MintAction),
   MintingPolicyTask (MPTask),
   Tokens (Tokens),
