@@ -64,30 +64,30 @@ library
     Test.Tasty.Plutus.Options.QQ
 
   build-depends:
-    , base                         ^>=4.14
-    , bytestring                   ^>=0.10.12.0
+    , base                    ^>=4.14
+    , bytestring              ^>=0.10.12.0
     , cardano-api
-    , containers                   ^>=0.6.2.1
-    , filepath                     ^>=1.4.2
-    , mtl                          ^>=2.2.2
+    , containers              ^>=0.6.2.1
+    , filepath                ^>=1.4.2
+    , mtl                     ^>=2.2.2
+    , plutus-context-builder  ^>=1.0
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
-    , plutus-numeric               ^>=5.0
-    , plutus-pretty                ^>=3.0
-    , plutus-context-builder        ^>=1.0
+    , plutus-numeric          ^>=5.0
+    , plutus-pretty           ^>=3.0
     , plutus-tx
     , plutus-tx-plugin
-    , pretty                       ^>=1.1.3.6
-    , pretty-show                  ^>=1.10
-    , QuickCheck                   ^>=2.14.2
-    , safe                         ^>=0.3.19
-    , serialise                    ^>=0.2.3.0
-    , tagged                       ^>=0.8.6.1
-    , tasty                        ^>=1.4.1
-    , template-haskell             ^>=2.16.0.0
-    , text                         ^>=1.2.4.1
-    , vector                       ^>=0.12.3.0
+    , pretty                  ^>=1.1.3.6
+    , pretty-show             ^>=1.10
+    , QuickCheck              ^>=2.14.2
+    , safe                    ^>=0.3.19
+    , serialise               ^>=0.2.3.0
+    , tagged                  ^>=0.8.6.1
+    , tasty                   ^>=1.4.1
+    , template-haskell        ^>=2.16.0.0
+    , text                    ^>=1.2.4.1
+    , vector                  ^>=0.12.3.0
 
   hs-source-dirs:  src
 

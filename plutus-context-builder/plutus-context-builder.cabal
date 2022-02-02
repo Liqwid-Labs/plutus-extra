@@ -44,38 +44,22 @@ common lang
 
 library
   import:          lang
-  exposed-modules:
-    Test.Plutus.ContextBuilder
-
+  exposed-modules: Test.Plutus.ContextBuilder
   other-modules:
     Test.Plutus.ContextBuilder.Internal
     Test.Plutus.ContextBuilder.Minting
 
   build-depends:
     , base                         ^>=4.14
-    , bytestring                   ^>=0.10.12.0
-    , cardano-api
     , containers                   ^>=0.6.2.1
     , plutus-contract
-    , plutus-core
     , plutus-extra
-    , plutus-numeric
-    , quickcheck-plutus-instances
-    , QuickCheck
     , plutus-ledger
     , plutus-ledger-api
-    , plutus-pretty                ^>=3.0
+    , plutus-numeric
     , plutus-tx
-    , plutus-tx-plugin
-    , pretty                       ^>=1.1.3.6
-    , pretty-show                  ^>=1.10
-    , row-types                    ^>=1.0.1
-    , safe                         ^>=0.3.19
-    , serialise                    ^>=0.2.3.0
-    , tagged                       ^>=0.8.6.1
-    , tasty                        ^>=1.4.1
-    , template-haskell             ^>=2.16.0.0
+    , QuickCheck
+    , quickcheck-plutus-instances
     , text                         ^>=1.2.4.1
-    , vector                       ^>=0.12.3.0
 
   hs-source-dirs:  src
