@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               tasty-plutus
-version:            7.1
+version:            8.0
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -70,9 +70,7 @@ library
     , containers                   ^>=0.6.2.1
     , filepath                     ^>=1.4.2
     , mtl                          ^>=2.2.2
-    , plutus-contract
     , plutus-core
-    , plutus-extra                 ^>=5.0
     , plutus-ledger
     , plutus-ledger-api
     , plutus-numeric               ^>=5.0
@@ -83,8 +81,6 @@ library
     , pretty                       ^>=1.1.3.6
     , pretty-show                  ^>=1.10
     , QuickCheck                   ^>=2.14.2
-    , quickcheck-plutus-instances  ^>=2.0
-    , row-types                    ^>=1.0.1
     , safe                         ^>=0.3.19
     , serialise                    ^>=0.2.3.0
     , tagged                       ^>=0.8.6.1
@@ -108,15 +104,13 @@ test-suite properties
     , base                         ^>=4.14
     , plutus-context-builder       ^>=1.0
     , plutus-contract
-    , plutus-extra                 ^>=5.0
     , plutus-ledger
     , plutus-ledger-api
-    , plutus-numeric               ^>=5.0
     , plutus-tx
     , plutus-tx-plugin
     , quickcheck-plutus-instances  ^>=2.0
     , tasty                        ^>=1.4.1
-    , tasty-plutus                 ^>=7.1
+    , tasty-plutus                 ^>=8.0
     , tasty-quickcheck             ^>=0.10.1.2
 
   ghc-options:    -threaded -rtsopts -with-rtsopts=-N -O1
