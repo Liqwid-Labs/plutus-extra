@@ -41,10 +41,10 @@ module Test.Plutus.ContextBuilder (
 
   -- ** Build context
 
-  buildSpending,
-  buildMinting,
-  buildSpendingDef,
-  buildMintingDef,
+  spendingScriptContext,
+  mintingScriptContext,
+  spendingScriptContextDef,
+  mintingScriptContextDef,
 
   -- ** Basic construction
   input,
@@ -128,11 +128,11 @@ import Test.Plutus.ContextBuilder.Internal (
     cbValidatorInputs,
     cbValidatorOutputs
    ),
-  buildSpending,
-  buildMinting,
+  spendingScriptContext,
+  mintingScriptContext,
   defTransactionConfig,
-  buildSpendingDef,
-  buildMintingDef,
+  spendingScriptContextDef,
+  mintingScriptContextDef,
  )
 import Test.Plutus.ContextBuilder.Minting (
   MintingPolicyTask (MPTask),

@@ -13,11 +13,11 @@ module Test.Plutus.ContextBuilder.Internal (
   ContextBuilder (..),
 
   -- * Utilities functions
-  buildSpending,
-  buildMinting,
+  spendingScriptContext,
+  mintingScriptContext,
   defTransactionConfig,
-  buildSpendingDef,
-  buildMintingDef,
+  spendingScriptContextDef,
+  mintingScriptContextDef,
 ) where
 
 import Data.Kind (Type)
@@ -336,28 +336,29 @@ instance Monoid (ContextBuilder p) where
   {-# INLINEABLE mempty #-}
   mempty = ContextBuilder mempty mempty mempty mempty mempty mempty mempty
 
-{- | 'buildSpending' with the default transaction config 'defTransactionConfig'
+{- | As 'spendingScriptContext', but with the default
+transaction config 'defTransactionConfig'.
 
  @since 1.0
 -}
-buildSpendingDef ::
+spendingScriptContextDef ::
   forall (datum :: Type) (redeemer :: Type).
   ContextBuilder ( 'ForSpending datum redeemer) ->
   TestUTXO datum ->
   ScriptContext
-buildSpendingDef = buildSpending defTransactionConfig
+spendingScriptContextDef = spendingScriptContext defTransactionConfig
 
 {- | Construct 'ScriptContext' with 'Spending' 'ScriptPurpose' from the provided blocks.
 
  @since 1.0
 -}
-buildSpending ::
+spendingScriptContext ::
   forall (datum :: Type) (redeemer :: Type).
   TransactionConfig ->
   ContextBuilder ( 'ForSpending datum redeemer) ->
   TestUTXO datum ->
   ScriptContext
-buildSpending conf cb (TestUTXO d v) =
+spendingScriptContext conf cb (TestUTXO d v) =
   ScriptContext go
     . Spending
     . TxOutRef (testTxId conf)
@@ -376,28 +377,29 @@ buildSpending conf cb (TestUTXO d v) =
             , txInfoData = inData : txInfoData baseInfo
             }
 
-{- | 'buildMinting' with the default transaction config 'defTransactionConfig'
+{- | As 'mintingScriptContext', but with the default
+transaction config 'defTransactionConfig'.
 
  @since 1.0
 -}
-buildMintingDef ::
+mintingScriptContextDef ::
   forall (r :: Type).
   ContextBuilder ( 'ForMinting r) ->
   NonEmpty MintingPolicyTask ->
   ScriptContext
-buildMintingDef = buildMinting defTransactionConfig
+mintingScriptContextDef = mintingScriptContext defTransactionConfig
 
 {- | Construct 'ScriptContext' with 'Minting' 'ScriptPurpose' from the provided blocks.
 
  @since 1.0
 -}
-buildMinting ::
+mintingScriptContext ::
   forall (r :: Type).
   TransactionConfig ->
   ContextBuilder ( 'ForMinting r) ->
   NonEmpty MintingPolicyTask ->
   ScriptContext
-buildMinting conf cb toks =
+mintingScriptContext conf cb toks =
   ScriptContext go (Minting sym)
   where
     sym :: CurrencySymbol
