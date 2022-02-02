@@ -1,4 +1,4 @@
-module Test.Plutus.ScriptContext.Internal.Minting (
+module Test.Plutus.ContextBuilder.Minting (
   -- * Types
   MintingPolicyTask (..),
   MintingPolicyAction (..),

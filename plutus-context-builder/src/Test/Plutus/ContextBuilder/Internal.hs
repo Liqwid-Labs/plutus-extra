@@ -197,7 +197,7 @@ data ValueType
 
  @since 1.0
 -}
-data SideUTXO = -- | @since
+data SideUTXO =
   SideUTXO
   { sUtxoType :: UTXOType
   , sUtxoValue :: ValueType
@@ -230,7 +230,7 @@ deriving stock instance (Show d) => Show (ValidatorUTXO d)
 -}
 data TestUTXO (datum :: Type) = (ToData datum) =>
   TestUTXO
-  { tUtxoData :: Datum
+  { tUtxoDatum :: datum
   , tUtxoValue :: Value
   }
 

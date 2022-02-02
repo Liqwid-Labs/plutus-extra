@@ -12,116 +12,189 @@
 
 -}
 module Test.Plutus.ContextBuilder (
+  
   -- * Types
+  
+  -- ** TransactionConfig
+  TransactionConfig (..),
+  InputPosition (..),
 
   -- ** Classification and labelling
   Purpose (..),
 
   -- ** Building contexts
-  ExternalType (..),
-  Input (..),
-  Output (..),
+  UTXOType (..),
+  ValueType (..),
+  SideUTXO (..),
+  ValidatorUTXO (..),
+  TestUTXO (..),
+  ValidatorUTXOs (..),
   Minting (..),
   ContextBuilder (..),
 
+  -- ** Minting
+  MintingPolicyTask (..),
+  MintingPolicyAction (..),
+  Tokens (..),
+
   -- * Functions
-  outputsToInputs,
+
+  -- ** Build context
+
+  buildSpending,
+  buildMinting,
+  buildSpendingDef,
+  buildMintingDef,
 
   -- ** Basic construction
   input,
+  validatorInput,
   output,
+  validatorOutput,
   signedWith,
   datum,
   addDatum,
   minting,
 
-  -- ** Paying
-  paysToPubKey,
-  paysToPubKeyWithDatum,
-  paysTokensToPubKey,
-  paysToWallet,
-  paysToWalletWithDatum,
-  paysTokensToWallet,
-  paysLovelaceToPubKey,
-  paysLovelaceToWallet,
-  paysToSelf,
-  paysToOther,
-  paysTokensToOther,
+  -- ** Output
+  outToPubKey,
+  outToPubKeyWithDatum,
+  outTokensToPubKey,
+  outTokensToPubKeyWithDatum,
+  outLovelaceToPubKey,
+  outLovelaceToPubKeyWithDatum,
+  outToValidator,
+  outToOtherScript,
+  outTokensToOtherScript,
 
   -- ** Spending
-  spendsFromPubKey,
-  spendsFromPubKeyWithDatum,
-  spendsTokensFromPubKey,
-  spendsFromPubKeySigned,
-  spendsFromPubKeyWithDatumSigned,
-  spendsTokensFromPubKeySigned,
-  spendsFromWallet,
-  spendsFromWalletWithDatum,
-  spendsTokensFromWallet,
-  spendsFromWalletSigned,
-  spendsFromWalletWithDatumSigned,
-  spendsTokensFromWalletSigned,
-  spendsFromOther,
-  spendsTokensFromOther,
+  inFromPubKey,
+  inFromPubKeyWithDatum,
+  inTokensFromPubKey,
+  inTokensFromPubKeyWithDatum,
+  inLovelaceFromPubKey,
+  inLovelaceFromPubKeyWithDatum,
+  inFromValidator,
+  inFromOtherScript,
+  inTokensFromOtherScript,
 
   -- ** Minting
-  mintsValue,
+  mintedValue,
+  burnTokens,
+  mintTokens,
 
-  -- ** Combining Contexts
-  makeIncompleteContexts,
+  -- ** Utilities
+  defTransactionConfig,
+  walletPubKeyHash,
+
 ) where
 
 import Data.Kind (Type)
-import Data.Sequence qualified as Seq
+import Data.Map.Strict qualified as Map 
+import Data.Text (Text)
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Ada (lovelaceValueOf)
 import Plutus.V1.Ledger.Scripts (ValidatorHash)
 import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.Builtins (BuiltinData)
-import PlutusTx.IsData.Class (ToData (toBuiltinData))
-import Test.Tasty.Plutus.Internal.Context (
+import PlutusTx.IsData.Class (FromData, ToData (toBuiltinData))
+import Test.Plutus.ContextBuilder.Internal (
+  TransactionConfig (
+    TransactionConfig,
+    testFee,
+    testTimeRange,
+    testTxId,
+    testCurrencySymbol,
+    testValidatorHash,
+    testInputPosition
+  ),
+  InputPosition (Head, Tail),
+  Purpose (ForMinting, ForSpending),
+  UTXOType (PubKeyUTXO, ScriptUTXO),
+  ValueType (GeneralValue, TokensValue),
+  SideUTXO (SideUTXO, sUtxoType, sUtxoValue),
+  ValidatorUTXO (ValidatorUTXO, vUtxoDatum, vUtxoValue),
+  TestUTXO (TestUTXO, tUtxoDatum, tUtxoValue),
+  ValidatorUTXOs (ValidatorUTXOs, NoValidatorUTXOs),
+  Minting (Mint),
   ContextBuilder (
     ContextBuilder,
-    cbDatums,
     cbInputs,
-    cbMinting,
     cbOutputs,
-    cbSignatories
-  ),
-  ExternalType (OwnType, PubKeyType, ScriptType),
-  Input (Input),
-  Minting (Mint),
-  Output (Output),
-  Purpose (ForMinting, ForSpending),
-  ValueType (GeneralValue, TokensValue),
-  makeIncompleteContexts,
-  outputsToInputs,
+    cbSignatures,
+    cbDatums,
+    cbMinting,
+    cbValidatorInputs,
+    cbValidatorOutputs
+   ),
+  buildSpending,
+  buildMinting,
+  defTransactionConfig,
+  buildSpendingDef,
+  buildMintingDef,
  )
-import Test.Tasty.Plutus.Internal.Minting (Tokens (Tokens))
+import Test.Plutus.ContextBuilder.Minting (
+  MintingPolicyTask (MPTask),
+  MintingPolicyAction (BurnAction, MintAction),
+  Tokens (Tokens),
+  burnTokens,
+  mintTokens,
+ )  
 import Wallet.Emulator.Types (Wallet, mockWalletPaymentPubKeyHash)
 
-{- | Single-input context.
+{- | Single 'SideUTXO'-input context.
 
  @since 1.0
 -}
 input ::
   forall (p :: Purpose).
-  Input ->
+  Text ->
+  SideUTXO ->
   ContextBuilder p
-input x =
-  ContextBuilder (Seq.singleton x) mempty mempty mempty mempty
+input name x = mempty {cbInputs = Map.singleton name x}
 
-{- | Single-output context.
+{- | Single 'ValidatorUTXO'-input context.
+
+ = Note
+
+ This input won't be used as 'Spending' in the 'ScriptPurpose'
+ of the builded 'ScriptContext'.
+
+ @since 1.0
+-}
+validatorInput ::
+  forall (d :: Type) (r :: Type).
+  (FromData d, ToData d, Show d) =>
+  Text ->
+  ValidatorUTXO d ->
+  ContextBuilder ( 'ForSpending d r)
+validatorInput name x =
+  mempty {cbValidatorInputs = ValidatorUTXOs $ Map.singleton name x}
+
+{- | Single 'SideUTXO'-output context.
 
  @since 1.0
 -}
 output ::
   forall (p :: Purpose).
-  Output ->
+  Text ->
+  SideUTXO ->
   ContextBuilder p
-output x =
-  ContextBuilder mempty (Seq.singleton x) mempty mempty mempty
+output name x = mempty {cbOutputs = Map.singleton name x}
+
+{- | Single 'ValidatorUTXO'-output context.
+
+ @since 1.0
+-}
+validatorOutput ::
+  forall (d :: Type) (r :: Type).
+  (FromData d, ToData d, Show d) =>
+  Text ->
+  ValidatorUTXO d ->
+  ContextBuilder ( 'ForSpending d r)
+validatorOutput name x =
+  mempty {cbValidatorOutputs = ValidatorUTXOs $ Map.singleton name x}
 
 {- | Context with one signature.
 
@@ -129,10 +202,10 @@ output x =
 -}
 signedWith ::
   forall (p :: Purpose).
+  Text ->
   PubKeyHash ->
   ContextBuilder p
-signedWith pkh =
-  ContextBuilder mempty mempty (Seq.singleton pkh) mempty mempty
+signedWith name x = mempty {cbSignatures = Map.singleton name x}
 
 {- | Context with one additional datum.
 
@@ -140,21 +213,22 @@ signedWith pkh =
 -}
 datum ::
   forall (p :: Purpose).
+  Text ->
   BuiltinData ->
   ContextBuilder p
-datum d =
-  ContextBuilder mempty mempty mempty (Seq.singleton d) mempty
+datum name x = mempty {cbDatums = Map.singleton name x}
 
 {- | Short for @'datum' '.' 'toBuiltinData'@.
 
- @since 3.0
+ @since 1.0
 -}
 addDatum ::
   forall (p :: Purpose) (a :: Type).
   (ToData a) =>
+  Text ->
   a ->
   ContextBuilder p
-addDatum = datum . toBuiltinData
+addDatum name = datum name . toBuiltinData
 
 {- | Context with 'Minting' value using a minting policy other than the tested one.
 
@@ -165,362 +239,313 @@ addDatum = datum . toBuiltinData
  Asset classes with 'CurrencySymbol' matching testCurrencySymbol in 'TransactionConfig'
  will be excluded from the resulting 'ScriptContext'.
 
- @since 3.2
+ @since 1.0
 -}
 minting ::
   forall (p :: Purpose).
+  Text ->
   Minting ->
   ContextBuilder p
-minting =
-  ContextBuilder mempty mempty mempty mempty . Seq.singleton
+minting name x = mempty {cbMinting = Map.singleton name x}
 
-{- | Indicate that a payment must happen to the given public key, worth the
- given amount.
+{- | Context with an output at the given public key with the given 'Value'.
 
  @since 1.0
 -}
-paysToPubKey ::
+outToPubKey ::
   forall (p :: Purpose).
+  Text ->
   PubKeyHash ->
   Value ->
   ContextBuilder p
-paysToPubKey pkh =
-  output . Output (PubKeyType pkh Nothing) . GeneralValue
+outToPubKey name pkh =
+  output name . SideUTXO (PubKeyUTXO pkh Nothing) . GeneralValue
 
-{- | Indicate that a payment must happen to the given public key, worth the
- given amount and the given datum attached.
+{- | As 'outToPubKey', but with attached datum.
 
- @since 5.3
+ @since 1.0
 -}
-paysToPubKeyWithDatum ::
+outToPubKeyWithDatum ::
   forall (p :: Purpose) (a :: Type).
   (ToData a) =>
+  Text ->
   PubKeyHash ->
   Value ->
   a ->
   ContextBuilder p
-paysToPubKeyWithDatum pkh val dt =
-  let value = GeneralValue val
-      outType = PubKeyType pkh (Just $ toBuiltinData dt)
-   in output $ Output outType value
+outToPubKeyWithDatum name pkh val dt =
+  let valueType = GeneralValue val
+      utxoType = PubKeyUTXO pkh (Just $ toBuiltinData dt)
+   in output name $ SideUTXO utxoType valueType
 
-{- | Indicate that the given 'Tokens' controlled by the tested minting policy
-must be paid to the given public key.
-
- @since 6.0
--}
-paysTokensToPubKey ::
-  forall (r :: Type).
-  PubKeyHash ->
-  Tokens ->
-  ContextBuilder ( 'ForMinting r)
-paysTokensToPubKey pkh (Tokens tn pos) =
-  output . Output (PubKeyType pkh Nothing) $ TokensValue tn pos
-
-{- | Indicate that a payment must happen to the given 'Wallet', worth the
- given amount.
+{- | As 'outToPubKey', but using 'Tokens'. These 'Tokens' are controlled
+ by the 'MintingPolicy' for which the context is built.
 
  @since 1.0
 -}
-paysToWallet ::
-  forall (p :: Purpose).
-  Wallet ->
-  Value ->
-  ContextBuilder p
-paysToWallet wallet =
-  paysToPubKey (walletPubKeyHash wallet)
-
-{- | Indicate that a payment must happen to the given 'Wallet', worth the
- given amount and the given datum attached.
-
- @since 5.3
--}
-paysToWalletWithDatum ::
-  forall (p :: Purpose) (a :: Type).
-  (ToData a) =>
-  Wallet ->
-  Value ->
-  a ->
-  ContextBuilder p
-paysToWalletWithDatum wallet =
-  paysToPubKeyWithDatum (walletPubKeyHash wallet)
-
-{- | Indicate that the given 'Tokens' controlled by the tested minting policy
- must be paid to the given 'Wallet'.
-
- @since 6.0
--}
-paysTokensToWallet ::
+outTokensToPubKey ::
   forall (r :: Type).
-  Wallet ->
+  Text -> 
+  PubKeyHash ->
   Tokens ->
   ContextBuilder ( 'ForMinting r)
-paysTokensToWallet wallet =
-  paysTokensToPubKey (walletPubKeyHash wallet)
+outTokensToPubKey name pkh (Tokens tn pos) =
+  let valueType = TokensValue tn pos
+      utxoType = PubKeyUTXO pkh Nothing
+   in output name $ SideUTXO utxoType valueType
 
-{- | Indicate that a payment must happen to the script being tested, worth
- the given amount.
+{- | As 'outTokensToPubKey', but with attached datum.
 
- @since 6.0
+ @since 1.0
 -}
-paysToSelf ::
+outTokensToPubKeyWithDatum ::
+  forall (p :: Purpose) (a :: Type).
+  (ToData a) =>
+  Text ->
+  PubKeyHash ->
+  Tokens ->
+  a ->
+  ContextBuilder p
+outTokensToPubKeyWithDatum name pkh (Tokens tn pos) dt =
+  let valueType = TokensValue tn pos
+      utxoType = PubKeyUTXO pkh (Just $ toBuiltinData dt)
+   in output name $ SideUTXO utxoType valueType
+
+{- | As 'outToPubKey', but using Lovelace.
+
+ @since 1.0
+-}
+outLovelaceToPubKey ::
+  forall (p :: Purpose).
+  Text ->
+  PubKeyHash ->
+  Integer ->
+  ContextBuilder p
+outLovelaceToPubKey name pkh = outToPubKey name pkh . lovelaceValueOf
+
+{- | As 'outLovelaceToPubKey', but with attached datum.
+
+ @since 1.0
+-}
+outLovelaceToPubKeyWithDatum ::
+  forall (p :: Purpose) (a :: Type).
+  (ToData a) =>
+  Text ->
+  PubKeyHash ->
+  Integer ->
+  a ->
+  ContextBuilder p
+outLovelaceToPubKeyWithDatum name pkh int dt =
+  outToPubKeyWithDatum name pkh (lovelaceValueOf int) (toBuiltinData dt)
+
+{- | Context with an output to the script that is associated
+ with the 'ScriptContext' being built.
+
+ @since 1.0
+-}
+outToValidator ::
   forall (d :: Type) (r :: Type).
-  (ToData d) =>
+  (FromData d, ToData d, Show d) =>
+  Text ->
   Value ->
   d ->
   ContextBuilder ( 'ForSpending d r)
-paysToSelf v dt =
-  output . Output (OwnType . toBuiltinData $ dt) $ GeneralValue v
+outToValidator name v dt = validatorOutput name (ValidatorUTXO dt v)
 
-{- | Indicate that a payment must happen to another script, worth the
- given amount.
+{- | Сontext with an output to a script that is not associated
+ with the 'ScriptContext' being built. 
 
- @since 4.0
+ @since 1.0
 -}
-paysToOther ::
+outToOtherScript ::
   forall (p :: Purpose) (a :: Type).
   (ToData a) =>
+  Text ->
   ValidatorHash ->
   Value ->
   a ->
   ContextBuilder p
-paysToOther hash v dt =
-  output . Output (ScriptType hash . toBuiltinData $ dt) $ GeneralValue v
+outToOtherScript name hash val dt =
+  let valueType = GeneralValue val
+      utxoType = ScriptUTXO hash (toBuiltinData dt)
+   in output name $ SideUTXO utxoType valueType
 
-{- | Indicate that the given 'Tokens' controlled by the tested minting policy
- must be paid to another script.
+{- | Сontext with an output to a script with the given 'Tokens' controlled
+ by the 'MintingPolicy' for which the 'ScriptContext' is built.
 
- @since 6.0
+ @since 1.0
 -}
-paysTokensToOther ::
+outTokensToOtherScript ::
   forall (a :: Type) (r :: Type).
   (ToData a) =>
+  Text ->
   ValidatorHash ->
   Tokens ->
   a ->
   ContextBuilder ( 'ForMinting r)
-paysTokensToOther hash (Tokens tn pos) dt =
-  output . Output (ScriptType hash . toBuiltinData $ dt) $ TokensValue tn pos
+outTokensToOtherScript name hash (Tokens tn pos) dt =
+  let valueType = TokensValue tn pos
+      utxoType = ScriptUTXO hash (toBuiltinData dt)
+   in output name $ SideUTXO utxoType valueType  
 
-{- | As 'paysToPubKey', but using Lovelace.
+{- | Context with an input from given public key with the given 'Value'.
 
- @since 3.0
+ @since 1.0
 -}
-paysLovelaceToPubKey ::
+inFromPubKey ::
   forall (p :: Purpose).
+  Text ->
+  PubKeyHash ->
+  Value ->
+  ContextBuilder p
+inFromPubKey name pkh value =
+  let valueType = GeneralValue value
+      utxoType = PubKeyUTXO pkh Nothing
+   in input name $ SideUTXO utxoType valueType
+
+{- | As 'inFromPubKey', but with the given datum.
+
+ @since 1.0
+-}
+inFromPubKeyWithDatum ::
+  forall (p :: Purpose) (a :: Type).
+  (ToData a) =>
+  Text ->
+  PubKeyHash ->
+  Value ->
+  a ->
+  ContextBuilder p
+inFromPubKeyWithDatum name pkh val dt =
+  let valueType = GeneralValue val
+      utxoType = PubKeyUTXO pkh (Just $ toBuiltinData dt)
+   in input name $ SideUTXO utxoType valueType
+
+{- | As 'inFromPubKey', but using 'Tokens'. These 'Tokens' are controlled
+ by the 'MintingPolicy' for which the context is built.
+
+ @since 1.0
+-}
+inTokensFromPubKey ::
+  forall (r :: Type).
+  Text ->
+  PubKeyHash ->
+  Tokens ->
+  ContextBuilder ( 'ForMinting r)
+inTokensFromPubKey name pkh (Tokens tn pos) =
+  let valueType = TokensValue tn pos
+      utxoType = PubKeyUTXO pkh Nothing
+   in input name $ SideUTXO utxoType valueType
+
+{- | As 'inFromPubKey', but with the given datum.
+
+ @since 1.0
+-}
+inTokensFromPubKeyWithDatum ::
+  forall (p :: Purpose) (a :: Type).
+  (ToData a) =>
+  Text ->
+  PubKeyHash ->
+  Tokens ->
+  a ->
+  ContextBuilder p
+inTokensFromPubKeyWithDatum name pkh (Tokens tn pos) dt =
+  let valueType = TokensValue tn pos
+      utxoType = PubKeyUTXO pkh (Just $ toBuiltinData dt)
+   in input name $ SideUTXO utxoType valueType
+
+{- | As 'inFromPubKey', but using Lovelace.
+
+ @since 1.0
+-}
+inLovelaceFromPubKey ::
+  forall (p :: Purpose).
+  Text ->
   PubKeyHash ->
   Integer ->
   ContextBuilder p
-paysLovelaceToPubKey pkh = paysToPubKey pkh . lovelaceValueOf
+inLovelaceFromPubKey name pkh = inFromPubKey name pkh . lovelaceValueOf
 
-{- | As 'paysToWallet', but using Lovelace.
+{- | As 'inLovelaceFromPubKey', but with attached datum.
 
- @since 3.0
+ @since 1.0
 -}
-paysLovelaceToWallet ::
-  forall (p :: Purpose).
-  Wallet ->
+inLovelaceFromPubKeyWithDatum ::
+  forall (p :: Purpose) (a :: Type).
+  (ToData a) =>
+  Text ->
+  PubKeyHash ->
   Integer ->
-  ContextBuilder p
-paysLovelaceToWallet wallet = paysToWallet wallet . lovelaceValueOf
-
-{- | Indicate that the given amount must be spent from the given public key.
-
- @since 1.0
--}
-spendsFromPubKey ::
-  forall (p :: Purpose).
-  PubKeyHash ->
-  Value ->
-  ContextBuilder p
-spendsFromPubKey pkh =
-  input . Input (PubKeyType pkh Nothing) . GeneralValue
-
-{- | Indicate that the given amount must be spent from the given public key,
- with the given datum attached.
-
- @since 5.3
--}
-spendsFromPubKeyWithDatum ::
-  forall (p :: Purpose) (a :: Type).
-  (ToData a) =>
-  PubKeyHash ->
-  Value ->
   a ->
   ContextBuilder p
-spendsFromPubKeyWithDatum pkh val dt =
-  let value = GeneralValue val
-      inType = PubKeyType pkh (Just $ toBuiltinData dt)
-   in input $ Input inType value
+inLovelaceFromPubKeyWithDatum name pkh int dt =
+  inFromPubKeyWithDatum name pkh (lovelaceValueOf int) (toBuiltinData dt)
 
-{- | Indicate that the given 'Tokens' controlled by the tested minting policy
- must be spent from the given public key.
-
- @since 6.0
--}
-spendsTokensFromPubKey ::
-  forall (r :: Type).
-  PubKeyHash ->
-  Tokens ->
-  ContextBuilder ( 'ForMinting r)
-spendsTokensFromPubKey pkh (Tokens tn pos) =
-  input . Input (PubKeyType pkh Nothing) $ TokensValue tn pos
-
-{- | As 'spendsFromPubKey', with an added signature.
+{- | Context with an input from the script that is associated
+ with the 'ScriptContext' being built. This input won`t be used
+ as 'Spending' in the 'ScriptPurpose' of the 'ScriptContext'.
 
  @since 1.0
 -}
-spendsFromPubKeySigned ::
-  forall (p :: Purpose).
-  PubKeyHash ->
+inFromValidator ::
+  forall (d :: Type) (r :: Type).
+  (FromData d, ToData d, Show d) =>
+  Text ->
   Value ->
-  ContextBuilder p
-spendsFromPubKeySigned pkh v = signedWith pkh <> spendsFromPubKey pkh v
+  d ->
+  ContextBuilder ( 'ForSpending d r)
+inFromValidator name val dt = validatorInput name (ValidatorUTXO dt val)
 
-{- | As 'spendsTokensFromPubKey', with an added signature.
-
- @since 6.0
--}
-spendsTokensFromPubKeySigned ::
-  forall (r :: Type).
-  PubKeyHash ->
-  Tokens ->
-  ContextBuilder ( 'ForMinting r)
-spendsTokensFromPubKeySigned pkh (Tokens tn pos) =
-  signedWith pkh <> spendsTokensFromPubKey pkh (Tokens tn pos)
-
-{- | As 'spendsFromPubKeyWithDatum', with an added signature.
-
- @since 5.3
--}
-spendsFromPubKeyWithDatumSigned ::
-  forall (p :: Purpose) (a :: Type).
-  (ToData a) =>
-  PubKeyHash ->
-  Value ->
-  a ->
-  ContextBuilder p
-spendsFromPubKeyWithDatumSigned pkh v dt =
-  spendsFromPubKeyWithDatum pkh v dt <> signedWith pkh
-
-{- | Indicate that the given amount must be spent from the given 'Wallet'.
+{- | Сontext with an input from a script that is not associated
+ with the 'ScriptContext' being built. 
 
  @since 1.0
 -}
-spendsFromWallet ::
-  forall (p :: Purpose).
-  Wallet ->
-  Value ->
-  ContextBuilder p
-spendsFromWallet wallet =
-  spendsFromPubKey (walletPubKeyHash wallet)
-
-{- | Indicate that the given 'Tokens' controlled by the tested minting policy
- must be spent from the given 'Wallet'
-
- @since 6.0
--}
-spendsTokensFromWallet ::
-  forall (r :: Type).
-  Wallet ->
-  Tokens ->
-  ContextBuilder ( 'ForMinting r)
-spendsTokensFromWallet wallet =
-  spendsTokensFromPubKey (walletPubKeyHash wallet)
-
-{- | Indicate that the given amount must be spent from the given 'Wallet'.
-
- @since 5.3
--}
-spendsFromWalletWithDatum ::
-  forall (p :: Purpose) (a :: Type).
-  (ToData a) =>
-  Wallet ->
-  Value ->
-  a ->
-  ContextBuilder p
-spendsFromWalletWithDatum wallet =
-  spendsFromPubKeyWithDatum (walletPubKeyHash wallet)
-
-{- | As 'spendsFromWallet', with an added signature.
-
- @since 1.0
--}
-spendsFromWalletSigned ::
-  forall (p :: Purpose).
-  Wallet ->
-  Value ->
-  ContextBuilder p
-spendsFromWalletSigned wallet =
-  spendsFromPubKeySigned (walletPubKeyHash wallet)
-
-{- | As 'spendsTokensFromWallet', with an added signature.
-
- @since 6.0
--}
-spendsTokensFromWalletSigned ::
-  forall (r :: Type).
-  Wallet ->
-  Tokens ->
-  ContextBuilder ( 'ForMinting r)
-spendsTokensFromWalletSigned wallet =
-  spendsTokensFromPubKeySigned (walletPubKeyHash wallet)
-
-{- | As 'spendsFromWalletWithDatum', with an added signature.
-
- @since 5.3
--}
-spendsFromWalletWithDatumSigned ::
-  forall (p :: Purpose) (a :: Type).
-  (ToData a) =>
-  Wallet ->
-  Value ->
-  a ->
-  ContextBuilder p
-spendsFromWalletWithDatumSigned wallet =
-  spendsFromPubKeyWithDatumSigned (walletPubKeyHash wallet)
-
-{- | Indicate that the given amount must be spent from another script.
-
- @since 1.0
--}
-spendsFromOther ::
+inFromOtherScript ::
   forall (p :: Purpose) (datum :: Type).
   (ToData datum) =>
+  Text ->
   ValidatorHash ->
   Value ->
   datum ->
   ContextBuilder p
-spendsFromOther hash v d =
-  input . Input (ScriptType hash . toBuiltinData $ d) $ GeneralValue v
+inFromOtherScript name hash val dt =
+  let valueType = GeneralValue val
+      utxoType = ScriptUTXO hash (toBuiltinData dt)
+   in input name $ SideUTXO utxoType valueType
 
-{- | Indicate that the given 'Tokens' controlled by the tested minting policy
- must be spent from another script.
+{- | Сontext with an input to a script with the given 'Tokens' controlled
+ by the 'MintingPolicy' for which the 'ScriptContext' is built.
 
- @since 6.0
+ @since 1.0
 -}
-spendsTokensFromOther ::
+inTokensFromOtherScript ::
   forall (datum :: Type) (r :: Type).
   (ToData datum) =>
+  Text ->
   ValidatorHash ->
   Tokens ->
   datum ->
   ContextBuilder ( 'ForMinting r)
-spendsTokensFromOther hash (Tokens tn pos) d =
-  input . Input (ScriptType hash . toBuiltinData $ d) $ TokensValue tn pos
+inTokensFromOtherScript name hash (Tokens tn pos) dt =
+  let valueType = TokensValue tn pos
+      utxoType = ScriptUTXO hash (toBuiltinData dt)
+   in input name $ SideUTXO utxoType valueType
 
-{- | Indicate that the given 'Value' must be minted with a minting policy
- other than the tested one.
+{- | Context with a minted 'Value'. The value is minted with a 'MintingPolicy'
+ that is not associated with the 'ScriptContext' being built.
 
- @since 3.2
+ @since 1.0
 -}
-mintsValue ::
+mintedValue ::
   forall (p :: Purpose).
+  Text ->
   Value ->
   ContextBuilder p
-mintsValue = minting . Mint
+mintedValue name = minting name . Mint
 
--- Helpers
+{- | Create 'PubKeyHash' from 'Wallet'.
 
+ @since 1.0
+-}
 walletPubKeyHash :: Wallet -> PubKeyHash
 walletPubKeyHash = unPaymentPubKeyHash . mockWalletPaymentPubKeyHash
