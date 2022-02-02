@@ -10,15 +10,15 @@ import Data.List.NonEmpty (NonEmpty)
 import Prelude hiding (($), (&&), (*), (+), (==))
 
 import Ledger.Crypto (PubKeyHash)
-import Test.QuickCheck.Plutus.Instances ()
-import Test.Tasty (TestTree)
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
   Purpose (ForMinting),
-  outTokensToPubKey,
   inTokensFromPubKey,
+  outTokensToPubKey,
   signedWith,
  )
+import Test.QuickCheck.Plutus.Instances ()
+import Test.Tasty (TestTree)
 import Test.Tasty.Plutus.Script.Property (scriptProperty, scriptPropertyPass)
 import Test.Tasty.Plutus.TestData (
   Generator (GenForMinting),

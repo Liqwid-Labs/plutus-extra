@@ -10,13 +10,13 @@ import Prelude hiding (($), (&&), (*), (+), (==))
 
 import Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Value (Value)
-import Test.QuickCheck.Plutus.Instances ()
-import Test.Tasty (TestTree, testGroup)
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
   Purpose (ForSpending),
   outToPubKey,
  )
+import Test.QuickCheck.Plutus.Instances ()
+import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.Plutus.Script.Property (
   paramScriptProperty,
   scriptProperty,

@@ -197,8 +197,7 @@ data ValueType
 
  @since 1.0
 -}
-data SideUTXO =
-  SideUTXO
+data SideUTXO = SideUTXO
   { sUtxoType :: UTXOType
   , sUtxoValue :: ValueType
   }

@@ -9,12 +9,10 @@
  Stability: Experimental
 
  An interface for building up Plutus 'ScriptContext' for testing purposes.
-
 -}
 module Test.Plutus.ContextBuilder (
-  
   -- * Types
-  
+
   -- ** TransactionConfig
   TransactionConfig (..),
   InputPosition (..),
@@ -40,7 +38,6 @@ module Test.Plutus.ContextBuilder (
   -- * Functions
 
   -- ** Build context
-
   spendingScriptContext,
   mintingScriptContext,
   spendingScriptContextDef,
@@ -86,11 +83,10 @@ module Test.Plutus.ContextBuilder (
   -- ** Utilities
   defTransactionConfig,
   walletPubKeyHash,
-
 ) where
 
 import Data.Kind (Type)
-import Data.Map.Strict qualified as Map 
+import Data.Map.Strict qualified as Map
 import Data.Text (Text)
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Crypto (PubKeyHash)
@@ -100,47 +96,47 @@ import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (FromData, ToData (toBuiltinData))
 import Test.Plutus.ContextBuilder.Internal (
-  TransactionConfig (
-    TransactionConfig,
-    testFee,
-    testTimeRange,
-    testTxId,
-    testCurrencySymbol,
-    testValidatorHash,
-    testInputPosition
-  ),
-  InputPosition (Head, Tail),
-  Purpose (ForMinting, ForSpending),
-  UTXOType (PubKeyUTXO, ScriptUTXO),
-  ValueType (GeneralValue, TokensValue),
-  SideUTXO (SideUTXO, sUtxoType, sUtxoValue),
-  ValidatorUTXO (ValidatorUTXO, vUtxoDatum, vUtxoValue),
-  TestUTXO (TestUTXO, tUtxoDatum, tUtxoValue),
-  ValidatorUTXOs (ValidatorUTXOs, NoValidatorUTXOs),
-  Minting (Mint),
   ContextBuilder (
     ContextBuilder,
+    cbDatums,
     cbInputs,
+    cbMinting,
     cbOutputs,
     cbSignatures,
-    cbDatums,
-    cbMinting,
     cbValidatorInputs,
     cbValidatorOutputs
-   ),
-  spendingScriptContext,
-  mintingScriptContext,
+  ),
+  InputPosition (Head, Tail),
+  Minting (Mint),
+  Purpose (ForMinting, ForSpending),
+  SideUTXO (SideUTXO, sUtxoType, sUtxoValue),
+  TestUTXO (TestUTXO, tUtxoDatum, tUtxoValue),
+  TransactionConfig (
+    TransactionConfig,
+    testCurrencySymbol,
+    testFee,
+    testInputPosition,
+    testTimeRange,
+    testTxId,
+    testValidatorHash
+  ),
+  UTXOType (PubKeyUTXO, ScriptUTXO),
+  ValidatorUTXO (ValidatorUTXO, vUtxoDatum, vUtxoValue),
+  ValidatorUTXOs (NoValidatorUTXOs, ValidatorUTXOs),
+  ValueType (GeneralValue, TokensValue),
   defTransactionConfig,
-  spendingScriptContextDef,
+  mintingScriptContext,
   mintingScriptContextDef,
+  spendingScriptContext,
+  spendingScriptContextDef,
  )
 import Test.Plutus.ContextBuilder.Minting (
-  MintingPolicyTask (MPTask),
   MintingPolicyAction (BurnAction, MintAction),
+  MintingPolicyTask (MPTask),
   Tokens (Tokens),
   burnTokens,
   mintTokens,
- )  
+ )
 import Wallet.Emulator.Types (Wallet, mockWalletPaymentPubKeyHash)
 
 {- | Single 'SideUTXO'-input context.
@@ -285,7 +281,7 @@ outToPubKeyWithDatum name pkh val dt =
 -}
 outTokensToPubKey ::
   forall (r :: Type).
-  Text -> 
+  Text ->
   PubKeyHash ->
   Tokens ->
   ContextBuilder ( 'ForMinting r)
@@ -353,7 +349,7 @@ outToValidator ::
 outToValidator name v dt = validatorOutput name (ValidatorUTXO dt v)
 
 {- | Сontext with an output to a script that is not associated
- with the 'ScriptContext' being built. 
+ with the 'ScriptContext' being built.
 
  @since 1.0
 -}
@@ -386,7 +382,7 @@ outTokensToOtherScript ::
 outTokensToOtherScript name hash (Tokens tn pos) dt =
   let valueType = TokensValue tn pos
       utxoType = ScriptUTXO hash (toBuiltinData dt)
-   in output name $ SideUTXO utxoType valueType  
+   in output name $ SideUTXO utxoType valueType
 
 {- | Context with an input from given public key with the given 'Value'.
 
@@ -496,7 +492,7 @@ inFromValidator ::
 inFromValidator name val dt = validatorInput name (ValidatorUTXO dt val)
 
 {- | Сontext with an input from a script that is not associated
- with the 'ScriptContext' being built. 
+ with the 'ScriptContext' being built.
 
  @since 1.0
 -}
