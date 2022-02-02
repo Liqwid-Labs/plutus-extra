@@ -25,20 +25,20 @@ import Plutus.V1.Ledger.Api (
 import Plutus.V1.Ledger.Scripts (Context (Context), ScriptError)
 import Test.Tasty.Options (OptionSet, lookupOption)
 
-import Test.Plutus.ScriptContext.Internal.Context (
+import Test.Plutus.ContextBuilder (
   ContextBuilder,
-  Purpose (ForMinting, ForSpending),
-  TransactionConfig (TransactionConfig),
   InputPosition,
-  compileMinting,
-  compileSpending,
-  testInputPosition,
+  Purpose (ForMinting, ForSpending),
+  TestUTXO (TestUTXO),
+  TransactionConfig (TransactionConfig),
+  mintingScriptContext,
+  spendingScriptContext,
   testCurrencySymbol,
   testFee,
+  testInputPosition,
   testTimeRange,
   testTxId,
   testValidatorHash,
-  testInputPosition,
  )
 import Test.Tasty.Plutus.Internal.Run (ScriptResult, testMintingPolicyScript, testValidatorScript)
 import Test.Tasty.Plutus.Options (
@@ -99,8 +99,8 @@ getScriptContext ::
   a ->
   ScriptContext
 getScriptContext getConf getCb getTd env = case getTd env of
-  SpendingTest d _ v -> compileSpending conf cb d v
-  MintingTest _ v -> compileMinting conf cb v
+  SpendingTest d _ v -> spendingScriptContext conf cb (TestUTXO d v)
+  MintingTest _ v -> mintingScriptContext conf cb v
   where
     conf :: TransactionConfig
     conf = getConf env

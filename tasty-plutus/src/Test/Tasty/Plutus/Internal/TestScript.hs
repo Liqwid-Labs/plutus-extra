@@ -26,7 +26,7 @@ import PlutusTx (CompiledCode, applyCode)
 import PlutusTx.Builtins (BuiltinData, BuiltinString, appendString, trace)
 import PlutusTx.IsData.Class (FromData (fromBuiltinData))
 import PlutusTx.TH (compile)
-import Test.Plutus.ScriptContext.Internal.Context (Purpose (ForMinting, ForSpending))
+import Test.Plutus.ContextBuilder (Purpose (ForMinting, ForSpending))
 
 {- | Typed wrapper for the 'Validator' and 'MintingPolicy' used to match
  the datum and redeemer types of the 'Validator' and the data passed to it.

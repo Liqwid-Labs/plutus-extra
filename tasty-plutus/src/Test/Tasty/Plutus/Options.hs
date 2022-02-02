@@ -36,6 +36,9 @@ import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts (ValidatorHash)
 import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.TxId (TxId (TxId))
+import Test.Plutus.ContextBuilder (
+  InputPosition (Head, Tail),
+ )
 import Test.Tasty.Options (
   IsOption (
     defaultValue,
@@ -46,9 +49,6 @@ import Test.Tasty.Options (
     showDefaultValue
   ),
   mkFlagCLParser,
- )
-import Test.Plutus.ScriptContext.Internal.Context (
-  InputPosition (Head, Tail),
  )
 import Test.Tasty.Plutus.Internal.Options (
   PropertyMaxSize,
@@ -209,7 +209,8 @@ newtype ScriptInputPosition = ScriptInputPosition InputPosition
       Eq
     , -- | @since 1.0
       Show
-    ) via InputPosition
+    )
+    via InputPosition
 
 -- | @since 3.4
 instance IsOption ScriptInputPosition where

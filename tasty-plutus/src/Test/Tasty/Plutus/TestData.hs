@@ -34,19 +34,17 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Semigroup (stimes, stimesIdempotent)
 import Plutus.V1.Ledger.Value (Value)
 import PlutusTx
-import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
-import Test.QuickCheck.Gen (Gen)
-import Test.Plutus.ScriptContext.Internal.Context (ContextBuilder)
-import Test.Plutus.ScriptContext.Internal.Context (
-  Purpose (ForMinting, ForSpending),
- )
-import Test.Plutus.ScriptContext.Internal.Minting (
+import Test.Plutus.ContextBuilder (
+  ContextBuilder,
   MintingPolicyAction (BurnAction, MintAction),
   MintingPolicyTask (MPTask),
+  Purpose (ForMinting, ForSpending),
   Tokens (Tokens),
   burnTokens,
   mintTokens,
  )
+import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
+import Test.QuickCheck.Gen (Gen)
 import Prelude
 
 {- | All the data needed to test a validator or minting policy.
