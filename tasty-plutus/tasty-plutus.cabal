@@ -45,7 +45,6 @@ common lang
 library
   import:          lang
   exposed-modules:
-    -- Test.Tasty.Plutus.Context
     Test.Tasty.Plutus.Options
     Test.Tasty.Plutus.Script.Property
     Test.Tasty.Plutus.Script.Size
@@ -55,11 +54,9 @@ library
     Test.Tasty.Plutus.WithScript
 
   other-modules:
-    -- Test.Tasty.Plutus.Internal.Context
     Test.Tasty.Plutus.Internal.DumpScript
     Test.Tasty.Plutus.Internal.Env
     Test.Tasty.Plutus.Internal.Feedback
-    -- Test.Tasty.Plutus.Internal.Minting
     Test.Tasty.Plutus.Internal.Options
     Test.Tasty.Plutus.Internal.Run
     Test.Tasty.Plutus.Internal.TestScript
@@ -98,27 +95,28 @@ library
 
   hs-source-dirs:  src
 
--- test-suite properties
---   import:         lang
---   type:           exitcode-stdio-1.0
---   main-is:        Main.hs
---   other-modules:
---     MintingPolicy
---     Validator
+test-suite properties
+  import:         lang
+  type:           exitcode-stdio-1.0
+  main-is:        Main.hs
+  other-modules:
+    MintingPolicy
+    Validator
 
---   hs-source-dirs: test/Properties
---   build-depends:
---     , base                         ^>=4.14
---     , plutus-contract
---     , plutus-extra                 ^>=5.0
---     , plutus-ledger
---     , plutus-ledger-api
---     , plutus-numeric               ^>=5.0
---     , plutus-tx
---     , plutus-tx-plugin
---     , quickcheck-plutus-instances  ^>=2.0
---     , tasty                        ^>=1.4.1
---     , tasty-plutus                 ^>=7.1
---     , tasty-quickcheck             ^>=0.10.1.2
+  hs-source-dirs: test/Properties
+  build-depends:
+    , base                         ^>=4.14
+    , plutus-context-builder       ^>=1.0
+    , plutus-contract
+    , plutus-extra                 ^>=5.0
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-numeric               ^>=5.0
+    , plutus-tx
+    , plutus-tx-plugin
+    , quickcheck-plutus-instances  ^>=2.0
+    , tasty                        ^>=1.4.1
+    , tasty-plutus                 ^>=7.1
+    , tasty-quickcheck             ^>=0.10.1.2
 
---   ghc-options:    -threaded -rtsopts -with-rtsopts=-N -O1
+  ghc-options:    -threaded -rtsopts -with-rtsopts=-N -O1

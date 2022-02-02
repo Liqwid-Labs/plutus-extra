@@ -12,10 +12,10 @@ import Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Value (Value)
 import Test.QuickCheck.Plutus.Instances ()
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Plutus.Context (
+import Test.Plutus.ContextBuilder (
   ContextBuilder,
   Purpose (ForSpending),
-  paysToPubKey,
+  outToPubKey,
  )
 import Test.Tasty.Plutus.Script.Property (
   paramScriptProperty,
@@ -101,7 +101,7 @@ transformForSimple1 (i1, i2, iSum, _, val) =
     }
   where
     cb :: ContextBuilder ( 'ForSpending (Integer, Integer) (Integer, Integer))
-    cb = paysToPubKey userPKHash val
+    cb = outToPubKey "outToUser" userPKHash val
     out :: Outcome
     out = if iSum == i1 + i2 then Pass else Fail
 
@@ -119,7 +119,7 @@ transformForSimple2 (i1, i2, _, iProd, val) =
     }
   where
     cb :: ContextBuilder ( 'ForSpending (Integer, Integer) (Integer, Integer))
-    cb = paysToPubKey userPKHash val
+    cb = outToPubKey "outToUser" userPKHash val
     out :: Outcome
     out = passIf $ iProd == i1 * i2
 
@@ -137,7 +137,7 @@ transformForSimple3 (i1, i2, _, _, val) =
     }
   where
     cb :: ContextBuilder ( 'ForSpending (Integer, Integer) (Integer, Integer))
-    cb = paysToPubKey userPKHash val
+    cb = outToPubKey "outToUser" userPKHash val
     out :: Outcome
     out = Pass
 
@@ -192,7 +192,7 @@ transformForParam (secret, guess, val) =
     }
   where
     cb :: ContextBuilder ( 'ForSpending () Integer)
-    cb = paysToPubKey userPKHash val
+    cb = outToPubKey "outToUser" userPKHash val
     out :: Outcome
     out = if secret == guess then Pass else Fail
 
