@@ -4,6 +4,16 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 5.1 -- 2022-02-04
+
+### Added
+
+* Functions to serialize and de-serialize `Address` to/from `Text`:
+  - `serialiseAddress`
+  - `deserialiseAddress`
+  - `unsafeDeserialiseAddress`
+  - `unsafeSerialiseAddress`
+
 ## 5.0 -- 2022-01-21
 
 ### Changed

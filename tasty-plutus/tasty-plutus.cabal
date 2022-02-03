@@ -75,7 +75,7 @@ library
     , mtl                          ^>=2.2.2
     , plutus-contract
     , plutus-core
-    , plutus-extra                 ^>=5.0
+    , plutus-extra                 ^>=5.1
     , plutus-ledger
     , plutus-ledger-api
     , plutus-numeric               ^>=5.0
@@ -109,7 +109,7 @@ test-suite properties
   build-depends:
     , base                         ^>=4.14
     , plutus-contract
-    , plutus-extra                 ^>=5.0
+    , plutus-extra                 ^>=5.1
     , plutus-ledger
     , plutus-ledger-api
     , plutus-numeric               ^>=5.0

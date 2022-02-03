@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-extra
-version:            5.0
+version:            5.1
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -40,6 +40,10 @@ common lang
   build-depends:
     , base                     ^>=4.14
     , openapi3                 ^>=3.1
+    , plutus-contract
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-tx
     , QuickCheck               ^>=2.14.2
     , record-dot-preprocessor  ^>=0.2.11
     , record-hasfield          ^>=1.0
@@ -61,6 +65,7 @@ library
     Plutus.PAB.CurrencyForge
     Plutus.PAB.OutputBus
     Plutus.PAB.PrettyLogger
+    Plutus.V1.Ledger.Address.Extra
     Plutus.V1.Ledger.Contexts.Extra
     Plutus.V1.Ledger.Extra
     Plutus.V1.Ledger.Interval.Extra
@@ -84,24 +89,28 @@ library
 
   other-modules:   PlutusTx.UniqueMap.Internal
   build-depends:
-    , aeson               ^>=1.5.6.0
-    , ansi-terminal       ^>=0.11
-    , containers          ^>=0.6.2
-    , data-default-class  ^>=0.1.2
-    , deepseq             ^>=1.4.4.0
-    , foldl               ^>=1.4.12
-    , freer-simple        ^>=1.2.1.1
-    , lens                ^>=4.19.2
-    , plutus-contract
-    , plutus-ledger
-    , plutus-ledger-api
+    , aeson                      ^>=1.5.6.0
+    , ansi-terminal              ^>=0.11
+    , cardano-api
+    , cardano-ledger-byron
+    , cardano-prelude
+    , containers                 ^>=0.6.2
+    , data-default-class         ^>=0.1.2
+    , deepseq                    ^>=1.4.4.0
+    , either                     ^>=5.0.1
+    , foldl                      ^>=1.4.12
+    , freer-simple               ^>=1.2.1.1
+    , lens                       ^>=4.19.2
+    , memory                     ^>=0.16.0
+    , plutus-chain-index-core
+    , plutus-core
     , plutus-ledger-constraints
     , plutus-pab
-    , plutus-tx
     , plutus-use-cases
-    , prettyprinter       ^>=1.7.0
-    , row-types           ^>=1.0.1.0
-    , template-haskell    ^>=2.16.0.0
+    , prettyprinter              ^>=1.7.0
+    , row-types                  ^>=1.0.1.0
+    , template-haskell           ^>=2.16.0.0
+    , text                       ^>=1.2.4
 
   hs-source-dirs:  src
 
@@ -117,12 +126,8 @@ test-suite plutus-extra-test
     Suites.PlutusTx.Set
 
   build-depends:
-    , plutus-contract
     , plutus-extra
-    , plutus-ledger
-    , plutus-ledger-api
-    , plutus-tx
-    , tasty              ^>=1.4.1
-    , tasty-quickcheck   ^>=0.10.1.2
+    , tasty             ^>=1.4.1
+    , tasty-quickcheck  ^>=0.10.1.2
 
   hs-source-dirs: test
