@@ -11,6 +11,8 @@
 module Test.Tasty.Plutus.TestScript (
   -- * Wrapper for scripts
   TestScript,
+  WrappedValidator,
+  WrappedMintingPolicy,
 
   -- * Helper functions
   mkTestMintingPolicy,
@@ -23,6 +25,8 @@ module Test.Tasty.Plutus.TestScript (
 
 import Test.Tasty.Plutus.Internal.TestScript (
   TestScript,
+  WrappedMintingPolicy,
+  WrappedValidator,
   mkTestMintingPolicy,
   mkTestMintingPolicyUnsafe,
   mkTestValidator,
