@@ -65,7 +65,6 @@ library
     Plutus.PAB.CurrencyForge
     Plutus.PAB.OutputBus
     Plutus.PAB.PrettyLogger
-    Plutus.V1.Ledger.Address.Extra
     Plutus.V1.Ledger.Contexts.Extra
     Plutus.V1.Ledger.Extra
     Plutus.V1.Ledger.Interval.Extra

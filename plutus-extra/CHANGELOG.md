@@ -13,6 +13,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   - `deserialiseAddress`
   - `unsafeDeserialiseAddress`
   - `unsafeSerialiseAddress`
+* `mustPayToAddress` to create `TxConstraints`
 
 ## 5.0 -- 2022-01-21
 
