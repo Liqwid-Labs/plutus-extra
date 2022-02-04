@@ -59,7 +59,7 @@ data TestScript (p :: Purpose) where
  to 'WrappedValidatorType' from the Plutus 'Ledger.Typed.Scripts' module.
  Its aim is to force you to use 'toTestValidator' to create a 'TestValidator'.
 
- @since 6.0
+ @since 7.2
 -}
 newtype WrappedValidator
   = WrappedValidator (BuiltinData -> BuiltinData -> BuiltinData -> ())
@@ -74,7 +74,7 @@ getWrappedValidator (WrappedValidator v) = v
  Its aim is to force you to use 'toTestMintingPolicy' to create
  a 'TestMintingPolicy'.
 
- @since 6.0
+ @since 7.2
 -}
 newtype WrappedMintingPolicy
   = WrappedMintingPolicy (BuiltinData -> BuiltinData -> ())

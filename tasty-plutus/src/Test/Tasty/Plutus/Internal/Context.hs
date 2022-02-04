@@ -119,17 +119,17 @@ data ExternalType
 
   In all other cases 'GeneralValue' is used.
 
- @since 7.3
+ @since 7.2
 -}
 data ValueType
-  = -- | @since 7.3
+  = -- | @since 7.2
     GeneralValue Value
-  | -- | @since 7.3
+  | -- | @since 7.2
     TokensValue TokenName Positive
   deriving stock
-    ( -- | @since 7.3
+    ( -- | @since 7.2
       Eq
-    , -- | @since 7.3
+    , -- | @since 7.2
       Show
     )
 
@@ -200,15 +200,15 @@ data TransactionConfig = TransactionConfig
  @since 1.0
 -}
 data ContextBuilder (p :: Purpose) = ContextBuilder
-  { -- | @since 7.1
+  { -- | @since 7.2
     cbInputs :: Seq Input
-  , -- | @since 7.1
+  , -- | @since 7.2
     cbOutputs :: Seq Output
-  , -- | @since 7.1
+  , -- | @since 7.2
     cbSignatories :: Seq PubKeyHash
-  , -- | @since 7.1
+  , -- | @since 7.2
     cbDatums :: Seq BuiltinData
-  , -- | @since 7.1
+  , -- | @since 7.2
     cbMinting :: Seq Minting
   }
 
