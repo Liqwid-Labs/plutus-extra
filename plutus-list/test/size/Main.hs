@@ -2,6 +2,8 @@
 
 import Plutus.V1.Ledger.Scripts (fromCompiledCode)
 import PlutusTx (CompiledCode)
+import PlutusTx.AssocMap (Map)
+import PlutusTx.AssocMap.Natural qualified as MapNat
 import PlutusTx.List.Natural qualified as Nat
 import PlutusTx.List.Ord qualified as Ord
 import PlutusTx.Natural (Natural)
@@ -15,7 +17,7 @@ main :: Prelude.IO ()
 main =
   defaultMain . testGroup "Size checks" $
     [ testGroup
-        "Natural"
+        "List.Natural"
         [ fitsOnChain "length" . fromCompiledCode $ naturalLength
         , fitsOnChain "take" . fromCompiledCode $ naturalTake
         , fitsOnChain "drop" . fromCompiledCode $ naturalDrop
@@ -23,7 +25,7 @@ main =
         , fitsOnChain "replicate" . fromCompiledCode $ naturalReplicate
         ]
     , testGroup
-        "Ord"
+        "List.Ord"
         [ fitsOnChain "sort" . fromCompiledCode $ ordSort
         , fitsOnChain "sortOn" . fromCompiledCode $ ordSortOn
         , fitsOnChain "sortBy" . fromCompiledCode $ ordSortBy
@@ -34,6 +36,12 @@ main =
         , fitsOnChain "isSortedAscending" . fromCompiledCode $ ordIsSortedAscending
         , fitsOnChain "isSortedAscendingOn" . fromCompiledCode $ ordIsSortedAscendingOn
         , fitsOnChain "isSortedBy" . fromCompiledCode $ ordIsSortedBy
+        ]
+    , testGroup
+        "AssocMap.Natural"
+        [ fitsOnChain "take" . fromCompiledCode $ naturalMapTake
+        , fitsOnChain "drop" . fromCompiledCode $ naturalMapDrop
+        , fitsOnChain "splitAt" . fromCompiledCode $ naturalMapSplitAt
         ]
     ]
 
@@ -108,3 +116,15 @@ ordIsSortedBy ::
     ( (Integer -> Integer -> Bool) -> [Integer] -> Bool
     )
 ordIsSortedBy = $$(compile [||Ord.isSortedBy||])
+
+{-# INLINEABLE naturalMapTake #-}
+naturalMapTake :: CompiledCode (Natural -> Map Integer Integer -> Map Integer Integer)
+naturalMapTake = $$(compile [||MapNat.take||])
+
+{-# INLINEABLE naturalMapDrop #-}
+naturalMapDrop :: CompiledCode (Natural -> Map Integer Integer -> Map Integer Integer)
+naturalMapDrop = $$(compile [||MapNat.drop||])
+
+{-# INLINEABLE naturalMapSplitAt #-}
+naturalMapSplitAt :: CompiledCode (Natural -> Map Integer Integer -> (Map Integer Integer, Map Integer Integer))
+naturalMapSplitAt = $$(compile [||MapNat.splitAt||])
