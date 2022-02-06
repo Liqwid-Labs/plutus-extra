@@ -4,7 +4,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
-## 8.0 - 2022-02-04
+## 8.0 - 2022-02-07
 
 ### Changed
 
@@ -12,16 +12,12 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   `plutus-context-builder` library. At the same time, the internal structure
   of the `ContextBuilder` has changed, as well as the basic building blocks.
   
-## 7.3 - 2022-02-01
+## 7.2 - 2022-02-04
 
 ### Added
 
-* `ValueType` representing the type of values in script inputs and outputs.
-
-## 7.2 - 2022-01-30
-
-### Added
-
+* Export of `WrappedValidator` and `WrappedMintingPolicy` without data constructors.
+* Export of `ValueType` representing the type of values in script inputs and outputs.
 * Record fields for `ContextBuilder`:
   * `cbInputs`
   * `cbOutputs`
