@@ -1,5 +1,14 @@
 cradle:
   cabal:
+    - path: "./plutus-collection/src"
+      component: "lib:plutus-collection"
+
+    - path: "./plutus-collection/test/property"
+      component: "plutus-collection:test:plutus-collection-properties"
+
+    - path: "./plutus-collection/test/size"
+      component: "plutus-collection:test:plutus-collection-size"
+
     - path: "./plutus-deriving/src"
       component: "lib:plutus-deriving"
 
@@ -23,15 +32,6 @@ cradle:
 
     - path: "./plutus-laws/src"
       component: "lib:plutus-laws"
-
-    - path: "./plutus-list/src"
-      component: "lib:plutus-list"
-
-    - path: "./plutus-list/test/property"
-      component: "plutus-list:test:plutus-list-properties"
-
-    - path: "./plutus-list/test/size"
-      component: "plutus-list:test:plutus-list-size"
 
     - path: "./plutus-numeric/src"
       component: "lib:plutus-numeric"

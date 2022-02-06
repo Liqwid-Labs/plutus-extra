@@ -1,8 +1,12 @@
-# Revision history for `plutus-list`
+# Revision history for `plutus-collection`
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
-## 2.1 -- 2022-02-06
+## 3.0 -- 2022-02-06
+
+### Changed
+
+* Renamed package to `plutus-collection`
 
 ### Added
 

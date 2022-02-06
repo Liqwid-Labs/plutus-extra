@@ -1,5 +1,5 @@
 cabal-version:      3.0
-name:               plutus-list
+name:               plutus-collection
 version:            2.1
 extra-source-files: CHANGELOG.md
 
@@ -58,12 +58,12 @@ library
 
   hs-source-dirs:  src
 
-test-suite plutus-list-properties
+test-suite plutus-collection-properties
   import:         lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   build-depends:
-    , plutus-list
+    , plutus-collection
     , plutus-numeric    ^>=5.0
     , plutus-tx
     , tasty             ^>=1.4.1
@@ -71,13 +71,13 @@ test-suite plutus-list-properties
 
   hs-source-dirs: test/property
 
-test-suite plutus-list-size
+test-suite plutus-collection-size
   import:         lang
   type:           exitcode-stdio-1.0
   main-is:        Main.hs
   build-depends:
     , plutus-ledger-api
-    , plutus-list
+    , plutus-collection
     , plutus-numeric     ^>=5.0
     , plutus-size-check  ^>=2.0
     , plutus-tx

@@ -22,14 +22,29 @@ import PlutusTx.Natural (Natural)
 import PlutusTx.Prelude hiding (take)
 import Prelude qualified ()
 
+{- | @'take' n mp@ returns the prefix of @mp@ of length @n@, or @mp@ itself if
+@n@ exceeds the size of @mp@.
+
+@since 3.0
+-}
 {-# INLINEABLE take #-}
 take :: Natural -> Map k v -> Map k v
 take n = AssocMap.fromList . List.take n . AssocMap.toList
 
+{- | @'drop' n mp@ returns the suffix of @mp@ after the first @n@ elements, or
+an empty map if @n@ exceeds the size of @mp@.
+
+@since 3.0
+-}
 {-# INLINEABLE drop #-}
 drop :: Natural -> Map k v -> Map k v
 drop n = AssocMap.fromList . List.drop n . AssocMap.toList
 
+{- | @'splitAt' n mp@ returns a tuple, where the first element is the prefix of
+@mp@ of length @n@, and the second element is the remainder of the map.
+
+@since 3.0
+-}
 {-# INLINEABLE splitAt #-}
 splitAt :: Natural -> Map k v -> (Map k v, Map k v)
 splitAt n mp =

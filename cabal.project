@@ -7,7 +7,7 @@ packages:
   ./plutus-numeric/plutus-numeric.cabal
   ./plutus-golden/plutus-golden.cabal
   ./plutus-laws/plutus-laws.cabal
-  ./plutus-list/plutus-list.cabal
+  ./plutus-collection/plutus-collection.cabal
   ./plutus-size-check/plutus-size-check.cabal
   ./quickcheck-plutus-instances/quickcheck-plutus-instances.cabal
   ./plutus-deriving/plutus-deriving.cabal
