@@ -312,16 +312,19 @@ compileMinting conf cb toks =
 
      > mapM_ (\(ctx,str) -> shouldn'tValidate str input ctx) convertedContexts
 
+     As of 7.3 this works on any `Semigroup` instead of
+     just `ContextBuilder`.
+
  @since 4.1
 -}
 makeIncompleteContexts ::
-  forall (p :: Purpose).
-  [(ContextBuilder p, String)] ->
-  [(ContextBuilder p, String)]
+  forall (s :: Type).
+  (Semigroup s) =>
+  [(s, String)] ->
+  [(s, String)]
 makeIncompleteContexts ctxs = map (first sconcat) ctxs2
   where
-    ctxs1 = removeContext ctxs
-    ctxs2 = mapMaybe nonEmpty1st ctxs1
+    ctxs2 = mapMaybe nonEmpty1st $ removeContext ctxs
     nonEmpty1st :: ([a], b) -> Maybe (NonEmpty a, b)
     nonEmpty1st (xs, y) = (,y) <$> NonEmpty.nonEmpty xs
 
