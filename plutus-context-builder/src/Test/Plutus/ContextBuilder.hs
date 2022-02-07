@@ -82,6 +82,7 @@ module Test.Plutus.ContextBuilder (
 
   -- ** Utilities
   defTransactionConfig,
+  makeIncompleteContexts,
   walletPubKeyHash,
 ) where
 
@@ -125,6 +126,7 @@ import Test.Plutus.ContextBuilder.Internal (
   ValidatorUTXOs (NoValidatorUTXOs, ValidatorUTXOs),
   ValueType (GeneralValue, TokensValue),
   defTransactionConfig,
+  makeIncompleteContexts,
   mintingScriptContext,
   mintingScriptContextDef,
   spendingScriptContext,
