@@ -108,7 +108,7 @@ test-suite properties
     , plutus-ledger-api
     , plutus-tx
     , plutus-tx-plugin
-    , quickcheck-plutus-instances  ^>=2.0
+    , quickcheck-plutus-instances  ^>=2.1
     , tasty                        ^>=1.4.1
     , tasty-plutus                 ^>=8.0
     , tasty-quickcheck             ^>=0.10.1.2

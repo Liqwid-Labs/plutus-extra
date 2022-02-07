@@ -4,7 +4,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
-## 8.0 - 2022-02-07
+## 8.0 - 2022-02-08
 
 ### Changed
 
@@ -12,6 +12,12 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   `plutus-context-builder` library. At the same time, the internal structure
   of the `ContextBuilder` has changed, as well as the basic building blocks.
   
+## 7.3 - 2022-02-07
+
+### Changed
+
+* `makeIncompleteContexts` now takes any `Semigroup` instead of a `ContextBuilder`.
+
 ## 7.2 - 2022-02-04
 
 ### Added

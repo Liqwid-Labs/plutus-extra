@@ -30,6 +30,12 @@ import Data.Maybe (maybeToList)
 import Data.Text (Text)
 import Data.Word (Word8)
 import GHC.Exts qualified as GHC
+import Ledger.Address (
+  PaymentPubKey (PaymentPubKey),
+  PaymentPubKeyHash (PaymentPubKeyHash),
+  StakePubKey (StakePubKey),
+  StakePubKeyHash (StakePubKeyHash),
+ )
 import Ledger.Scripts (datumHash)
 import Plutus.Contract.Oracle (
   Observation (Observation),
@@ -230,6 +236,32 @@ instance Function PubKey where
       into :: PubKey -> LedgerBytes
       into (PubKey lb) = lb
 
+-- | @since 2.1
+deriving via PubKey instance Arbitrary PaymentPubKey
+
+-- | @since 2.1
+deriving via PubKey instance CoArbitrary PaymentPubKey
+
+-- | @since 2.1
+instance Function PaymentPubKey where
+  function = functionMap into PaymentPubKey
+    where
+      into :: PaymentPubKey -> PubKey
+      into (PaymentPubKey pk) = pk
+
+-- | @since 2.1
+deriving via PubKey instance Arbitrary StakePubKey
+
+-- | @since 2.1
+deriving via PubKey instance CoArbitrary StakePubKey
+
+-- | @since 2.1
+instance Function StakePubKey where
+  function = functionMap into StakePubKey
+    where
+      into :: StakePubKey -> PubKey
+      into (StakePubKey pk) = pk
+
 -- | @since 1.0
 deriving via (NonNegative Integer) instance Arbitrary POSIXTime
 
@@ -421,6 +453,32 @@ instance Function PubKeyHash where
     where
       into :: PubKeyHash -> BuiltinByteString
       into (PubKeyHash bs) = bs
+
+-- | @since 2.1
+deriving via PubKeyHash instance Arbitrary PaymentPubKeyHash
+
+-- | @since 2.1
+deriving via PubKeyHash instance CoArbitrary PaymentPubKeyHash
+
+-- | @since 2.1
+instance Function PaymentPubKeyHash where
+  function = functionMap into PaymentPubKeyHash
+    where
+      into :: PaymentPubKeyHash -> PubKeyHash
+      into (PaymentPubKeyHash pkh) = pkh
+
+-- | @since 2.1
+deriving via PubKeyHash instance Arbitrary StakePubKeyHash
+
+-- | @since 2.1
+deriving via PubKeyHash instance CoArbitrary StakePubKeyHash
+
+-- | @since 2.1
+instance Function StakePubKeyHash where
+  function = functionMap into StakePubKeyHash
+    where
+      into :: StakePubKeyHash -> PubKeyHash
+      into (StakePubKeyHash pkh) = pkh
 
 -- | @since 1.0
 instance Arbitrary CurrencySymbol where
