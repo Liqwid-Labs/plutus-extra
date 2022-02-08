@@ -52,6 +52,11 @@ import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Plutus.V1.Ledger.Contexts (ScriptContext)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError, EvaluationException, MalformedScript))
+import Test.Plutus.ContextBuilder (
+  ContextBuilder,
+  Purpose (ForMinting, ForSpending),
+  TransactionConfig,
+ )
 import Test.QuickCheck (
   Args (maxSize, maxSuccess),
   Gen,
@@ -67,11 +72,6 @@ import Test.QuickCheck (
  )
 import Test.Tasty (TestTree)
 import Test.Tasty.Options (OptionDescription (Option), OptionSet, lookupOption)
-import Test.Tasty.Plutus.Internal.Context (
-  ContextBuilder,
-  Purpose (ForMinting, ForSpending),
-  TransactionConfig,
- )
 import Test.Tasty.Plutus.Internal.Env (
   SomeScript (SomeMinter, SomeSpender),
   getContext,

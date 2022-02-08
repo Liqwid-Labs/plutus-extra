@@ -1,0 +1,65 @@
+cabal-version:      3.0
+name:               plutus-context-builder
+version:            1.0
+extra-source-files: CHANGELOG.md
+
+common lang
+  default-language:   Haskell2010
+  default-extensions:
+    BangPatterns
+    BinaryLiterals
+    ConstraintKinds
+    DataKinds
+    DeriveFunctor
+    DeriveGeneric
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    DuplicateRecordFields
+    EmptyCase
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    GeneralizedNewtypeDeriving
+    HexFloatLiterals
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    NumericUnderscores
+    OverloadedStrings
+    ScopedTypeVariables
+    StandaloneDeriving
+    TupleSections
+    TypeApplications
+    TypeOperators
+    TypeSynonymInstances
+    UndecidableInstances
+
+  ghc-options:
+    -Wall -Wcompat -Wincomplete-uni-patterns -Wredundant-constraints
+    -Wmissing-export-lists -Werror -Wincomplete-record-updates
+    -Wmissing-deriving-strategies
+
+library
+  import:          lang
+  exposed-modules: Test.Plutus.ContextBuilder
+  other-modules:
+    Test.Plutus.ContextBuilder.Internal
+    Test.Plutus.ContextBuilder.Minting
+
+  build-depends:
+    , base                         ^>=4.14
+    , containers                   ^>=0.6.2.1
+    , plutus-contract
+    , plutus-extra
+    , plutus-ledger
+    , plutus-ledger-api
+    , plutus-numeric
+    , plutus-tx
+    , QuickCheck
+    , quickcheck-plutus-instances
+    , text                         ^>=1.2.4.1
+
+  hs-source-dirs:  src

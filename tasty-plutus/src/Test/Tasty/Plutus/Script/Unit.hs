@@ -48,15 +48,15 @@ import Plutus.V1.Ledger.Scripts (
     MalformedScript
   ),
  )
+import Test.Plutus.ContextBuilder (
+  ContextBuilder,
+  Purpose (ForMinting, ForSpending),
+  TransactionConfig,
+ )
 import Test.Tasty.Options (
   OptionDescription (Option),
   OptionSet,
   lookupOption,
- )
-import Test.Tasty.Plutus.Internal.Context (
-  ContextBuilder,
-  Purpose (ForMinting, ForSpending),
-  TransactionConfig,
  )
 import Test.Tasty.Plutus.Internal.Env (
   SomeScript (SomeMinter, SomeSpender),

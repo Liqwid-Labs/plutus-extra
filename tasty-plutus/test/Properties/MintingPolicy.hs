@@ -10,14 +10,15 @@ import Data.List.NonEmpty (NonEmpty)
 import Prelude hiding (($), (&&), (*), (+), (==))
 
 import Ledger.Crypto (PubKeyHash)
-import Test.QuickCheck.Plutus.Instances ()
-import Test.Tasty (TestTree)
-import Test.Tasty.Plutus.Context (
+import Test.Plutus.ContextBuilder (
   ContextBuilder,
   Purpose (ForMinting),
-  paysTokensToPubKey,
-  spendsTokensFromPubKeySigned,
+  inTokensFromPubKey,
+  outTokensToPubKey,
+  signedWith,
  )
+import Test.QuickCheck.Plutus.Instances ()
+import Test.Tasty (TestTree)
 import Test.Tasty.Plutus.Script.Property (scriptProperty, scriptPropertyPass)
 import Test.Tasty.Plutus.TestData (
   Generator (GenForMinting),
@@ -99,8 +100,9 @@ transform1 (key, toksMint, toksBurn) =
     out = passIf $ key == secretKey
     cb :: ContextBuilder ( 'ForMinting Integer)
     cb =
-      paysTokensToPubKey userPKHash1 toksMint
-        <> spendsTokensFromPubKeySigned userPKHash2 toksBurn
+      outTokensToPubKey "toUser" userPKHash1 toksMint
+        <> inTokensFromPubKey "fromUser" userPKHash2 toksBurn
+        <> signedWith "userSignature" userPKHash2
 
 -- | Creates TestItems with correct secretKey used in Redeemer
 transform2 ::

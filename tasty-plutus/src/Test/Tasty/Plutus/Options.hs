@@ -36,6 +36,9 @@ import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Scripts (ValidatorHash)
 import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.TxId (TxId (TxId))
+import Test.Plutus.ContextBuilder (
+  InputPosition (Head, Tail),
+ )
 import Test.Tasty.Options (
   IsOption (
     defaultValue,
@@ -198,25 +201,22 @@ instance IsOption PlutusTracing where
 {- | Where to place the script input in 'txInfoInputs' when generating a
  'ScriptContext'.
 
- The default value is 'Head' (meaning \'the first item in the list\'). The
- option is controlled purely by a flag; if you want to change to 'Tail'
- (meaning \'the last item in the list\'), pass @--input-last@.
-
- @since 3.4
+ @since 1.0
 -}
-data ScriptInputPosition = Head | Tail
-  deriving stock
-    ( -- | @since 3.4
+newtype ScriptInputPosition = ScriptInputPosition InputPosition
+  deriving
+    ( -- | @since 1.0
       Eq
-    , -- | @since 3.4
+    , -- | @since 1.0
       Show
     )
+    via InputPosition
 
 -- | @since 3.4
 instance IsOption ScriptInputPosition where
-  defaultValue = Head
-  parseValue = const (Just Tail)
+  defaultValue = ScriptInputPosition Head
+  parseValue = const (Just $ ScriptInputPosition Tail)
   optionName = Tagged "input-last"
   optionHelp = Tagged "Place the script input last in txInfoInputs."
   showDefaultValue = const . Just $ "Place the script input first."
-  optionCLParser = mkFlagCLParser mempty Tail
+  optionCLParser = mkFlagCLParser mempty $ ScriptInputPosition Tail

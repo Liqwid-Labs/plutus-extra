@@ -5,7 +5,7 @@ module Test.Tasty.Plutus.Internal.WithScript (
 import Control.Monad.RWS.Strict (MonadReader (ask, local), RWS)
 import Data.Kind (Type)
 import Data.Sequence (Seq)
-import Test.Tasty.Plutus.Internal.Context (
+import Test.Plutus.ContextBuilder (
   Purpose (ForMinting, ForSpending),
  )
 import Test.Tasty.Plutus.Internal.TestScript (TestScript)

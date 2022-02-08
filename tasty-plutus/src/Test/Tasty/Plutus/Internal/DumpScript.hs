@@ -17,13 +17,13 @@ import Plutus.V1.Ledger.Scripts (
 import PlutusCore.Pretty qualified as PLC
 import PlutusTx (CompiledCode, getPir, getPlc)
 import System.FilePath ((</>))
+import Test.Plutus.ContextBuilder (Purpose)
 import Test.Tasty.Options (
   IsOption,
   OptionDescription (Option),
   OptionSet,
   lookupOption,
  )
-import Test.Tasty.Plutus.Internal.Context (Purpose)
 import Test.Tasty.Plutus.Internal.Options (
   DumpPath (DumpPath, NoDumpPath),
   DumpPlutusCore (DumpPlutusCore),

@@ -4,6 +4,14 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 8.0 - 2022-02-08
+
+### Changed
+
+* `ContextBuilder` with all related types and constructors moved to separate
+  `plutus-context-builder` library. At the same time, the internal structure
+  of the `ContextBuilder` has changed, as well as the basic building blocks.
+  
 ## 7.3 - 2022-02-07
 
 ### Changed
