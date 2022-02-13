@@ -24,6 +24,7 @@ We currently have two modules:
     sorts the list along the way.
 * `PlutusTx.AssocMap.Natural` that provides `AssocMap` counterparts of
   `PlutusTx.List.Natural` functions.
+* `Witherable.Natural` that provides `takeW` and `dropW` for any `Witherable`.
 
 ## What are the goals of this project?
 

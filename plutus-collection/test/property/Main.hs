@@ -29,6 +29,7 @@ import Test.Tasty.QuickCheck (
   oneof,
   testProperty,
  )
+import Witherable.Natural qualified as Witherable
 
 main :: IO ()
 main = defaultMain $ testGroup "Tests" tests
@@ -56,6 +57,12 @@ tests =
       , testProperty "isSortedOn f xs == isSorted (f <$> xs)" propIsSortedOn
       , testProperty "isSortedAscendingOn f xs == isSortedAscending (f <$> xs)" propIsSortedAscendingOn
       ]
+  , localOption go
+      . testGroup
+        "Witherable with Natural"
+      $ [ testProperty "takeW == take" propTakeWAgree
+        , testProperty "dropW == drop" propDropWAgree
+        ]
   ]
   where
     go :: QuickCheckTests
@@ -194,3 +201,11 @@ propIsSortedAscendingOn = property $
         checkCoverage
           . cover 50.0 (isSortedAscendingOn f xs) "precondition known satisfied"
           $ isSortedAscendingOn f xs == isSortedAscending (f <$> xs)
+
+propTakeWAgree :: Property
+propTakeWAgree = property $ \(n :: Natural) (xs :: [Int]) ->
+  Witherable.takeW n xs == Nat.take n xs
+
+propDropWAgree :: Property
+propDropWAgree = property $ \(n :: Natural) (xs :: [Int]) ->
+  Witherable.dropW n xs == Nat.drop n xs
