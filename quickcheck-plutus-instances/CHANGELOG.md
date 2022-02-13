@@ -4,6 +4,13 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 2.2 -- 2021-02-13
+
+### Changed
+
+* The `Arbitrary StakingCredential` instance doesn't generate `StakingPtr`s
+  now
+
 ## 2.1 -- 2021-02-06
 
 ### Added
