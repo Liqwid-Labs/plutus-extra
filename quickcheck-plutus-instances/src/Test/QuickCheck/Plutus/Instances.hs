@@ -605,18 +605,10 @@ instance Function Credential where
         Left pk -> PubKeyCredential pk
         Right vh -> ScriptCredential vh
 
--- | @since 1.1
+-- | @since 2.2
 instance Arbitrary StakingCredential where
-  arbitrary =
-    oneof
-      [ StakingHash <$> arbitrary
-      , go
-      ]
-    where
-      go :: Gen StakingCredential
-      go = do
-        NonNegative i <- arbitrary
-        StakingPtr i <$> arbitrary <*> arbitrary
+  -- TODO: Get StakingPtr back when it is properly supported by Plutus
+  arbitrary = StakingHash <$> arbitrary
   shrink = \case
     StakingHash cred -> StakingHash <$> shrink cred
     StakingPtr i j k -> do
