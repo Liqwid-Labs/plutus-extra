@@ -2,7 +2,7 @@
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/plutus
+  location: https://github.com/input-output-hk/plutus.git
   subdir:
     plutus-core
     plutus-ledger-api
@@ -45,7 +45,7 @@ source-repository-package
 
 ---------- *replace here* ----------------------------------------------------------------------
 
--- We never, ever, want this.
+-- You never, ever, want this.
 write-ghc-environment-files: never
 
 -- Always build tests and benchmarks.

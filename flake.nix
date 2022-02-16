@@ -138,7 +138,7 @@
               = "Hesb5GXSx0IwKSIi42ofisVELcQNX6lwHcoZcbaDiqc=";
             "https://github.com/input-output-hk/goblins"."cde90a2b27f79187ca8310b6549331e59595e7ba"
               = "z9ut0y6umDIjJIRjz9KSvKgotuw06/S8QDwOtVdGiJ0=";
-            "https://github.com/input-output-hk/plutus"."cc72a56eafb02333c96f662581b57504f8f8992f"
+            "https://github.com/input-output-hk/plutus.git"."cc72a56eafb02333c96f662581b57504f8f8992f"
               = "1w89ikv3jsg5x9xf7qpcjnix3nf016z0xpf48q5238h4ngvcqp9y";
             "https://github.com/nomeata/tasty-expected-failure.git"."33b71e694b954e35c05859fff3ca886d8cfe5bfe" =
               "C/IWktTILklfPEAht/RE4IC8to6MrvrLmmbqgWsJlIM=";
