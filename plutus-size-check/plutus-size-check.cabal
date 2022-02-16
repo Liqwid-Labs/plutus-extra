@@ -52,7 +52,7 @@ library
   build-depends:
     , base               ^>=4.14
     , bytestring         ^>=0.10.12.0
-    , cardano-api        ^>=1.32.1
+    , cardano-api        ^>=1.33.0
     , plutus-contract
     , plutus-ledger
     , plutus-ledger-api
