@@ -1,4 +1,4 @@
-# `plutus-list`
+# `plutus-collection`
 
 ## What is this?
 
@@ -22,6 +22,9 @@ We currently have two modules:
     as `-On` and `-By` versions for both of the functions;
   * `ordNub` and `ordNubBy` that is like `nub` but has `O(n log n)` time and
     sorts the list along the way.
+* `PlutusTx.AssocMap.Natural` that provides `AssocMap` counterparts of
+  `PlutusTx.List.Natural` functions.
+* `Witherable.Natural` that provides `takeW` and `dropW` for any `Witherable`.
 
 ## What are the goals of this project?
 
