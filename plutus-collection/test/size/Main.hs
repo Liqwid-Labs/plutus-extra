@@ -1,6 +1,7 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskell #-}
 
+import Data.Kind (Type)
 import Plutus.V1.Ledger.Scripts (fromCompiledCode)
 import PlutusTx (CompiledCode)
 import PlutusTx.AssocMap (Map)
@@ -13,7 +14,6 @@ import PlutusTx.TH (compile)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.Plutus.Size (ByteSize, bytes, fitsInto)
 import Prelude qualified
-import Data.Kind (Type)
 
 -- byte values are script sizes from c36555e35289c7aaabf62af8dccac65d9ab52c11
 main :: Prelude.IO ()
@@ -21,39 +21,40 @@ main =
   defaultMain . testGroup "Size checks" $
     [ testGroup
         "List.Natural"
-        [ runSizeTest "length"    [bytes| 121 |] naturalLength
-        , runSizeTest "take"      [bytes| 173 |] naturalTake
-        , runSizeTest "drop"      [bytes| 168 |] naturalDrop
-        , runSizeTest "splitAt"   [bytes| 263 |] naturalSplitAt
+        [ runSizeTest "length" [bytes| 121 |] naturalLength
+        , runSizeTest "take" [bytes| 173 |] naturalTake
+        , runSizeTest "drop" [bytes| 168 |] naturalDrop
+        , runSizeTest "splitAt" [bytes| 263 |] naturalSplitAt
         , runSizeTest "replicate" [bytes| 163 |] naturalReplicate
         ]
     , testGroup
         "List.Ord"
-        [ runSizeTest "sort"                [bytes| 467 |] ordSort
-        , runSizeTest "sortOn"              [bytes| 469 |] ordSortOn
-        , runSizeTest "sortBy"              [bytes| 266 |] ordSortBy
-        , runSizeTest "ordNub"              [bytes| 540 |] ordOrdNub
-        , runSizeTest "ordNubBy"            [bytes| 340 |] ordOrdNubBy
-        , runSizeTest "isSorted"            [bytes| 426 |] ordIsSorted
-        , runSizeTest "isSortedOn"          [bytes| 428 |] ordIsSortedOn
-        , runSizeTest "isSortedAscending"   [bytes| 426 |] ordIsSortedAscending
+        [ runSizeTest "sort" [bytes| 467 |] ordSort
+        , runSizeTest "sortOn" [bytes| 469 |] ordSortOn
+        , runSizeTest "sortBy" [bytes| 266 |] ordSortBy
+        , runSizeTest "ordNub" [bytes| 540 |] ordOrdNub
+        , runSizeTest "ordNubBy" [bytes| 340 |] ordOrdNubBy
+        , runSizeTest "isSorted" [bytes| 426 |] ordIsSorted
+        , runSizeTest "isSortedOn" [bytes| 428 |] ordIsSortedOn
+        , runSizeTest "isSortedAscending" [bytes| 426 |] ordIsSortedAscending
         , runSizeTest "isSortedAscendingOn" [bytes| 428 |] ordIsSortedAscendingOn
-        , runSizeTest "isSortedBy"          [bytes| 218 |] ordIsSortedBy
+        , runSizeTest "isSortedBy" [bytes| 218 |] ordIsSortedBy
         ]
     , testGroup
         "AssocMap.Natural"
-        [ runSizeTest "take"    [bytes| 178 |] naturalMapTake
-        , runSizeTest "drop"    [bytes| 173 |] naturalMapDrop
+        [ runSizeTest "take" [bytes| 178 |] naturalMapTake
+        , runSizeTest "drop" [bytes| 173 |] naturalMapDrop
         , runSizeTest "splitAt" [bytes| 290 |] naturalMapSplitAt
         ]
     ]
   where
-    runSizeTest :: forall (a :: Type)
-                 . Prelude.String 
-                -> ByteSize 
-                -> CompiledCode a 
-                -> TestTree
-    runSizeTest scriptName maxSize = 
+    runSizeTest ::
+      forall (a :: Type).
+      Prelude.String ->
+      ByteSize ->
+      CompiledCode a ->
+      TestTree
+    runSizeTest scriptName maxSize =
       fitsInto scriptName maxSize . fromCompiledCode
 
 {-# INLINEABLE naturalLength #-}
