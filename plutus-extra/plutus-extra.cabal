@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-extra
-version:            5.1
+version:            5.2
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -99,6 +99,7 @@ library
     , either                     ^>=5.0.1
     , foldl                      ^>=1.4.12
     , freer-simple               ^>=1.2.1.1
+    , hedgehog                   ^>=1.0
     , lens                       ^>=4.19.2
     , memory                     ^>=0.16.0
     , plutus-chain-index-core

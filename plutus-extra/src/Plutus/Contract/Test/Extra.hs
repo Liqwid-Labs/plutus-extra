@@ -16,6 +16,9 @@ module Plutus.Contract.Test.Extra (
   utxoAtComputedAddress,
   utxoAtAddress,
   addressValueOptions,
+  checkPredicateGenAll,
+  checkPredicateGenAllShow,
+  checkPredicateGenAllShows,
 ) where
 
 --------------------------------------------------------------------------------
@@ -26,7 +29,7 @@ import Control.Foldl qualified as L
 
 import Control.Arrow ((>>>))
 import Control.Lens (at, view, (^.))
-import Control.Monad (unless, (>=>))
+import Control.Monad (forM_, unless, (>=>))
 import Control.Monad.Freer (Eff, Member)
 import Control.Monad.Freer.Error (Error)
 import Control.Monad.Freer.Reader (Reader, ask)
@@ -55,15 +58,20 @@ import Prelude
 --------------------------------------------------------------------------------
 
 import Control.Foldl (generalize)
+import Hedgehog qualified
 import Ledger qualified
 import Ledger.Ada qualified as Ada
 import Ledger.AddressMap (UtxoMap)
 import Ledger.AddressMap qualified as AM
 import Ledger.Scripts qualified as Scripts
-import Plutus.Contract.Test (TracePredicate)
+import Plutus.Contract.Test (CheckOptions, TracePredicate, checkPredicateInner)
 import Plutus.Contract.Trace (InitialDistribution, Wallet)
 import Plutus.Contract.Types (IsContract (toContract))
-import Plutus.Trace.Emulator (ContractInstanceTag, EmulatorConfig (EmulatorConfig))
+import Plutus.Trace.Emulator (
+  ContractInstanceTag,
+  EmulatorConfig (EmulatorConfig),
+  EmulatorTrace,
+ )
 import PlutusTx (FromData (fromBuiltinData))
 import PlutusTx.Prelude qualified as P
 import Wallet.Emulator.Chain (ChainEvent (..))
@@ -500,7 +508,7 @@ getTxOutDatum _ (Ledger.TxOutTx _ (Ledger.TxOut _ _ Nothing)) = Nothing
 getTxOutDatum _ (Ledger.TxOutTx tx' (Ledger.TxOut _ _ (Just datumHash))) =
   Ledger.lookupDatum tx' datumHash >>= (Ledger.getDatum >>> fromBuiltinData @datum)
 
-{- | Setting up a emulator config with values at wallets/pubKeyHashes
+{- | Setting up an emulator config with values at wallets/pubKeyHashes
      and values and datums at validators.
 
      Example Usage:
@@ -557,3 +565,263 @@ addressValueOptions walletAllocs validatorAllocs = EmulatorConfig (Right [tx]) d
               (\(_, _, d) -> (Scripts.datumHash d, d)) <$> validatorAllocs
         , Ledger.txMint = foldMap snd walletAllocs <> foldMap (\(_, v, _) -> v) validatorAllocs
         }
+
+{- | Use a Hedgehog generator to create a property
+     test of Contract traces. Unlike
+     checkPredicateGenOptions, this allows the use
+     of an arbitrary type for the generatef value,
+     and also lets the emulator config, predicate,
+     and emulator trace to depend on the generated
+     value.
+
+     A common use is to generate a list of 'actions'
+     that correspond to a sequence of endpoint calls.
+     This list of actions is then used to generate
+     the options, trace, and predicate.
+
+     Example usage:
+
+     > data MyDatum a = ...
+     >
+     > data Action a
+     >    = Add BuiltinByteString a
+     >    | Rem BuiltinByteString
+     >    | Mod BuiltinByteString a
+     >
+     > -- Generate a list of actions to perform in order.
+     > -- (May want to use StateT to keep information from
+     > --  preceding in scope)
+     > genActions :: forall (a :: Type). (...) => Gen [Action a]
+     > genActions = ...
+     >
+     > genEmuConfig :: forall (a :: Type). (PlutusTx.ToData a) =>
+     >   Wallet -> ValidatorHash -> [Action a] -> EmulatorConfig
+     > genEmuConfig wallet valHash acts =
+     >   let val = lovelaceValueOf 100_000_000
+     >    in addressValueOptions
+     >         [ (wallet  , v <> genValue acts) ]
+     >         [ (valHash , starterValue acts , starterDatum acts) ]
+     >   where
+     >     genValue :: [Action a] -> Value
+     >     starterValue :: [Action a] -> Value
+     >     starterDatum :: [Action a] -> Datum
+     >
+     > -- Create a list of the expected final data after running the trace.
+     > -- This is essentially a user-defined simulator that should produce
+     > -- the same set of data after running the actions through the trace.
+     > genData :: forall (a :: Type). [Action a] -> [MyDatum a]
+     > genData = ...
+     >
+     > -- Generate a trace from a list of actions
+     > genTrace ::
+     >   forall (a :: Type).
+     >   ( FromJSON a
+     >   , ToJSON a
+     >   ) =>
+     >   Wallet ->
+     >   Contract ... () ->
+     >   [Action a] ->
+     >   EmulatorTrace
+     > genTrace wallet endpoints acts = do
+     >   hnd <- activateContractWallet wallet endpoints
+     >   forM_ acts $ \case
+     >     (Add bs val) -> do
+     >       callEndpoint @"Add" hnd (bs,val)
+     >       void $ waitNSlots 3
+     >     (Rem bs) -> do
+     >       callEndpoint @"Rem" hnd bs
+     >       void $ waitNSlots 3
+     >     (Mod bs val) -> do
+     >       callEndpoint @"Mod" hnd (bs,val)
+     >       void $ waitNSlots 3
+     >
+     > -- Turn a trace into a Hedgehog Property.
+     > testTrace ::
+     >   forall (a :: Type).
+     >   ( FromJSON a
+     >   , ToJSON a
+     >   , FromData a
+     >   , ToData a
+     >   , ...
+     >   ) =>
+     >   ValidatorHash ->
+     >   Wallet ->
+     >   Contract ... () ->
+     >   Gen [Action a] ->
+     >   Property
+     > testTrace valHash endpoints =
+     >   checkPredicateGenAll
+     >     (\acts -> defaultCheckOptions & emulatorConfig .~ emuConfig acts)
+     >     (\acts ->
+     >       dataAtAddress
+     >         (scriptHashAddress valHash)
+     >         (foldl (\acc x -> acc /\ elem x) top $ genData acts)
+     >     )
+     >     theTrace
+     >   where
+     >     theTrace acts = genTrace wallet endpoints acts
+     >     emuConfig acts = genEmuConfig wallet valHash acts
+     >
+     > -- The actual Tasty test group.
+     > tests :: Int -> TestTree
+     > tests n =
+     >   localOption (HedgehogTestLimit (Just n)) $
+     >     testProperty "Testing Contract Traces" $
+     >       testTrace
+     >         myWallet
+     >         myValidatorHash
+     >         myEndpoints
+     >         genActions
+
+    This creates a Hedgehog property that generates a list of
+    actions according to a user-defined generator, and then
+    runs a trace calling the endpoints according to the list
+    of actions generated. This is then used to check the final
+    list of data against a simulator that should produce the
+    same set of final data as the contract trace.
+
+    Note that these tests can take a very long time
+    to run; you'll probably want to set the number
+    of tests to below 100.
+
+     @since 5.2
+-}
+checkPredicateGenAll ::
+  forall (a :: Type).
+  Show a =>
+  (a -> CheckOptions) ->
+  (a -> TracePredicate) ->
+  (a -> EmulatorTrace ()) ->
+  Hedgehog.Gen a ->
+  Hedgehog.Property
+checkPredicateGenAll goptions gpredicate gtrace gen =
+  Hedgehog.property $ do
+    myVal <- Hedgehog.forAll gen
+    let options = goptions myVal
+        predicate = gpredicate myVal
+        action = gtrace myVal
+    checkPredicateInner options predicate action Hedgehog.annotate Hedgehog.assert
+
+{- | The same as checkPredicateGenAll, but
+     with an added value to show as a footnote
+     in the case of failure.
+
+     Exmple Usage:
+     (Same as for checkPredicateGenAll, but with
+      a modification to testTrace)
+
+     > -- Turn a trace into a Hedgehog Property.
+     > testTrace ::
+     >   forall (a :: Type).
+     >   (...) =>
+     >   ValidatorHash ->
+     >   Wallet ->
+     >   Contract ... () ->
+     >   Gen [Action a] ->
+     >   Property
+     > testTrace valHash endpoints =
+     >   checkPredicateGenAllShow
+     >     (\acts -> defaultCheckOptions & emulatorConfig .~ emuConfig acts)
+     >     (\acts ->
+     >       dataAtAddress
+     >         (scriptHashAddress valHash)
+     >         (foldl (\acc x -> acc /\ elem x) top $ genData acts)
+     >     )
+     >     theTrace
+     >     "Simulated Data:"
+     >     genData
+     >   where
+     >     theTrace acts = genTrace wallet endpoints acts
+     >     emuConfig acts = genEmuConfig wallet valHash acts
+
+     This is the same as the example for checkPredicateGenAll,
+     but also prints out the list of the final data from their
+     simulator so the user can troubleshoot possible errors with
+     their simulator.
+
+     @since 5.2
+-}
+checkPredicateGenAllShow ::
+  forall (a :: Type) (b :: Type).
+  (Show a, Show b) =>
+  (a -> CheckOptions) ->
+  (a -> TracePredicate) ->
+  (a -> EmulatorTrace ()) ->
+  String ->
+  (a -> b) ->
+  Hedgehog.Gen a ->
+  Hedgehog.Property
+checkPredicateGenAllShow goptions gpredicate gtrace str shower gen =
+  Hedgehog.property $ do
+    myVal <- Hedgehog.forAll gen
+    let options = goptions myVal
+        predicate = gpredicate myVal
+        action = gtrace myVal
+        modVal = shower myVal
+    Hedgehog.footnoteShow modVal
+    Hedgehog.footnote str
+    checkPredicateInner options predicate action Hedgehog.annotate Hedgehog.assert
+
+{- | When you want to examine multiple
+     views of the generated value. Note that
+     the views are appended in reverse order;
+     i.e. the first view will be the last one
+     printed in the event of a failure.
+
+     Example Usage:
+
+          > testTrace ::
+     >   forall (a :: Type).
+     >   (...) =>
+     >   ValidatorHash ->
+     >   Wallet ->
+     >   Contract ... () ->
+     >   Gen [Action a] ->
+     >   Property
+     > testTrace valHash endpoints =
+     >   checkPredicateGenAllShows
+     >     (\acts -> defaultCheckOptions & emulatorConfig .~ emuConfig acts)
+     >     (\acts ->
+     >       dataAtAddress
+     >         (scriptHashAddress valHash)
+     >         (foldl (\acc x -> acc /\ elem x) top $ genData acts)
+     >     )
+     >     theTrace
+     >     [( "Simulated Data:", show . genData)
+     >     ,( "Action List:"   , show)
+     >     ]
+     >   where
+     >     theTrace acts = genTrace wallet endpoints acts
+     >     emuConfig acts = genEmuConfig wallet valHash acts
+
+     Again, this is the same as checkPredicateGenAll and
+     checkPredicateGenAllShow, but will output:
+
+       * The generated action list.
+       * The final list of data at the validator,
+         according to the user-supplied simulator.
+
+     in that order, at the end of the error information
+     in the event of a case that fails the predicate.
+
+     @since 5.2
+-}
+checkPredicateGenAllShows ::
+  forall (a :: Type).
+  (Show a) =>
+  (a -> CheckOptions) ->
+  (a -> TracePredicate) ->
+  (a -> EmulatorTrace ()) ->
+  [(String, a -> String)] ->
+  Hedgehog.Gen a ->
+  Hedgehog.Property
+checkPredicateGenAllShows goptions gpredicate gtrace showers gen =
+  Hedgehog.property $ do
+    myVal <- Hedgehog.forAll gen
+    let options = goptions myVal
+        predicate = gpredicate myVal
+        action = gtrace myVal
+    forM_ showers $ \(nm, fnc) -> do
+      Hedgehog.footnote $ fnc myVal
+      Hedgehog.footnote nm
+    checkPredicateInner options predicate action Hedgehog.annotate Hedgehog.assert
