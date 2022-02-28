@@ -1,5 +1,8 @@
 cradle:
   cabal:
+    - path: "./plutus-asdata/src"
+      component: "lib:plutus-asdata"
+
     - path: "./plutus-collection/src"
       component: "lib:plutus-collection"
 
@@ -8,6 +11,9 @@ cradle:
 
     - path: "./plutus-collection/test/size"
       component: "plutus-collection:test:plutus-collection-size"
+
+    - path: "./plutus-context-builder/src"
+      component: "lib:plutus-context-builder"
 
     - path: "./plutus-deriving/src"
       component: "lib:plutus-deriving"

@@ -1,6 +1,7 @@
 index-state: 2021-10-20T00:00:00Z
 
 packages:
+  ./plutus-asdata/plutus-asdata.cabal
   ./plutus-extra/plutus-extra.cabal
   ./tasty-plutus/tasty-plutus.cabal
   ./plutus-pretty/plutus-pretty.cabal
