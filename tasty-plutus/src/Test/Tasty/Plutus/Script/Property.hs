@@ -1,4 +1,5 @@
 {-# LANGUAGE Trustworthy #-}
+{-# OPTIONS_GHC -Wno-error=incomplete-patterns #-}
 
 {- |
  Module: Test.Tasty.Plutus.Script.Property
@@ -51,7 +52,7 @@ import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Plutus.V1.Ledger.Contexts (ScriptContext)
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError, EvaluationException, MalformedScript))
+import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError, EvaluationException))
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
@@ -82,7 +83,6 @@ import Test.Tasty.Plutus.Internal.Env (
 import Test.Tasty.Plutus.Internal.Feedback (
   dumpState',
   internalError,
-  malformedScript,
   noOutcome,
   noParse,
   ourStyle,
@@ -567,7 +567,6 @@ produceResult sr = do
           Pass -> asks (counter . unexpectedFailure (getDumpedState logs) msg)
           Fail -> pass
       EvaluationException name msg -> pure . counter $ scriptException name msg
-      MalformedScript msg -> pure . counter $ malformedScript msg
     Right (logs, res) -> case (outcome, res) of
       (_, NoOutcome) -> asks (counter . noOutcome state)
       (Fail, ScriptPassed) -> asks (counter . unexpectedSuccess state)
