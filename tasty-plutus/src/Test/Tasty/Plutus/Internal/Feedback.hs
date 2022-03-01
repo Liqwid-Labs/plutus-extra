@@ -1,7 +1,6 @@
 module Test.Tasty.Plutus.Internal.Feedback (
   unexpectedFailure,
   scriptException,
-  malformedScript,
   noOutcome,
   unexpectedSuccess,
   internalError,
@@ -61,12 +60,6 @@ scriptException name msg =
   renderStyle ourStyle $
     "Unexpected behaviour in script:" <+> text name
       $+$ hang "Description" 4 (text msg)
-
-malformedScript :: String -> String
-malformedScript msg =
-  renderStyle ourStyle $
-    "Script was malformed"
-      $+$ hang "Details" 4 (text msg)
 
 noOutcome ::
   forall (a :: Type).

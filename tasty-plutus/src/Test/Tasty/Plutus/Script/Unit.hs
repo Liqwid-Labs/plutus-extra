@@ -1,4 +1,5 @@
 {-# LANGUAGE Trustworthy #-}
+{-# OPTIONS_GHC -Wno-error=incomplete-patterns #-}
 
 {- |
  Module: Test.Tasty.Plutus.Script.Unit
@@ -44,8 +45,7 @@ import Plutus.V1.Ledger.Api (ScriptContext)
 import Plutus.V1.Ledger.Scripts (
   ScriptError (
     EvaluationError,
-    EvaluationException,
-    MalformedScript
+    EvaluationException
   ),
  )
 import Test.Plutus.ContextBuilder (
@@ -70,7 +70,6 @@ import Test.Tasty.Plutus.Internal.Feedback (
   doPass,
   dumpState,
   internalError,
-  malformedScript,
   noOutcome,
   noParse,
   scriptException,
@@ -326,7 +325,6 @@ handleError = \case
       Pass -> asks (testFailed . unexpectedFailure (getDumpedState logs) msg)
       Fail -> asks getMPred >>= (`tryPass` logs)
   EvaluationException name msg -> pure . testFailed $ scriptException name msg
-  MalformedScript msg -> pure . testFailed $ malformedScript msg
 
 deliverResult ::
   forall (p :: Purpose).
