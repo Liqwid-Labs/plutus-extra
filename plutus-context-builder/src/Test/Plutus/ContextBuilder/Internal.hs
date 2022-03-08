@@ -29,6 +29,8 @@ import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Semigroup (sconcat)
+import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.Text (Text)
 import Ledger.Scripts (datumHash)
 import Plutus.V1.Ledger.Address (pubKeyHashAddress, scriptHashAddress)
@@ -217,30 +219,30 @@ This UTxO won't be used as 'Spending' in the 'ScriptPurpose'
 of the builded 'ScriptContext'. For the representation of a 'Spending' UTxO
 use 'TestUTXO'.
 
- @since 1.0
+ @since 2.0
 -}
-data ValidatorUTXO (datum :: Type) = (ToData datum) =>
-  ValidatorUTXO
+data ValidatorUTXO (datum :: Type) = ValidatorUTXO
   { vUtxoDatum :: datum
   , vUtxoValue :: Value
   }
-
--- | @since 1.0
-deriving stock instance (Show d) => Show (ValidatorUTXO d)
+  deriving stock
+    ( -- | @since 1.0
+      Show
+    )
 
 {- | UTxO at the tested validator address. It will be used as 'Spending'
  in the 'ScriptPurpose' of the builded 'ScriptContext'.
 
- @since 1.0
+ @since 2.0
 -}
-data TestUTXO (datum :: Type) = (ToData datum) =>
-  TestUTXO
+data TestUTXO (datum :: Type) = TestUTXO
   { tUtxoDatum :: datum
   , tUtxoValue :: Value
   }
-
--- | @since 1.0
-deriving stock instance (Show d) => Show (TestUTXO d)
+  deriving stock
+    ( -- | @since 1.0
+      Show
+    )
 
 {- | ValidatorUTXOs represents a set of 'ValidatorUTXO's.
  It is type compatible with 'ContextBuider'.
@@ -307,8 +309,8 @@ data ContextBuilder (p :: Purpose) = ContextBuilder
     cbInputs :: Map.Map Text SideUTXO
   , -- | @since 1.0
     cbOutputs :: Map.Map Text SideUTXO
-  , -- | @since 1.0
-    cbSignatures :: Map.Map Text PubKeyHash
+  , -- | @since 2.0
+    cbSignatures :: Map.Map Text (Set PubKeyHash)
   , -- | @since 1.0
     cbDatums :: Map.Map Text BuiltinData
   , -- | @since 1.0
@@ -318,11 +320,12 @@ data ContextBuilder (p :: Purpose) = ContextBuilder
   , -- | @since 1.0
     cbValidatorOutputs :: ValidatorUTXOs p
   }
+  deriving stock
+    ( -- | @since 1.0
+      Show
+    )
 
--- | @since 1.0
-deriving stock instance Show (ContextBuilder p)
-
--- | @since 1.0
+-- | @since 2.0
 instance Semigroup (ContextBuilder p) where
   {-# INLINEABLE (<>) #-}
   (ContextBuilder is os pkhs ds ms vis vos)
@@ -330,7 +333,7 @@ instance Semigroup (ContextBuilder p) where
       ContextBuilder
         (is <> is')
         (os <> os')
-        (pkhs <> pkhs')
+        (Map.unionWith Set.union pkhs pkhs')
         (ds <> ds')
         (ms <> ms')
         (vis <> vis')
@@ -344,10 +347,11 @@ instance Monoid (ContextBuilder p) where
 {- | As 'spendingScriptContext', but with the default
 transaction config 'defTransactionConfig'.
 
- @since 1.0
+ @since 2.0
 -}
 spendingScriptContextDef ::
   forall (datum :: Type) (redeemer :: Type).
+  (ToData datum) =>
   ContextBuilder ( 'ForSpending datum redeemer) ->
   TestUTXO datum ->
   ScriptContext
@@ -355,10 +359,11 @@ spendingScriptContextDef = spendingScriptContext defTransactionConfig
 
 {- | Construct 'ScriptContext' with 'Spending' 'ScriptPurpose' from the provided blocks.
 
- @since 1.0
+ @since 2.0
 -}
 spendingScriptContext ::
   forall (datum :: Type) (redeemer :: Type).
+  (ToData datum) =>
   TransactionConfig ->
   ContextBuilder ( 'ForSpending datum redeemer) ->
   TestUTXO datum ->
@@ -491,7 +496,7 @@ baseTxInfo conf (ContextBuilder ins outs pkhs dats mints vins vouts) =
         , txInfoDCert = []
         , txInfoWdrl = []
         , txInfoValidRange = testTimeRange conf
-        , txInfoSignatories = Map.elems pkhs
+        , txInfoSignatories = concatMap Set.toList . Map.elems $ pkhs
         , txInfoData =
             validatorUtxosToDatum vins
               <> validatorUtxosToDatum vouts
@@ -544,6 +549,7 @@ sideUtxoToTxOut conf (SideUTXO typ valType) =
 
 validatorUtxoToTxOut ::
   forall (d :: Type).
+  (ToData d) =>
   TransactionConfig ->
   ValidatorUTXO d ->
   TxOut

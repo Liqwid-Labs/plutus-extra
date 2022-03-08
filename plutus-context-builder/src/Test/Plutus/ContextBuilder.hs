@@ -88,6 +88,7 @@ module Test.Plutus.ContextBuilder (
 
 import Data.Kind (Type)
 import Data.Map.Strict qualified as Map
+import Data.Set qualified as Set
 import Data.Text (Text)
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Crypto (PubKeyHash)
@@ -203,7 +204,7 @@ signedWith ::
   Text ->
   PubKeyHash ->
   ContextBuilder p
-signedWith name x = mempty {cbSignatures = Map.singleton name x}
+signedWith name x = mempty {cbSignatures = Map.singleton name . Set.singleton $ x}
 
 {- | Context with one additional datum.
 
