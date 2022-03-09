@@ -70,7 +70,7 @@ library
     , containers              ^>=0.6.2.1
     , filepath                ^>=1.4.2
     , mtl                     ^>=2.2.2
-    , plutus-context-builder  ^>=1.0
+    , plutus-context-builder  ^>=2.0
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
@@ -102,7 +102,7 @@ test-suite properties
   hs-source-dirs: test/Properties
   build-depends:
     , base                         ^>=4.14
-    , plutus-context-builder       ^>=1.0
+    , plutus-context-builder
     , plutus-contract
     , plutus-ledger
     , plutus-ledger-api

@@ -11,6 +11,7 @@ module Test.Plutus.ContextBuilder.Internal (
   TestUTXO (..),
   Minting (..),
   ContextBuilder (..),
+  ContextFragment (..),
 
   -- * Utilities functions
   spendingScriptContext,
@@ -26,12 +27,14 @@ import Data.Bifunctor (first)
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Semigroup (sconcat)
-import Data.Set (Set)
-import Data.Set qualified as Set
+import Data.Sequence (Seq)
+import Data.Sequence qualified as Seq
 import Data.Text (Text)
+import GHC.Exts (toList)
 import Ledger.Scripts (datumHash)
 import Plutus.V1.Ledger.Address (pubKeyHashAddress, scriptHashAddress)
 import Plutus.V1.Ledger.Api (
@@ -302,47 +305,62 @@ data Minting
  >          signedWith "userSignature" aHash <>
  >          tagged "specialTag" aUniqueTag
 
- @since 1.0
+ @since 2.0
 -}
-data ContextBuilder (p :: Purpose) = ContextBuilder
-  { -- | @since 1.0
-    cbInputs :: Map.Map Text SideUTXO
-  , -- | @since 1.0
-    cbOutputs :: Map.Map Text SideUTXO
-  , -- | @since 2.0
-    cbSignatures :: Map.Map Text (Set PubKeyHash)
-  , -- | @since 1.0
-    cbDatums :: Map.Map Text BuiltinData
-  , -- | @since 1.0
-    cbMinting :: Map.Map Text Minting
-  , -- | @since 1.0
-    cbValidatorInputs :: ValidatorUTXOs p
-  , -- | @since 1.0
-    cbValidatorOutputs :: ValidatorUTXOs p
-  }
+newtype ContextBuilder (p :: Purpose)
+  = ContextBuilder (Map Text (ContextFragment p))
+  deriving
+    ( -- | @since 2.0
+      Monoid
+    )
+    via (Map Text (ContextFragment p))
   deriving stock
-    ( -- | @since 1.0
+    ( -- | @since 2.0
       Show
     )
 
 -- | @since 2.0
 instance Semigroup (ContextBuilder p) where
   {-# INLINEABLE (<>) #-}
-  (ContextBuilder is os pkhs ds ms vis vos)
-    <> (ContextBuilder is' os' pkhs' ds' ms' vis' vos') =
-      ContextBuilder
-        (is <> is')
-        (os <> os')
-        (Map.unionWith Set.union pkhs pkhs')
-        (ds <> ds')
-        (ms <> ms')
-        (vis <> vis')
-        (vos <> vos')
+  ContextBuilder cfs <> ContextBuilder cfs' =
+    ContextBuilder . Map.unionWith (<>) cfs $ cfs'
 
--- | @since 1.0
-instance Monoid (ContextBuilder p) where
+{- | A single piece of script context, with the ability to be named.
+
+ @since 2.0
+-}
+data ContextFragment (p :: Purpose) = ContextFragment
+  { -- | @since 2.0
+    cfInputs :: Seq SideUTXO
+  , -- | @since 2.0
+    cfOutputs :: Seq SideUTXO
+  , -- | @since 2.0
+    cfSignatures :: Seq PubKeyHash
+  , -- | @since 2.0
+    cfDatums :: Seq BuiltinData
+  , -- | @since 2.0
+    cfMinting :: Seq Minting
+  , -- | @since 2.0
+    cfValidatorInputs :: ValidatorUTXOs p
+  , -- | @since 2.0
+    cfValidatorOutputs :: ValidatorUTXOs p
+  }
+  deriving stock
+    ( -- | @since 2.0
+      Show
+    )
+
+-- | @since 2.0
+instance Semigroup (ContextFragment p) where
+  {-# INLINEABLE (<>) #-}
+  ContextFragment ins outs sigs ds ms vins vouts
+    <> ContextFragment ins' outs' sigs' ds' ms' vins' vouts' =
+      ContextFragment (ins <> ins') (outs <> outs') (sigs <> sigs') (ds <> ds') (ms <> ms') (vins <> vins') (vouts <> vouts')
+
+-- | @since 2.0
+instance Monoid (ContextFragment p) where
   {-# INLINEABLE mempty #-}
-  mempty = ContextBuilder mempty mempty mempty mempty mempty mempty mempty
+  mempty = ContextFragment mempty mempty mempty mempty mempty mempty mempty
 
 {- | As 'spendingScriptContext', but with the default
 transaction config 'defTransactionConfig'.
@@ -484,33 +502,37 @@ baseTxInfo ::
   TransactionConfig ->
   ContextBuilder p ->
   TxInfo
-baseTxInfo conf (ContextBuilder ins outs pkhs dats mints vins vouts) =
-  let value = foldMap (filterValue filterCS . unMint) mints
-      insLst = filter (checkSideUtxoAddress conf) . Map.elems $ ins
-      outsLst = filter (checkSideUtxoAddress conf) . Map.elems $ outs
+baseTxInfo conf (ContextBuilder cfs) =
+  let value = foldMap (foldMap toUsefulValue . cfMinting) cfs
+      insList = toList . foldMap (Seq.filter go . cfInputs) $ cfs
+      outsList = toList . foldMap (Seq.filter go . cfOutputs) $ cfs
+      vins = foldMap cfValidatorInputs cfs
+      vouts = foldMap cfValidatorOutputs cfs
+      pkhs = toList . foldMap cfSignatures $ cfs
+      dats = toList . foldMap (fmap datumWithHash . cfDatums) $ cfs
    in TxInfo
-        { txInfoInputs = createTxInInfos conf insLst vins
-        , txInfoOutputs = createTxOuts conf outsLst vouts
+        { txInfoInputs = createTxInInfos conf insList vins
+        , txInfoOutputs = createTxOuts conf outsList vouts
         , txInfoFee = testFee conf
         , txInfoMint = value
         , txInfoDCert = []
         , txInfoWdrl = []
         , txInfoValidRange = testTimeRange conf
-        , txInfoSignatories = concatMap Set.toList . Map.elems $ pkhs
+        , txInfoSignatories = pkhs
         , txInfoData =
             validatorUtxosToDatum vins
-              <> validatorUtxosToDatum vouts
-              <> mapMaybe sideUtxoToDatum insLst
-              <> mapMaybe sideUtxoToDatum outsLst
-              <> (fmap datumWithHash . Map.elems $ dats)
+              <> mapMaybe sideUtxoToDatum insList
+              <> mapMaybe sideUtxoToDatum outsList
+              <> dats
         , txInfoId = TxId "testTx"
         }
   where
-    unMint :: Minting -> Value
-    unMint (Mint val) = val
-
+    toUsefulValue :: Minting -> Value
+    toUsefulValue (Mint val) = filterValue filterCS val
     filterCS :: CurrencySymbol -> TokenName -> Integer -> Bool
     filterCS cs _ _ = cs /= testCurrencySymbol conf
+    go :: SideUTXO -> Bool
+    go = checkSideUtxoAddress conf
 
 checkSideUtxoAddress :: TransactionConfig -> SideUTXO -> Bool
 checkSideUtxoAddress conf (SideUTXO typ _) =

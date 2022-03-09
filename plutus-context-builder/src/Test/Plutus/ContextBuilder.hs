@@ -29,6 +29,7 @@ module Test.Plutus.ContextBuilder (
   ValidatorUTXOs (..),
   Minting (..),
   ContextBuilder (..),
+  ContextFragment (..),
 
   -- ** Minting
   MintingPolicyTask (..),
@@ -52,6 +53,10 @@ module Test.Plutus.ContextBuilder (
   datum,
   addDatum,
   minting,
+
+  -- ** Naming
+  named,
+  deleteNamed,
 
   -- ** Output
   outToPubKey,
@@ -88,7 +93,6 @@ module Test.Plutus.ContextBuilder (
 
 import Data.Kind (Type)
 import Data.Map.Strict qualified as Map
-import Data.Set qualified as Set
 import Data.Text (Text)
 import Ledger.Address (PaymentPubKeyHash (unPaymentPubKeyHash))
 import Ledger.Crypto (PubKeyHash)
@@ -98,15 +102,16 @@ import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (FromData, ToData (toBuiltinData))
 import Test.Plutus.ContextBuilder.Internal (
-  ContextBuilder (
-    ContextBuilder,
-    cbDatums,
-    cbInputs,
-    cbMinting,
-    cbOutputs,
-    cbSignatures,
-    cbValidatorInputs,
-    cbValidatorOutputs
+  ContextBuilder (ContextBuilder),
+  ContextFragment (
+    ContextFragment,
+    cfDatums,
+    cfInputs,
+    cfMinting,
+    cfOutputs,
+    cfSignatures,
+    cfValidatorInputs,
+    cfValidatorOutputs
   ),
   InputPosition (Head, Tail),
   Minting (Mint),
@@ -142,205 +147,217 @@ import Test.Plutus.ContextBuilder.Minting (
  )
 import Wallet.Emulator.Types (Wallet, mockWalletPaymentPubKeyHash)
 
-{- | Single 'SideUTXO'-input context.
+{- | Name a 'ContextFragment', producing a 'ContextBuilder'.
 
- @since 1.0
+ @since 2.0
+-}
+named ::
+  forall (p :: Purpose).
+  ContextFragment p ->
+  Text ->
+  ContextBuilder p
+named cf name = ContextBuilder . Map.singleton name $ cf
+
+{- | Remove a part of a 'ContextBuilder' by name, if it exists.
+
+ @since 2.0
+-}
+deleteNamed ::
+  forall (p :: Purpose).
+  Text ->
+  ContextBuilder p ->
+  ContextBuilder p
+deleteNamed name (ContextBuilder cfs) = ContextBuilder . Map.delete name $ cfs
+
+{- | Single 'SideUTXO'-input context fragment.
+
+ @since 2.0
 -}
 input ::
   forall (p :: Purpose).
-  Text ->
   SideUTXO ->
-  ContextBuilder p
-input name x = mempty {cbInputs = Map.singleton name x}
+  ContextFragment p
+input x = mempty {cfInputs = pure x}
 
-{- | Single 'ValidatorUTXO'-input context.
+{- | Single 'ValidatorUTXO'-input context fragment.
 
  = Note
 
  This input won't be used as 'Spending' in the 'ScriptPurpose'
- of the builded 'ScriptContext'.
+ of any 'ScriptContext' built from the resulting fragment.
 
- @since 1.0
+ @since 2.0
 -}
 validatorInput ::
   forall (d :: Type) (r :: Type).
   (FromData d, ToData d, Show d) =>
   Text ->
   ValidatorUTXO d ->
-  ContextBuilder ( 'ForSpending d r)
+  ContextFragment ( 'ForSpending d r)
 validatorInput name x =
-  mempty {cbValidatorInputs = ValidatorUTXOs $ Map.singleton name x}
+  mempty {cfValidatorInputs = ValidatorUTXOs $ Map.singleton name x}
 
-{- | Single 'SideUTXO'-output context.
+{- | Single 'SideUTXO'-output context fragment.
 
- @since 1.0
+ @since 2.0
 -}
 output ::
   forall (p :: Purpose).
-  Text ->
   SideUTXO ->
-  ContextBuilder p
-output name x = mempty {cbOutputs = Map.singleton name x}
+  ContextFragment p
+output x = mempty {cfOutputs = pure x}
 
-{- | Single 'ValidatorUTXO'-output context.
+{- | Single 'ValidatorUTXO'-output context fragment.
 
- @since 1.0
+ @since 2.0
 -}
 validatorOutput ::
   forall (d :: Type) (r :: Type).
   (FromData d, ToData d, Show d) =>
   Text ->
   ValidatorUTXO d ->
-  ContextBuilder ( 'ForSpending d r)
+  ContextFragment ( 'ForSpending d r)
 validatorOutput name x =
-  mempty {cbValidatorOutputs = ValidatorUTXOs $ Map.singleton name x}
+  mempty {cfValidatorOutputs = ValidatorUTXOs $ Map.singleton name x}
 
-{- | Context with one signature.
+{- | Context fragment with one signature.
 
- @since 1.0
+ @since 2.0
 -}
 signedWith ::
   forall (p :: Purpose).
-  Text ->
   PubKeyHash ->
-  ContextBuilder p
-signedWith name x = mempty {cbSignatures = Map.singleton name . Set.singleton $ x}
+  ContextFragment p
+signedWith x = mempty {cfSignatures = pure x}
 
-{- | Context with one additional datum.
+{- | Context fragment with one additional datum.
 
- @since 1.0
+ @since 2.0
 -}
 datum ::
   forall (p :: Purpose).
-  Text ->
   BuiltinData ->
-  ContextBuilder p
-datum name x = mempty {cbDatums = Map.singleton name x}
+  ContextFragment p
+datum x = mempty {cfDatums = pure x}
 
 {- | Short for @'datum' '.' 'toBuiltinData'@.
 
- @since 1.0
+ @since 2.0
 -}
 addDatum ::
   forall (p :: Purpose) (a :: Type).
   (ToData a) =>
-  Text ->
   a ->
-  ContextBuilder p
-addDatum name = datum name . toBuiltinData
+  ContextFragment p
+addDatum = datum . toBuiltinData
 
-{- | Context with 'Minting' value using a minting policy other than the tested one.
+{- | Context fragment with 'Minting' value using a minting policy other than
+ the one being tested.
 
  = Note
 
- Do not use this for 'Value' being minted by the tested minting policy.
+ Do not use this for 'Value's being minted by the minting policy you want to test.
 
- Asset classes with 'CurrencySymbol' matching testCurrencySymbol in 'TransactionConfig'
- will be excluded from the resulting 'ScriptContext'.
+ Asset classes with 'CurrencySymbol's matching 'testCurrencySymbol' in
+ 'TransactionConfig' will be excluded from the resulting 'ScriptContext'.
 
- @since 1.0
+ @since 2.0
 -}
 minting ::
   forall (p :: Purpose).
-  Text ->
   Minting ->
-  ContextBuilder p
-minting name x = mempty {cbMinting = Map.singleton name x}
+  ContextFragment p
+minting x = mempty {cfMinting = pure x}
 
-{- | Context with an output at the given public key with the given 'Value'.
+{- | Context fragment with an output at the given public key with the given
+ 'Value'.
 
- @since 1.0
+ @since 2.0
 -}
 outToPubKey ::
   forall (p :: Purpose).
-  Text ->
   PubKeyHash ->
   Value ->
-  ContextBuilder p
-outToPubKey name pkh =
-  output name . SideUTXO (PubKeyUTXO pkh Nothing) . GeneralValue
+  ContextFragment p
+outToPubKey pkh =
+  output . SideUTXO (PubKeyUTXO pkh Nothing) . GeneralValue
 
 {- | As 'outToPubKey', but with attached datum.
 
- @since 1.0
+ @since 2.0
 -}
 outToPubKeyWithDatum ::
   forall (p :: Purpose) (a :: Type).
   (ToData a) =>
-  Text ->
   PubKeyHash ->
   Value ->
   a ->
-  ContextBuilder p
-outToPubKeyWithDatum name pkh val dt =
+  ContextFragment p
+outToPubKeyWithDatum pkh val dt =
   let valueType = GeneralValue val
       utxoType = PubKeyUTXO pkh (Just $ toBuiltinData dt)
-   in output name $ SideUTXO utxoType valueType
+   in output $ SideUTXO utxoType valueType
 
 {- | As 'outToPubKey', but using 'Tokens'. These 'Tokens' are controlled
  by the 'MintingPolicy' for which the context is built.
 
- @since 1.0
+ @since 2.0
 -}
 outTokensToPubKey ::
   forall (r :: Type).
-  Text ->
   PubKeyHash ->
   Tokens ->
-  ContextBuilder ( 'ForMinting r)
-outTokensToPubKey name pkh (Tokens tn pos) =
+  ContextFragment ( 'ForMinting r)
+outTokensToPubKey pkh (Tokens tn pos) =
   let valueType = TokensValue tn pos
       utxoType = PubKeyUTXO pkh Nothing
-   in output name $ SideUTXO utxoType valueType
+   in output $ SideUTXO utxoType valueType
 
 {- | As 'outTokensToPubKey', but with attached datum.
 
- @since 1.0
+ @since 2.0
 -}
 outTokensToPubKeyWithDatum ::
   forall (p :: Purpose) (a :: Type).
   (ToData a) =>
-  Text ->
   PubKeyHash ->
   Tokens ->
   a ->
-  ContextBuilder p
-outTokensToPubKeyWithDatum name pkh (Tokens tn pos) dt =
+  ContextFragment p
+outTokensToPubKeyWithDatum pkh (Tokens tn pos) dt =
   let valueType = TokensValue tn pos
       utxoType = PubKeyUTXO pkh (Just $ toBuiltinData dt)
-   in output name $ SideUTXO utxoType valueType
+   in output $ SideUTXO utxoType valueType
 
 {- | As 'outToPubKey', but using Lovelace.
 
- @since 1.0
+ @since 2.0
 -}
 outLovelaceToPubKey ::
   forall (p :: Purpose).
-  Text ->
   PubKeyHash ->
   Integer ->
-  ContextBuilder p
-outLovelaceToPubKey name pkh = outToPubKey name pkh . lovelaceValueOf
+  ContextFragment p
+outLovelaceToPubKey pkh = outToPubKey pkh . lovelaceValueOf
 
 {- | As 'outLovelaceToPubKey', but with attached datum.
 
- @since 1.0
+ @since 2.0
 -}
 outLovelaceToPubKeyWithDatum ::
   forall (p :: Purpose) (a :: Type).
   (ToData a) =>
-  Text ->
   PubKeyHash ->
   Integer ->
   a ->
-  ContextBuilder p
-outLovelaceToPubKeyWithDatum name pkh int dt =
-  outToPubKeyWithDatum name pkh (lovelaceValueOf int) (toBuiltinData dt)
+  ContextFragment p
+outLovelaceToPubKeyWithDatum pkh int dt =
+  outToPubKeyWithDatum pkh (lovelaceValueOf int) (toBuiltinData dt)
 
-{- | Context with an output to the script that is associated
+{- | Context fragment with an output to the script that is associated
  with the 'ScriptContext' being built.
 
- @since 1.0
+ @since 2.0
 -}
 outToValidator ::
   forall (d :: Type) (r :: Type).
@@ -348,92 +365,87 @@ outToValidator ::
   Text ->
   Value ->
   d ->
-  ContextBuilder ( 'ForSpending d r)
+  ContextFragment ( 'ForSpending d r)
 outToValidator name v dt = validatorOutput name (ValidatorUTXO dt v)
 
-{- | Сontext with an output to a script that is not associated
+{- | Сontext fragment with an output to a script that is /not/ associated
  with the 'ScriptContext' being built.
 
- @since 1.0
+ @since 2.0
 -}
 outToOtherScript ::
   forall (p :: Purpose) (a :: Type).
   (ToData a) =>
-  Text ->
   ValidatorHash ->
   Value ->
   a ->
-  ContextBuilder p
-outToOtherScript name hash val dt =
+  ContextFragment p
+outToOtherScript hash val dt =
   let valueType = GeneralValue val
       utxoType = ScriptUTXO hash (toBuiltinData dt)
-   in output name $ SideUTXO utxoType valueType
+   in output $ SideUTXO utxoType valueType
 
-{- | Сontext with an output to a script with the given 'Tokens' controlled
+{- | Сontext fragment with an output to a script with the given 'Tokens' controlled
  by the 'MintingPolicy' for which the 'ScriptContext' is built.
 
- @since 1.0
+ @since 2.0
 -}
 outTokensToOtherScript ::
   forall (a :: Type) (r :: Type).
   (ToData a) =>
-  Text ->
   ValidatorHash ->
   Tokens ->
   a ->
-  ContextBuilder ( 'ForMinting r)
-outTokensToOtherScript name hash (Tokens tn pos) dt =
+  ContextFragment ( 'ForMinting r)
+outTokensToOtherScript hash (Tokens tn pos) dt =
   let valueType = TokensValue tn pos
       utxoType = ScriptUTXO hash (toBuiltinData dt)
-   in output name $ SideUTXO utxoType valueType
+   in output $ SideUTXO utxoType valueType
 
-{- | Context with an input from given public key with the given 'Value'.
+{- | Context fragment with an input from given public key with the given 'Value'.
 
- @since 1.0
+ @since 2.0
 -}
 inFromPubKey ::
   forall (p :: Purpose).
-  Text ->
   PubKeyHash ->
   Value ->
-  ContextBuilder p
-inFromPubKey name pkh value =
+  ContextFragment p
+inFromPubKey pkh value =
   let valueType = GeneralValue value
       utxoType = PubKeyUTXO pkh Nothing
-   in input name $ SideUTXO utxoType valueType
+   in input $ SideUTXO utxoType valueType
 
 {- | As 'inFromPubKey', but with the given datum.
 
- @since 1.0
+ @since 2.0
 -}
 inFromPubKeyWithDatum ::
   forall (p :: Purpose) (a :: Type).
   (ToData a) =>
-  Text ->
   PubKeyHash ->
   Value ->
   a ->
-  ContextBuilder p
-inFromPubKeyWithDatum name pkh val dt =
+  ContextFragment p
+inFromPubKeyWithDatum pkh val dt =
   let valueType = GeneralValue val
       utxoType = PubKeyUTXO pkh (Just $ toBuiltinData dt)
-   in input name $ SideUTXO utxoType valueType
+   in input $ SideUTXO utxoType valueType
 
 {- | As 'inFromPubKey', but using 'Tokens'. These 'Tokens' are controlled
  by the 'MintingPolicy' for which the context is built.
 
- @since 1.0
+ @since 2.0
 -}
 inTokensFromPubKey ::
   forall (r :: Type).
-  Text ->
   PubKeyHash ->
   Tokens ->
-  ContextBuilder ( 'ForMinting r)
-inTokensFromPubKey name pkh (Tokens tn pos) =
+  ContextFragment ( 'ForMinting r)
+inTokensFromPubKey pkh (Tokens tn pos) =
   let valueType = TokensValue tn pos
       utxoType = PubKeyUTXO pkh Nothing
-   in input name $ SideUTXO utxoType valueType
+   in input $ SideUTXO utxoType valueType
 
 {- | As 'inFromPubKey', but with the given datum.
 
@@ -442,48 +454,45 @@ inTokensFromPubKey name pkh (Tokens tn pos) =
 inTokensFromPubKeyWithDatum ::
   forall (p :: Purpose) (a :: Type).
   (ToData a) =>
-  Text ->
   PubKeyHash ->
   Tokens ->
   a ->
-  ContextBuilder p
-inTokensFromPubKeyWithDatum name pkh (Tokens tn pos) dt =
+  ContextFragment p
+inTokensFromPubKeyWithDatum pkh (Tokens tn pos) dt =
   let valueType = TokensValue tn pos
       utxoType = PubKeyUTXO pkh (Just $ toBuiltinData dt)
-   in input name $ SideUTXO utxoType valueType
+   in input $ SideUTXO utxoType valueType
 
 {- | As 'inFromPubKey', but using Lovelace.
 
- @since 1.0
+ @since 2.0
 -}
 inLovelaceFromPubKey ::
   forall (p :: Purpose).
-  Text ->
   PubKeyHash ->
   Integer ->
-  ContextBuilder p
-inLovelaceFromPubKey name pkh = inFromPubKey name pkh . lovelaceValueOf
+  ContextFragment p
+inLovelaceFromPubKey pkh = inFromPubKey pkh . lovelaceValueOf
 
 {- | As 'inLovelaceFromPubKey', but with attached datum.
 
- @since 1.0
+ @since 2.0
 -}
 inLovelaceFromPubKeyWithDatum ::
   forall (p :: Purpose) (a :: Type).
   (ToData a) =>
-  Text ->
   PubKeyHash ->
   Integer ->
   a ->
-  ContextBuilder p
-inLovelaceFromPubKeyWithDatum name pkh int dt =
-  inFromPubKeyWithDatum name pkh (lovelaceValueOf int) (toBuiltinData dt)
+  ContextFragment p
+inLovelaceFromPubKeyWithDatum pkh int dt =
+  inFromPubKeyWithDatum pkh (lovelaceValueOf int) (toBuiltinData dt)
 
-{- | Context with an input from the script that is associated
+{- | Context fragment with an input from the script that is associated
  with the 'ScriptContext' being built. This input won`t be used
  as 'Spending' in the 'ScriptPurpose' of the 'ScriptContext'.
 
- @since 1.0
+ @since 2.0
 -}
 inFromValidator ::
   forall (d :: Type) (r :: Type).
@@ -491,56 +500,53 @@ inFromValidator ::
   Text ->
   Value ->
   d ->
-  ContextBuilder ( 'ForSpending d r)
+  ContextFragment ( 'ForSpending d r)
 inFromValidator name val dt = validatorInput name (ValidatorUTXO dt val)
 
-{- | Сontext with an input from a script that is not associated
+{- | Сontext fragment with an input from a script that is not associated
  with the 'ScriptContext' being built.
 
- @since 1.0
+ @since 2.0
 -}
 inFromOtherScript ::
   forall (p :: Purpose) (datum :: Type).
   (ToData datum) =>
-  Text ->
   ValidatorHash ->
   Value ->
   datum ->
-  ContextBuilder p
-inFromOtherScript name hash val dt =
+  ContextFragment p
+inFromOtherScript hash val dt =
   let valueType = GeneralValue val
       utxoType = ScriptUTXO hash (toBuiltinData dt)
-   in input name $ SideUTXO utxoType valueType
+   in input $ SideUTXO utxoType valueType
 
-{- | Сontext with an input to a script with the given 'Tokens' controlled
+{- | Сontext fragment with an input to a script with the given 'Tokens' controlled
  by the 'MintingPolicy' for which the 'ScriptContext' is built.
 
- @since 1.0
+ @since 2.0
 -}
 inTokensFromOtherScript ::
   forall (datum :: Type) (r :: Type).
   (ToData datum) =>
-  Text ->
   ValidatorHash ->
   Tokens ->
   datum ->
-  ContextBuilder ( 'ForMinting r)
-inTokensFromOtherScript name hash (Tokens tn pos) dt =
+  ContextFragment ( 'ForMinting r)
+inTokensFromOtherScript hash (Tokens tn pos) dt =
   let valueType = TokensValue tn pos
       utxoType = ScriptUTXO hash (toBuiltinData dt)
-   in input name $ SideUTXO utxoType valueType
+   in input $ SideUTXO utxoType valueType
 
-{- | Context with a minted 'Value'. The value is minted with a 'MintingPolicy'
+{- | Context fragment with a minted 'Value'. The value is minted with a 'MintingPolicy'
  that is not associated with the 'ScriptContext' being built.
 
  @since 1.0
 -}
 mintedValue ::
   forall (p :: Purpose).
-  Text ->
   Value ->
-  ContextBuilder p
-mintedValue name = minting name . Mint
+  ContextFragment p
+mintedValue = minting . Mint
 
 {- | Create 'PubKeyHash' from 'Wallet'.
 
