@@ -4,6 +4,15 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 9.0 -- 2022-03-10
+
+### Changed
+
+* Support for named and anonymous `ContextBuilder`s, in line with changes in
+  `plutus-context-builder`. These changes are technically breaking, but
+  shouldn't have issues in themselves, as long as the `ContextBuilder`s are
+  updated.
+
 ## 8.0 - 2022-02-08
 
 ### Changed

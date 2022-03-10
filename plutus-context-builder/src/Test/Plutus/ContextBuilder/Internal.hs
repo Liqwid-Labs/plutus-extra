@@ -10,6 +10,7 @@ module Test.Plutus.ContextBuilder.Internal (
   ValidatorUTXOs (..),
   TestUTXO (..),
   Minting (..),
+  Naming (..),
   ContextBuilder (..),
   ContextFragment (..),
 
@@ -293,39 +294,66 @@ data Minting
       Show
     )
 
-{- | A way to incrementally build up a script context.
-
- It is tagged with a 'Purpose' as a marker for what kind of 'ScriptPurpose'
- will be used in the constructed 'ScriptContext'.
-
- You can use the 'Semigroup' instance of this type to build up larger
- contexts. For example:
-
- > let cb = paysToWallet "userWalletOut" aWallet someValue <>
- >          signedWith "userSignature" aHash <>
- >          tagged "specialTag" aUniqueTag
+{- | Indicates whether a 'ContextBuilder' has named components or not.
 
  @since 2.0
 -}
-newtype ContextBuilder (p :: Purpose)
-  = ContextBuilder (Map Text (ContextFragment p))
-  deriving
-    ( -- | @since 2.0
-      Monoid
-    )
-    via (Map Text (ContextFragment p))
+data Naming = Anonymous | Named
   deriving stock
     ( -- | @since 2.0
+      Eq
+    , -- | @since 2.0
       Show
     )
 
--- | @since 2.0
-instance Semigroup (ContextBuilder p) where
-  {-# INLINEABLE (<>) #-}
-  ContextBuilder cfs <> ContextBuilder cfs' =
-    ContextBuilder . Map.unionWith (<>) cfs $ cfs'
+{- | A way to incrementally build up a 'ScriptContext'.
 
-{- | A single piece of script context, with the ability to be named.
+ This has two \'tags\':
+
+ * A 'Purpose' to indicate what kind of 'ScriptPurpose' will be used in the
+ resulting 'ScriptContext'; and
+ * a 'Naming' to indicate whether named fragments are in use or not.
+
+ You can use the 'Semigroup' instance of this type to build up larger
+ contexts.
+
+ @since 2.0
+-}
+data ContextBuilder (p :: Purpose) (n :: Naming) where
+  NoNames :: ContextFragment p -> ContextBuilder p 'Anonymous
+  WithNames :: Map Text (ContextFragment p) -> ContextBuilder p 'Named
+
+-- | @since 2.0
+deriving stock instance Show (ContextBuilder p n)
+
+{- | Anonymous 'ContextBuilder's preserve all the informations of each \'half\'
+ when '<>'d. Named 'ContextBuilder's instead combine all the named fragments
+ in each \'half\'.
+
+ = Important note
+
+ When combining named 'ContextBuilder's, if both \'halves\' have a fragment
+ associated to a specific name, the fragment in the /second/ argument will
+ overwrite the first.
+
+ @since 2.0
+-}
+instance Semigroup (ContextBuilder p n) where
+  {-# INLINEABLE (<>) #-}
+  NoNames cf <> NoNames cf' = NoNames $ cf <> cf'
+  WithNames cfs <> WithNames cfs' = WithNames $ cfs <> cfs'
+
+-- | @since 2.0
+instance Monoid (ContextBuilder p 'Anonymous) where
+  {-# INLINEABLE mempty #-}
+  mempty = NoNames mempty
+
+-- | @since 2.0
+instance Monoid (ContextBuilder p 'Named) where
+  {-# INLINEABLE mempty #-}
+  mempty = WithNames mempty
+
+{- | Optionally-nameable piece of script context.
 
  @since 2.0
 -}
@@ -355,7 +383,14 @@ instance Semigroup (ContextFragment p) where
   {-# INLINEABLE (<>) #-}
   ContextFragment ins outs sigs ds ms vins vouts
     <> ContextFragment ins' outs' sigs' ds' ms' vins' vouts' =
-      ContextFragment (ins <> ins') (outs <> outs') (sigs <> sigs') (ds <> ds') (ms <> ms') (vins <> vins') (vouts <> vouts')
+      ContextFragment
+        (ins <> ins')
+        (outs <> outs')
+        (sigs <> sigs')
+        (ds <> ds')
+        (ms <> ms')
+        (vins <> vins')
+        (vouts <> vouts')
 
 -- | @since 2.0
 instance Monoid (ContextFragment p) where
@@ -368,9 +403,9 @@ transaction config 'defTransactionConfig'.
  @since 2.0
 -}
 spendingScriptContextDef ::
-  forall (datum :: Type) (redeemer :: Type).
+  forall (datum :: Type) (redeemer :: Type) (n :: Naming).
   (ToData datum) =>
-  ContextBuilder ( 'ForSpending datum redeemer) ->
+  ContextBuilder ( 'ForSpending datum redeemer) n ->
   TestUTXO datum ->
   ScriptContext
 spendingScriptContextDef = spendingScriptContext defTransactionConfig
@@ -380,10 +415,10 @@ spendingScriptContextDef = spendingScriptContext defTransactionConfig
  @since 2.0
 -}
 spendingScriptContext ::
-  forall (datum :: Type) (redeemer :: Type).
+  forall (datum :: Type) (redeemer :: Type) (n :: Naming).
   (ToData datum) =>
   TransactionConfig ->
-  ContextBuilder ( 'ForSpending datum redeemer) ->
+  ContextBuilder ( 'ForSpending datum redeemer) n ->
   TestUTXO datum ->
   ScriptContext
 spendingScriptContext conf cb (TestUTXO d v) =
@@ -411,8 +446,8 @@ transaction config 'defTransactionConfig'.
  @since 1.0
 -}
 mintingScriptContextDef ::
-  forall (r :: Type).
-  ContextBuilder ( 'ForMinting r) ->
+  forall (r :: Type) (n :: Naming).
+  ContextBuilder ( 'ForMinting r) n ->
   NonEmpty MintingPolicyTask ->
   ScriptContext
 mintingScriptContextDef = mintingScriptContext defTransactionConfig
@@ -422,9 +457,9 @@ mintingScriptContextDef = mintingScriptContext defTransactionConfig
  @since 1.0
 -}
 mintingScriptContext ::
-  forall (r :: Type).
+  forall (r :: Type) (n :: Naming).
   TransactionConfig ->
-  ContextBuilder ( 'ForMinting r) ->
+  ContextBuilder ( 'ForMinting r) n ->
   NonEmpty MintingPolicyTask ->
   ScriptContext
 mintingScriptContext conf cb toks =
@@ -498,41 +533,64 @@ makeIncompleteContexts ctxs = map (first sconcat) ctxs2
 -- Helpers
 
 baseTxInfo ::
-  forall (p :: Purpose).
+  forall (p :: Purpose) (n :: Naming).
   TransactionConfig ->
-  ContextBuilder p ->
+  ContextBuilder p n ->
   TxInfo
-baseTxInfo conf (ContextBuilder cfs) =
-  let value = foldMap (foldMap toUsefulValue . cfMinting) cfs
-      insList = toList . foldMap (Seq.filter go . cfInputs) $ cfs
-      outsList = toList . foldMap (Seq.filter go . cfOutputs) $ cfs
-      vins = foldMap cfValidatorInputs cfs
-      vouts = foldMap cfValidatorOutputs cfs
-      pkhs = toList . foldMap cfSignatures $ cfs
-      dats = toList . foldMap (fmap datumWithHash . cfDatums) $ cfs
-   in TxInfo
-        { txInfoInputs = createTxInInfos conf insList vins
-        , txInfoOutputs = createTxOuts conf outsList vouts
-        , txInfoFee = testFee conf
-        , txInfoMint = value
-        , txInfoDCert = []
-        , txInfoWdrl = []
-        , txInfoValidRange = testTimeRange conf
-        , txInfoSignatories = pkhs
-        , txInfoData =
-            validatorUtxosToDatum vins
-              <> mapMaybe sideUtxoToDatum insList
-              <> mapMaybe sideUtxoToDatum outsList
-              <> dats
-        , txInfoId = TxId "testTx"
-        }
+baseTxInfo conf = \case
+  NoNames cf -> go cf
+  WithNames cfs -> case Map.minView cfs of
+    Nothing -> starterTxInfo
+    Just (cf, rest) -> Map.foldl' combineTxi (go cf) rest
   where
+    go :: ContextFragment p -> TxInfo
+    go cf =
+      let value = foldMap toUsefulValue . cfMinting $ cf
+          insList = toList . Seq.filter (checkSideUtxoAddress conf) . cfInputs $ cf
+          outsList = toList . Seq.filter (checkSideUtxoAddress conf) . cfOutputs $ cf
+          vins = cfValidatorInputs cf
+          vouts = cfValidatorOutputs cf
+          pkhs = toList . cfSignatures $ cf
+          dats = toList . fmap datumWithHash . cfDatums $ cf
+       in starterTxInfo
+            { txInfoMint = value
+            , txInfoInputs = createTxInInfos conf insList vins
+            , txInfoOutputs = createTxOuts conf outsList vouts
+            , txInfoSignatories = pkhs
+            , txInfoData =
+                validatorUtxosToDatum vins
+                  <> mapMaybe sideUtxoToDatum insList
+                  <> mapMaybe sideUtxoToDatum outsList
+                  <> dats
+            }
+    combineTxi :: TxInfo -> ContextFragment p -> TxInfo
+    combineTxi txi cf =
+      let txi' = go cf
+       in starterTxInfo
+            { txInfoMint = txInfoMint txi <> txInfoMint txi'
+            , txInfoInputs = txInfoInputs txi <> txInfoInputs txi'
+            , txInfoOutputs = txInfoOutputs txi <> txInfoOutputs txi'
+            , txInfoSignatories = txInfoSignatories txi <> txInfoSignatories txi'
+            , txInfoData = txInfoData txi <> txInfoData txi'
+            }
     toUsefulValue :: Minting -> Value
     toUsefulValue (Mint val) = filterValue filterCS val
     filterCS :: CurrencySymbol -> TokenName -> Integer -> Bool
     filterCS cs _ _ = cs /= testCurrencySymbol conf
-    go :: SideUTXO -> Bool
-    go = checkSideUtxoAddress conf
+    starterTxInfo :: TxInfo
+    starterTxInfo =
+      TxInfo
+        { txInfoInputs = []
+        , txInfoOutputs = []
+        , txInfoFee = testFee conf
+        , txInfoMint = mempty
+        , txInfoDCert = []
+        , txInfoWdrl = []
+        , txInfoValidRange = testTimeRange conf
+        , txInfoSignatories = []
+        , txInfoData = []
+        , txInfoId = TxId "testTx"
+        }
 
 checkSideUtxoAddress :: TransactionConfig -> SideUTXO -> Bool
 checkSideUtxoAddress conf (SideUTXO typ _) =

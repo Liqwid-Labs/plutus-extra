@@ -50,6 +50,7 @@ import Plutus.V1.Ledger.Scripts (
  )
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
+  Naming,
   Purpose (ForMinting, ForSpending),
   TransactionConfig,
  )
@@ -120,14 +121,14 @@ import Type.Reflection (Typeable)
 {- | Specify that, given this test data and context, the validation should
  succeed.
 
- @since 3.0
+ @since 9.0
 -}
 shouldValidate ::
-  forall (p :: Purpose).
-  (Typeable p) =>
+  forall (p :: Purpose) (n :: Naming).
+  (Typeable p, Typeable n) =>
   String ->
   TestData p ->
-  ContextBuilder p ->
+  ContextBuilder p n ->
   WithScript p ()
 shouldValidate = addUnitTest Pass Nothing
 
@@ -137,28 +138,28 @@ shouldValidate = addUnitTest Pass Nothing
  * The validation should succeed; and
  * The trace that results should satisfy the predicate.
 
- @since 3.3
+ @since 9.0
 -}
 shouldValidateTracing ::
-  forall (p :: Purpose).
-  (Typeable p) =>
+  forall (p :: Purpose) (n :: Naming).
+  (Typeable p, Typeable n) =>
   String ->
   (Vector Text -> Bool) ->
   TestData p ->
-  ContextBuilder p ->
+  ContextBuilder p n ->
   WithScript p ()
 shouldValidateTracing name f = addUnitTest Pass (Just f) name
 
 {- | Specify that, given this test data and context, the validation should fail.
 
- @since 3.0
+ @since 9.0
 -}
 shouldn'tValidate ::
-  forall (p :: Purpose).
-  (Typeable p) =>
+  forall (p :: Purpose) (n :: Naming).
+  (Typeable p, Typeable n) =>
   String ->
   TestData p ->
-  ContextBuilder p ->
+  ContextBuilder p n ->
   WithScript p ()
 shouldn'tValidate = addUnitTest Fail Nothing
 
@@ -168,28 +169,28 @@ shouldn'tValidate = addUnitTest Fail Nothing
  * The validation should fail; and
  * The resulting trace should satisfy the predicate.
 
- @since 3.3
+ @since 9.0
 -}
 shouldn'tValidateTracing ::
-  forall (p :: Purpose).
-  (Typeable p) =>
+  forall (p :: Purpose) (n :: Naming).
+  (Typeable p, Typeable n) =>
   String ->
   (Vector Text -> Bool) ->
   TestData p ->
-  ContextBuilder p ->
+  ContextBuilder p n ->
   WithScript p ()
 shouldn'tValidateTracing name f = addUnitTest Fail (Just f) name
 
 -- Helpers
 
 addUnitTest ::
-  forall (p :: Purpose).
-  (Typeable p) =>
+  forall (p :: Purpose) (n :: Naming).
+  (Typeable p, Typeable n) =>
   Outcome ->
   Maybe (Vector Text -> Bool) ->
   String ->
   TestData p ->
-  ContextBuilder p ->
+  ContextBuilder p n ->
   WithScript p ()
 addUnitTest out trace name td cb = case td of
   SpendingTest {} -> WithSpending $ do
@@ -199,53 +200,53 @@ addUnitTest out trace name td cb = case td of
     tt <- asks (singleTest name . Minter out trace td cb)
     tell . Seq.singleton $ tt
 
-data ScriptTest (p :: Purpose) where
+data ScriptTest (p :: Purpose) (n :: Naming) where
   Spender ::
-    forall (d :: Type) (r :: Type).
+    forall (d :: Type) (r :: Type) (n :: Naming).
     Outcome ->
     Maybe (Vector Text -> Bool) ->
     TestData ( 'ForSpending d r) ->
-    ContextBuilder ( 'ForSpending d r) ->
+    ContextBuilder ( 'ForSpending d r) n ->
     TestScript ( 'ForSpending d r) ->
-    ScriptTest ( 'ForSpending d r)
+    ScriptTest ( 'ForSpending d r) n
   Minter ::
-    forall (r :: Type).
+    forall (r :: Type) (n :: Naming).
     Outcome ->
     Maybe (Vector Text -> Bool) ->
     TestData ( 'ForMinting r) ->
-    ContextBuilder ( 'ForMinting r) ->
+    ContextBuilder ( 'ForMinting r) n ->
     TestScript ( 'ForMinting r) ->
-    ScriptTest ( 'ForMinting r)
+    ScriptTest ( 'ForMinting r) n
 
-data UnitEnv (p :: Purpose) = UnitEnv
+data UnitEnv (p :: Purpose) (n :: Naming) = UnitEnv
   { envOpts :: OptionSet
-  , envScriptTest :: ScriptTest p
+  , envScriptTest :: ScriptTest p n
   }
 
 getShouldChat ::
-  forall (p :: Purpose).
-  UnitEnv p ->
+  forall (p :: Purpose) (n :: Naming).
+  UnitEnv p n ->
   PlutusTracing
 getShouldChat = lookupOption . envOpts
 
 getConf ::
-  forall (p :: Purpose).
-  UnitEnv p ->
+  forall (p :: Purpose) (n :: Naming).
+  UnitEnv p n ->
   TransactionConfig
 getConf = prepareConf envOpts
 
 getCB ::
-  forall (p :: Purpose).
-  UnitEnv p ->
-  ContextBuilder p
+  forall (p :: Purpose) (n :: Naming).
+  UnitEnv p n ->
+  ContextBuilder p n
 getCB =
   envScriptTest >>> \case
     Spender _ _ _ cb _ -> cb
     Minter _ _ _ cb _ -> cb
 
 getTestData ::
-  forall (p :: Purpose).
-  UnitEnv p ->
+  forall (p :: Purpose) (n :: Naming).
+  UnitEnv p n ->
   TestData p
 getTestData =
   envScriptTest >>> \case
@@ -253,8 +254,8 @@ getTestData =
     Minter _ _ td _ _ -> td
 
 getScript ::
-  forall (p :: Purpose).
-  UnitEnv p ->
+  forall (p :: Purpose) (n :: Naming).
+  UnitEnv p n ->
   SomeScript p
 getScript =
   envScriptTest >>> \case
@@ -262,8 +263,8 @@ getScript =
     Minter _ _ _ _ mp -> SomeMinter . getTestMintingPolicy $ mp
 
 getMPred ::
-  forall (p :: Purpose).
-  UnitEnv p ->
+  forall (p :: Purpose) (n :: Naming).
+  UnitEnv p n ->
   Maybe (Vector Text -> Bool)
 getMPred =
   envScriptTest >>> \case
@@ -271,8 +272,8 @@ getMPred =
     Minter _ mPred _ _ _ -> mPred
 
 getExpected ::
-  forall (p :: Purpose).
-  UnitEnv p ->
+  forall (p :: Purpose) (n :: Naming).
+  UnitEnv p n ->
   Outcome
 getExpected =
   envScriptTest >>> \case
@@ -280,24 +281,24 @@ getExpected =
     Minter expected _ _ _ _ -> expected
 
 getSC ::
-  forall (p :: Purpose).
-  UnitEnv p ->
+  forall (p :: Purpose) (n :: Naming).
+  UnitEnv p n ->
   ScriptContext
 getSC = getScriptContext getConf getCB getTestData
 
 getDumpedState ::
-  forall (p :: Purpose).
+  forall (p :: Purpose) (n :: Naming).
   [Text] ->
-  UnitEnv p ->
+  UnitEnv p n ->
   Doc
 getDumpedState = dumpState getConf getCB getTestData
 
-instance (Typeable p) => IsTest (ScriptTest p) where
+instance (Typeable p, Typeable n) => IsTest (ScriptTest p n) where
   run opts vt _ = pure $ case result of
     Left err -> runReader (handleError err) env
     Right (logs, sr) -> runReader (deliverResult logs sr) env
     where
-      env :: UnitEnv p
+      env :: UnitEnv p n
       env =
         UnitEnv
           { envOpts = opts
@@ -317,9 +318,9 @@ instance (Typeable p) => IsTest (ScriptTest p) where
       ]
 
 handleError ::
-  forall (p :: Purpose).
+  forall (p :: Purpose) (n :: Naming).
   ScriptError ->
-  Reader (UnitEnv p) Result
+  Reader (UnitEnv p n) Result
 handleError = \case
   EvaluationError logs msg ->
     asks getExpected >>= \case
@@ -329,10 +330,10 @@ handleError = \case
   MalformedScript msg -> pure . testFailed $ malformedScript msg
 
 deliverResult ::
-  forall (p :: Purpose).
+  forall (p :: Purpose) (n :: Naming).
   [Text] ->
   ScriptResult ->
-  Reader (UnitEnv p) Result
+  Reader (UnitEnv p n) Result
 deliverResult logs result = do
   expected <- asks getExpected
   case (expected, result) of
@@ -344,10 +345,14 @@ deliverResult logs result = do
     (_, InternalError t) -> asks (testFailed . internalError state t)
     (_, ParseFailed t) -> asks (testFailed . noParse state t)
   where
-    state :: UnitEnv p -> Doc
+    state :: UnitEnv p n -> Doc
     state = getDumpedState logs
 
-tryPass :: Maybe (Vector Text -> Bool) -> [Text] -> Reader (UnitEnv p) Result
+tryPass ::
+  forall (p :: Purpose) (n :: Naming).
+  Maybe (Vector Text -> Bool) ->
+  [Text] ->
+  Reader (UnitEnv p n) Result
 tryPass mPred logs = case mPred of
   Nothing -> asks (testPassed . doPass getShouldChat logs)
   Just f ->

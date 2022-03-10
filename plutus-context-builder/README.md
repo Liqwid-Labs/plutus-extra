@@ -2,45 +2,78 @@
 
 ## What is this?
 
-A utility library for creating `ScriptContext` with `Spending` or `Minting` `ScriptPurpose`. This provides a builder abstraction for assembling ScriptContext, for use in `tasty-plutus`, or somewhere else.
+A utility library for creating `ScriptContext`s with `Spending` or `Minting` 
+`ScriptPurpose`. We provide a builder abstraction for assembling 
+`ScriptContext`s; we use this library in `tasty-plutus`, but provide this 
+functionality for use in other places as well.
 
 ## What can this do?
 
-To create `ScriptContext`, you can use functions like `outToPubKey`, `inFromValidator`, `mintedValue` etc. These functions create named `ContextBuilder` parts, that describe various parts of the transaction from a script point of view.
+We currently support the following:
 
-Once you have a `ContextBuilder`, you can
-* modify parts of it by accessing them by name 
-* build `ScriptContext` using `spendingScriptContext` and `mintingScriptContext` functions
+* Incremental construction of `ScriptContext`s, using a range of helper
+  functionality.
+* The ability to name, and modify, arbitrary sub-contexts if you wish.
+* Low-level 'hooks' allowing definition of precise `ScriptContext` behaviour if
+  required.
+* Construction of `ScriptContext`s for both minting and spending.
 
-## What does 'script point of view' mean?
+## How do I use this?
 
-`ScriptContext` is always passed to one specific _script_ (_validator_ or _mintingpolicy_) for one specific _check_.
+To create a `ScriptContext`, use functions such as `outToPubKey`,
+`inFromValidator`, `mintedValue`, and so on. These functions create anonymous
+`ContextBuilder` parts, which describe various parts of the transaction from a
+script point of view. If you wish, you can use `named` to name anonymous
+`ContextBuilder`s, which can then be combined with other named
+`ContextBuilder`s. We provide a monoidal API for both anonymous and named
+`ContextBuilder`s to assist in this.
 
-Thus any transaction input can be classified as:
-1. input from the _validator_ address, validated in the _check_
-2. input from the _validator_ address, not validated in the _check_
-3. input from the address of any other script
-4. input from the address of a wallet
+Once you have a finished `ContextBuilder`, you can use it to build a
+`ScriptContext` using either `spendingScriptContext` or `mintingScriptContext`.
 
-The same with a transaction output. It can be classified as:
-1. output to the _validator_ address
-2. output to the address of any other script
-3. output to the address of a wallet
+### What does 'script point of view' mean?
 
-Let's look at this classification in a little more detail.
+A `ScriptContext` is always passed to one specific _script_ (which can be a
+_validator_ or a _minting policy_ in our case), for one specific _check_. 
 
-Inputs `3` and `4`, as well as outputs `2` and `3` correspond to `SideUTXO`.
-They can be represented by functions like `...ToPubKey...`, `...FromPubKey...`, `...ToOtherScript...`, `...FromOtherScript...`.
+For a validator, any transaction input can be classified as:
 
-Inputs `2` and outputs `1` correspond to `ValidatorUTXO` and can be represented by functions `inFromValidator` and `outFromValidator`.
+1. Input from the validator address, which is validated in the check;
+1. Input from the validator address, which is **not** validated in the
+   check;
+1. Input from the address of any other script;
+1. Input from the address of a wallet.
 
-Input `1` corresponds to `TestUTXO`. It is not a part of the `ContextBuilder`. You have to provide a `TestUTXO` directly to one of the consumer functions (`spendingScriptContext` or `spendingScriptContextDef`).
-__Note__ `TestUTXO` doesn't make sense in `ScriptContext` with `Minting` purpose.
+We can do the same with its transaction outputs:
 
-If you create a `Minting` context for the _mintingpolicy_, you must also classify inputs and outputs as:
-1. Which only contain tokens controlled by the _mintingpolicy_.
-   Those inputs and outputs have to be represented by functions like `...Tokens...`.
-2. Which don't contain tokens controlled by the _mintingpolicy_.
-   Those inputs and outputs have to be represented by functions without `...Tokens...`.
-3. Which contain tokes controlled as well as not controlled by the _mintingpolicy_.
-   Those inputs and outputs have to be represented as a combination of `1` and `2`
+1. Output to the validator address;
+1. Output to the address of any other script;
+1. Output to the address of a wallet.
+
+Let's examine this classification, and its implications for the library, in more
+detail. Inputs of type 3 and 4, as well as outputs of type 2 and 3, correspond
+to the `SideUTXO` data type, and can be constructed by using `ToPubKey`,
+`FromPubKey`, `ToOtherScript` and `FromOtherScript`, as well as helpers
+operating on these. Inputs of type 2, as well as outputs of type 1, correspond
+to the `ValidatorUTXO` data type, and can be built using the helpers
+`inFromValidator` and `outFromValidator. Lastly, inputs of type 1 correspond to
+the `TestUTXO` data type. Unlike the others, this is not part of the
+`ContextBuilder` abstraction, and needs to be provided directly to one of the
+functions that _consume_ a `ContextBuilder` (namely, `spendingScriptContext`).
+
+For minting policies, we can also classify inputs and outputs in a similar
+way:
+
+1. Those which only contain tokens controlled by the minting policy;
+1. Those which only contain tokens _not_ controlled by the minting policy;
+1. Those which contain both.
+
+Type 1 inputs and outputs are represented with helper functions using the
+`Tokens` type. Type 2 inputs and outputs are represented with helper functions
+_not_ using the `Tokens` type. Type 3 inputs and outputs require use of both.
+Note that `TestUTXO` does not make sense for a `ScriptContext` designed for a
+minting policy.
+
+## What can I do with this?
+
+The code is licensed under Apache 2.0; check the LICENSE.md for details.

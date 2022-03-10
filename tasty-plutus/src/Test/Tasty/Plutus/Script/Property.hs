@@ -54,6 +54,7 @@ import Plutus.V1.Ledger.Contexts (ScriptContext)
 import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError, EvaluationException, MalformedScript))
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
+  Naming,
   Purpose (ForMinting, ForSpending),
   TransactionConfig,
  )
@@ -165,15 +166,15 @@ and a function to create 'TestItems' from the seed, check that:
  the provided way produces roughly equal numbers of 'Pass' and
  'Fail'-classified cases.
 
- @since 5.0
+ @since 9.0
 -}
 scriptProperty ::
-  forall (a :: Type) (p :: Purpose).
-  (Typeable a, Typeable p) =>
+  forall (a :: Type) (p :: Purpose) (n :: Naming).
+  (Typeable a, Typeable p, Typeable n) =>
   -- | Property name
   String ->
   -- | Data generator
-  Generator a p ->
+  Generator a p n ->
   WithScript p ()
 scriptProperty = mkScriptPropertyWith OutcomeDependent
 
@@ -184,15 +185,15 @@ and a function to create 'TestItems' from the seed, check that:
 
  This test ignores the 'Outcome' from 'TestItems' and changes it to 'Fail'
 
- @since 5.0
+ @since 9.0
 -}
 scriptPropertyFail ::
-  forall (a :: Type) (p :: Purpose).
-  (Typeable a, Typeable p) =>
+  forall (a :: Type) (p :: Purpose) (n :: Naming).
+  (Typeable a, Typeable p, Typeable n) =>
   -- | Property name
   String ->
   -- | Data generator
-  Generator a p ->
+  Generator a p n ->
   WithScript p ()
 scriptPropertyFail = mkScriptPropertyWith OutcomeAlwaysFail
 
@@ -203,15 +204,15 @@ and a function to create 'TestItems' from the seed, check that:
 
  This test ignores the 'Outcome' from 'TestItems' and changes it to 'Pass'
 
- @since 5.0
+ @since 9.0
 -}
 scriptPropertyPass ::
-  forall (a :: Type) (p :: Purpose).
-  (Typeable a, Typeable p) =>
+  forall (a :: Type) (p :: Purpose) (n :: Naming).
+  (Typeable a, Typeable p, Typeable n) =>
   -- | Property name
   String ->
   -- | Data generator
-  Generator a p ->
+  Generator a p n ->
   WithScript p ()
 scriptPropertyPass = mkScriptPropertyWith OutcomeAlwaysPass
 
@@ -226,17 +227,17 @@ scriptPropertyPass = mkScriptPropertyWith OutcomeAlwaysPass
  the provided way produces roughly equal numbers of 'Pass' and
  'Fail'-classified cases.
 
- @since 6.0
+ @since 9.0
 -}
 paramScriptProperty ::
-  forall (a :: Type) (p :: Purpose).
-  (Show a, Typeable a, Typeable p) =>
+  forall (a :: Type) (p :: Purpose) (n :: Naming).
+  (Show a, Typeable a, Typeable p, Typeable n) =>
   -- | Property name
   String ->
   -- | The way to create 'TestScript' from the seed
   (a -> TestScript p) ->
   -- | Data generator
-  Generator a p ->
+  Generator a p n ->
   TestTree
 paramScriptProperty = mkParamScriptPropertyWith OutcomeDependent
 
@@ -248,17 +249,17 @@ paramScriptProperty = mkParamScriptPropertyWith OutcomeDependent
 
  This test ignores the 'Outcome' from 'TestItems' and changes it to 'Pass'
 
- @since 6.0
+ @since 9.0
 -}
 paramScriptPropertyPass ::
-  forall (a :: Type) (p :: Purpose).
-  (Show a, Typeable a, Typeable p) =>
+  forall (a :: Type) (p :: Purpose) (n :: Naming).
+  (Show a, Typeable a, Typeable p, Typeable n) =>
   -- | Property name
   String ->
   -- | The way to create 'TestScript' from the seed
   (a -> TestScript p) ->
   -- | Data generator
-  Generator a p ->
+  Generator a p n ->
   TestTree
 paramScriptPropertyPass = mkParamScriptPropertyWith OutcomeAlwaysPass
 
@@ -270,30 +271,30 @@ paramScriptPropertyPass = mkParamScriptPropertyWith OutcomeAlwaysPass
 
  This test ignores the 'Outcome' from 'TestItems' and changes it to 'Fail'
 
- @since 6.0
+ @since 9.0
 -}
 paramScriptPropertyFail ::
-  forall (a :: Type) (p :: Purpose).
-  (Show a, Typeable a, Typeable p) =>
+  forall (a :: Type) (p :: Purpose) (n :: Naming).
+  (Show a, Typeable a, Typeable p, Typeable n) =>
   -- | Property name
   String ->
   -- | The way to create 'TestScript' from the seed
   (a -> TestScript p) ->
   -- | Data generator
-  Generator a p ->
+  Generator a p n ->
   TestTree
 paramScriptPropertyFail = mkParamScriptPropertyWith OutcomeAlwaysFail
 
 -- Helpers
 
 mkScriptPropertyWith ::
-  forall (a :: Type) (p :: Purpose).
-  (Typeable a, Typeable p) =>
+  forall (a :: Type) (p :: Purpose) (n :: Naming).
+  (Typeable a, Typeable p, Typeable n) =>
   OutcomeKind ->
   -- | Property name
   String ->
   -- | Data generator
-  Generator a p ->
+  Generator a p n ->
   WithScript p ()
 mkScriptPropertyWith outKind name generator = case generator of
   GenForSpending (Methodology gen shrinker) fTi ->
@@ -312,12 +313,12 @@ mkScriptPropertyWith outKind name generator = case generator of
         $ Minter gen shrinker (const mp) fTi outKind
 
 mkParamScriptPropertyWith ::
-  forall (a :: Type) (p :: Purpose).
-  (Show a, Typeable a, Typeable p) =>
+  forall (a :: Type) (p :: Purpose) (n :: Naming).
+  (Show a, Typeable a, Typeable p, Typeable n) =>
   OutcomeKind ->
   String ->
   (a -> TestScript p) ->
-  Generator a p ->
+  Generator a p n ->
   TestTree
 mkParamScriptPropertyWith outKind name fScr generator =
   case generator of
@@ -328,25 +329,25 @@ mkParamScriptPropertyWith outKind name fScr generator =
       singleTest name $
         Minter gen shr fScr fTi outKind
 
-data PropertyTest (a :: Type) (p :: Purpose) where
+data PropertyTest (a :: Type) (p :: Purpose) (n :: Naming) where
   Spender ::
-    forall (a :: Type) (d :: Type) (r :: Type).
+    forall (a :: Type) (d :: Type) (r :: Type) (n :: Naming).
     Typeable a =>
     Gen a ->
     (a -> [a]) ->
     (a -> TestScript ( 'ForSpending d r)) ->
-    (a -> TestItems ( 'ForSpending d r)) ->
+    (a -> TestItems ( 'ForSpending d r) n) ->
     OutcomeKind ->
-    PropertyTest a ( 'ForSpending d r)
+    PropertyTest a ( 'ForSpending d r) n
   Minter ::
-    forall (a :: Type) (r :: Type).
+    forall (a :: Type) (r :: Type) (n :: Naming).
     Typeable a =>
     Gen a ->
     (a -> [a]) ->
     (a -> TestScript ( 'ForMinting r)) ->
-    (a -> TestItems ( 'ForMinting r)) ->
+    (a -> TestItems ( 'ForMinting r) n) ->
     OutcomeKind ->
-    PropertyTest a ( 'ForMinting r)
+    PropertyTest a ( 'ForMinting r) n
 
 data OutcomeKind
   = OutcomeAlwaysFail
@@ -365,34 +366,34 @@ adjustCoverage OutcomeAlwaysPass _ = id
 adjustCoverage OutcomeDependent outcome =
   checkCoverage . cover 45.0 (outcome == Pass) "Successful validation"
 
-data PropertyEnv (p :: Purpose) = PropertyEnv
+data PropertyEnv (p :: Purpose) (n :: Naming) = PropertyEnv
   { envOpts :: OptionSet
   , envScript :: SomeScript p
   , envTestData :: TestData p
-  , envContextBuilder :: ContextBuilder p
+  , envContextBuilder :: ContextBuilder p n
   , envOutcome :: Outcome
   }
 
 getConf ::
-  forall (p :: Purpose).
-  PropertyEnv p ->
+  forall (p :: Purpose) (n :: Naming).
+  PropertyEnv p n ->
   TransactionConfig
 getConf = prepareConf envOpts
 
 getSC ::
-  forall (p :: Purpose).
-  PropertyEnv p ->
+  forall (p :: Purpose) (n :: Naming).
+  PropertyEnv p n ->
   ScriptContext
 getSC = getScriptContext getConf envContextBuilder envTestData
 
 getDumpedState ::
-  forall (p :: Purpose).
+  forall (p :: Purpose) (n :: Naming).
   [Text] ->
-  PropertyEnv p ->
+  PropertyEnv p n ->
   Doc
 getDumpedState = dumpState' getConf envContextBuilder envTestData
 
-instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
+instance (Show a, Typeable a, Typeable p, Typeable n) => IsTest (PropertyTest a p n) where
   run opts vt _ = do
     let PropertyTestCount testCount' = lookupOption opts
     let PropertyMaxSize maxSize' = lookupOption opts
@@ -425,10 +426,10 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
       ]
 
 spenderProperty ::
-  forall (a :: Type) (d :: Type) (r :: Type).
+  forall (a :: Type) (d :: Type) (r :: Type) (n :: Naming).
   OptionSet ->
   (a -> TestScript ( 'ForSpending d r)) ->
-  (a -> TestItems ( 'ForSpending d r)) ->
+  (a -> TestItems ( 'ForSpending d r) n) ->
   OutcomeKind ->
   a ->
   Property
@@ -457,9 +458,9 @@ spenderProperty opts fVal fTi outKind seed = case fTi seed of
             $ getScriptResult envScript envTestData (getContext getSC) env
 
 prettySpender ::
-  forall (a :: Type) (d :: Type) (r :: Type).
+  forall (a :: Type) (d :: Type) (r :: Type) (n :: Naming).
   (Show a) =>
-  (a -> TestItems ( 'ForSpending d r)) ->
+  (a -> TestItems ( 'ForSpending d r) n) ->
   OutcomeKind ->
   a ->
   String
@@ -491,10 +492,10 @@ prettySpender f outKind seed = case f seed of
               $+$ hang "Inputs" 4 dumpInputs
 
 minterProperty ::
-  forall (a :: Type) (r :: Type).
+  forall (a :: Type) (r :: Type) (n :: Naming).
   OptionSet ->
   (a -> TestScript ( 'ForMinting r)) ->
-  (a -> TestItems ( 'ForMinting r)) ->
+  (a -> TestItems ( 'ForMinting r) n) ->
   OutcomeKind ->
   a ->
   Property
@@ -522,9 +523,9 @@ minterProperty opts fMp fTi outKind seed = case fTi seed of
             $ getScriptResult envScript envTestData (getContext getSC) env
 
 prettyMinter ::
-  forall (a :: Type) (r :: Type).
+  forall (a :: Type) (r :: Type) (n :: Naming).
   (Show a) =>
-  (a -> TestItems ( 'ForMinting r)) ->
+  (a -> TestItems ( 'ForMinting r) n) ->
   OutcomeKind ->
   a ->
   String
@@ -556,8 +557,9 @@ counter :: String -> Property
 counter s = counterexample s False
 
 produceResult ::
+  forall (p :: Purpose) (n :: Naming).
   Either ScriptError ([Text], ScriptResult) ->
-  Reader (PropertyEnv p) Property
+  Reader (PropertyEnv p n) Property
 produceResult sr = do
   outcome <- asks envOutcome
   case sr of
@@ -577,8 +579,8 @@ produceResult sr = do
       (_, InternalError t) -> asks (counter . internalError state t)
       (_, ParseFailed t) -> asks (counter . noParse state t)
       where
-        state :: PropertyEnv p -> Doc
+        state :: PropertyEnv p n -> Doc
         state = getDumpedState logs
   where
-    pass :: Reader (PropertyEnv p) Property
+    pass :: Reader (PropertyEnv p n) Property
     pass = pure $ property True

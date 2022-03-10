@@ -28,7 +28,8 @@ module Test.Plutus.ContextBuilder (
   TestUTXO (..),
   ValidatorUTXOs (..),
   Minting (..),
-  ContextBuilder (..),
+  Naming (..),
+  ContextBuilder,
   ContextFragment (..),
 
   -- ** Minting
@@ -37,12 +38,6 @@ module Test.Plutus.ContextBuilder (
   Tokens (..),
 
   -- * Functions
-
-  -- ** Build context
-  spendingScriptContext,
-  mintingScriptContext,
-  spendingScriptContextDef,
-  mintingScriptContextDef,
 
   -- ** Basic construction
   input,
@@ -57,6 +52,8 @@ module Test.Plutus.ContextBuilder (
   -- ** Naming
   named,
   deleteNamed,
+  alterNamed,
+  unionNamed,
 
   -- ** Output
   outToPubKey,
@@ -85,6 +82,16 @@ module Test.Plutus.ContextBuilder (
   burnTokens,
   mintTokens,
 
+  -- ** Direct
+  liftContextFragment,
+  liftNamedContextFragment,
+
+  -- ** Build finished context
+  spendingScriptContext,
+  mintingScriptContext,
+  spendingScriptContextDef,
+  mintingScriptContextDef,
+
   -- ** Utilities
   defTransactionConfig,
   makeIncompleteContexts,
@@ -102,7 +109,7 @@ import Plutus.V1.Ledger.Value (Value)
 import PlutusTx.Builtins (BuiltinData)
 import PlutusTx.IsData.Class (FromData, ToData (toBuiltinData))
 import Test.Plutus.ContextBuilder.Internal (
-  ContextBuilder (ContextBuilder),
+  ContextBuilder (NoNames, WithNames),
   ContextFragment (
     ContextFragment,
     cfDatums,
@@ -115,6 +122,7 @@ import Test.Plutus.ContextBuilder.Internal (
   ),
   InputPosition (Head, Tail),
   Minting (Mint),
+  Naming (Anonymous, Named),
   Purpose (ForMinting, ForSpending),
   SideUTXO (SideUTXO, sUtxoType, sUtxoValue),
   TestUTXO (TestUTXO, tUtxoDatum, tUtxoValue),
@@ -147,67 +155,46 @@ import Test.Plutus.ContextBuilder.Minting (
  )
 import Wallet.Emulator.Types (Wallet, mockWalletPaymentPubKeyHash)
 
-{- | Name a 'ContextFragment', producing a 'ContextBuilder'.
-
- @since 2.0
--}
-named ::
-  forall (p :: Purpose).
-  ContextFragment p ->
-  Text ->
-  ContextBuilder p
-named cf name = ContextBuilder . Map.singleton name $ cf
-
-{- | Remove a part of a 'ContextBuilder' by name, if it exists.
-
- @since 2.0
--}
-deleteNamed ::
-  forall (p :: Purpose).
-  Text ->
-  ContextBuilder p ->
-  ContextBuilder p
-deleteNamed name (ContextBuilder cfs) = ContextBuilder . Map.delete name $ cfs
-
-{- | Single 'SideUTXO'-input context fragment.
+{- | Anonymous context from a single 'SideUTXO' input.
 
  @since 2.0
 -}
 input ::
   forall (p :: Purpose).
   SideUTXO ->
-  ContextFragment p
-input x = mempty {cfInputs = pure x}
+  ContextBuilder p 'Anonymous
+input x = NoNames $ mempty {cfInputs = pure x}
 
-{- | Single 'ValidatorUTXO'-input context fragment.
+{- | Anonymous context from a single 'ValidatorUTXO' input.
 
  = Note
 
- This input won't be used as 'Spending' in the 'ScriptPurpose'
- of any 'ScriptContext' built from the resulting fragment.
+ This input won't be used for spending in any 'ScriptPurpose' of any
+ 'ScriptContext' built from this.
 
  @since 2.0
 -}
 validatorInput ::
   forall (d :: Type) (r :: Type).
   (FromData d, ToData d, Show d) =>
+  -- | Name of the input
   Text ->
   ValidatorUTXO d ->
-  ContextFragment ( 'ForSpending d r)
+  ContextBuilder ( 'ForSpending d r) 'Anonymous
 validatorInput name x =
-  mempty {cfValidatorInputs = ValidatorUTXOs $ Map.singleton name x}
+  NoNames $ mempty {cfValidatorInputs = ValidatorUTXOs $ Map.singleton name x}
 
-{- | Single 'SideUTXO'-output context fragment.
+{- | Anonymous context from a single 'SideUTXO' output.
 
  @since 2.0
 -}
 output ::
   forall (p :: Purpose).
   SideUTXO ->
-  ContextFragment p
-output x = mempty {cfOutputs = pure x}
+  ContextBuilder p 'Anonymous
+output x = NoNames $ mempty {cfOutputs = pure x}
 
-{- | Single 'ValidatorUTXO'-output context fragment.
+{- | Anonymous context from a single 'ValidatorUTXO' output.
 
  @since 2.0
 -}
@@ -216,29 +203,29 @@ validatorOutput ::
   (FromData d, ToData d, Show d) =>
   Text ->
   ValidatorUTXO d ->
-  ContextFragment ( 'ForSpending d r)
+  ContextBuilder ( 'ForSpending d r) 'Anonymous
 validatorOutput name x =
-  mempty {cfValidatorOutputs = ValidatorUTXOs $ Map.singleton name x}
+  NoNames $ mempty {cfValidatorOutputs = ValidatorUTXOs $ Map.singleton name x}
 
-{- | Context fragment with one signature.
+{- | Anonymous context signed with one signature.
 
  @since 2.0
 -}
 signedWith ::
   forall (p :: Purpose).
   PubKeyHash ->
-  ContextFragment p
-signedWith x = mempty {cfSignatures = pure x}
+  ContextBuilder p 'Anonymous
+signedWith x = NoNames $ mempty {cfSignatures = pure x}
 
-{- | Context fragment with one additional datum.
+{- | Anonymous context with one additional datum.
 
  @since 2.0
 -}
 datum ::
   forall (p :: Purpose).
   BuiltinData ->
-  ContextFragment p
-datum x = mempty {cfDatums = pure x}
+  ContextBuilder p 'Anonymous
+datum x = NoNames $ mempty {cfDatums = pure x}
 
 {- | Short for @'datum' '.' 'toBuiltinData'@.
 
@@ -248,28 +235,108 @@ addDatum ::
   forall (p :: Purpose) (a :: Type).
   (ToData a) =>
   a ->
-  ContextFragment p
+  ContextBuilder p 'Anonymous
 addDatum = datum . toBuiltinData
 
-{- | Context fragment with 'Minting' value using a minting policy other than
+{- | Anonymous context with a 'Minting' value, using a minting policy other than
  the one being tested.
 
  = Note
 
- Do not use this for 'Value's being minted by the minting policy you want to test.
-
- Asset classes with 'CurrencySymbol's matching 'testCurrencySymbol' in
- 'TransactionConfig' will be excluded from the resulting 'ScriptContext'.
+ Do not use this for 'Value's being minted by the minting policy you want to
+ test with the 'ScriptContext' this would produce. Asset classes with
+ 'CurrencySymbol's matching 'testCurrencySymbol' in the 'TransactionConfig'
+ provided when building the 'ScriptContext' will be excluded.
 
  @since 2.0
 -}
 minting ::
   forall (p :: Purpose).
   Minting ->
-  ContextFragment p
-minting x = mempty {cfMinting = pure x}
+  ContextBuilder p 'Anonymous
+minting x = NoNames $ mempty {cfMinting = pure x}
 
-{- | Context fragment with an output at the given public key with the given
+{- | Name an arbitrary sub-context. The argument order is designed for infix
+ use:
+
+ > subContext :: ContextBuilder p 'Named
+ > subContext = (signedWith myPubKeyHash) `named` "usingMyPK"
+
+ @since 2.0
+-}
+named ::
+  forall (p :: Purpose).
+  ContextBuilder p 'Anonymous ->
+  Text ->
+  ContextBuilder p 'Named
+named (NoNames cf) name = WithNames . Map.singleton name $ cf
+
+{- | Remove a sub-context by name. Does nothing if there is no sub-context by
+ that name.
+
+ @since 2.0
+-}
+deleteNamed ::
+  forall (p :: Purpose).
+  Text ->
+  ContextBuilder p 'Named ->
+  ContextBuilder p 'Named
+deleteNamed name (WithNames cfs) = WithNames . Map.delete name $ cfs
+
+{- | Update, add or modify a sub-context given a name. This is a very general
+ operation, which can be used to implement almost any modification of a
+ sub-context by name.
+
+ @since 2.0
+-}
+alterNamed ::
+  forall (p :: Purpose).
+  -- | The input to this function will be 'Nothing' if no sub-context exists by
+  -- the given name, and 'Just' if one does. If this function returns 'Nothing',
+  -- any sub-context by the given name will be removed; if it returns 'Just', it
+  -- will be set to whatever that is.
+  (Maybe (ContextFragment p) -> Maybe (ContextFragment p)) ->
+  Text ->
+  ContextBuilder p 'Named ->
+  ContextBuilder p 'Named
+alterNamed f name (WithNames cfs) = WithNames . Map.alter f name $ cfs
+
+{- | A more precise combination operation for named 'ContextBuilder's, allowing
+ specifying what to do if both \'halves\' share named sub-contexts. This is
+ unlike '<>', which always discards the first: see the documentation for the
+ 'Semigroup' instance for 'ContextBuilder' for details.
+
+ @since 2.0
+-}
+unionNamed ::
+  forall (p :: Purpose).
+  -- | This function will be used to combine 'ContextFragment's labelled with
+  -- the same name in both \'halves\' to produce the final result. The first
+  -- argument is the 'ContextFragment' from the \'left\' 'ContextBuilder', the
+  -- second is from the \'right\'.
+  (ContextFragment p -> ContextFragment p -> ContextFragment p) ->
+  ContextBuilder p 'Named ->
+  ContextBuilder p 'Named ->
+  ContextBuilder p 'Named
+unionNamed f (WithNames cfs) (WithNames cfs') =
+  WithNames . Map.unionWith f cfs $ cfs'
+
+{- | As 'outToPubKey', but using 'Tokens'. These 'Tokens' are controlled by the
+ 'MintingPolicy' for which the context is built.
+
+ @since 2.0
+-}
+outTokensToPubKey ::
+  forall (r :: Type).
+  PubKeyHash ->
+  Tokens ->
+  ContextBuilder ( 'ForMinting r) 'Anonymous
+outTokensToPubKey pkh (Tokens tn pos) =
+  let valueType = TokensValue tn pos
+      utxoType = PubKeyUTXO pkh Nothing
+   in output $ SideUTXO utxoType valueType
+
+{- | Anonymous context with an output at the given public key, with the given
  'Value'.
 
  @since 2.0
@@ -278,11 +345,11 @@ outToPubKey ::
   forall (p :: Purpose).
   PubKeyHash ->
   Value ->
-  ContextFragment p
+  ContextBuilder p 'Anonymous
 outToPubKey pkh =
   output . SideUTXO (PubKeyUTXO pkh Nothing) . GeneralValue
 
-{- | As 'outToPubKey', but with attached datum.
+{- | As 'outToPubKey', but with an attached datum.
 
  @since 2.0
 -}
@@ -292,28 +359,13 @@ outToPubKeyWithDatum ::
   PubKeyHash ->
   Value ->
   a ->
-  ContextFragment p
+  ContextBuilder p 'Anonymous
 outToPubKeyWithDatum pkh val dt =
   let valueType = GeneralValue val
       utxoType = PubKeyUTXO pkh (Just $ toBuiltinData dt)
    in output $ SideUTXO utxoType valueType
 
-{- | As 'outToPubKey', but using 'Tokens'. These 'Tokens' are controlled
- by the 'MintingPolicy' for which the context is built.
-
- @since 2.0
--}
-outTokensToPubKey ::
-  forall (r :: Type).
-  PubKeyHash ->
-  Tokens ->
-  ContextFragment ( 'ForMinting r)
-outTokensToPubKey pkh (Tokens tn pos) =
-  let valueType = TokensValue tn pos
-      utxoType = PubKeyUTXO pkh Nothing
-   in output $ SideUTXO utxoType valueType
-
-{- | As 'outTokensToPubKey', but with attached datum.
+{- | As 'outTokensToPubKey', but with an attached datum.
 
  @since 2.0
 -}
@@ -323,7 +375,7 @@ outTokensToPubKeyWithDatum ::
   PubKeyHash ->
   Tokens ->
   a ->
-  ContextFragment p
+  ContextBuilder p 'Anonymous
 outTokensToPubKeyWithDatum pkh (Tokens tn pos) dt =
   let valueType = TokensValue tn pos
       utxoType = PubKeyUTXO pkh (Just $ toBuiltinData dt)
@@ -337,10 +389,10 @@ outLovelaceToPubKey ::
   forall (p :: Purpose).
   PubKeyHash ->
   Integer ->
-  ContextFragment p
+  ContextBuilder p 'Anonymous
 outLovelaceToPubKey pkh = outToPubKey pkh . lovelaceValueOf
 
-{- | As 'outLovelaceToPubKey', but with attached datum.
+{- | As 'outLovelaceToPubKey', but with an attached datum.
 
  @since 2.0
 -}
@@ -350,12 +402,12 @@ outLovelaceToPubKeyWithDatum ::
   PubKeyHash ->
   Integer ->
   a ->
-  ContextFragment p
+  ContextBuilder p 'Anonymous
 outLovelaceToPubKeyWithDatum pkh int dt =
   outToPubKeyWithDatum pkh (lovelaceValueOf int) (toBuiltinData dt)
 
-{- | Context fragment with an output to the script that is associated
- with the 'ScriptContext' being built.
+{- | Anonymous context with an output to the script that is associated with the
+ 'ScriptContext' being built.
 
  @since 2.0
 -}
@@ -365,11 +417,11 @@ outToValidator ::
   Text ->
   Value ->
   d ->
-  ContextFragment ( 'ForSpending d r)
+  ContextBuilder ( 'ForSpending d r) 'Anonymous
 outToValidator name v dt = validatorOutput name (ValidatorUTXO dt v)
 
-{- | Сontext fragment with an output to a script that is /not/ associated
- with the 'ScriptContext' being built.
+{- | Anonymous context with an output to a script that is /not/ associated with
+ the 'ScriptContext' being built.
 
  @since 2.0
 -}
@@ -379,14 +431,14 @@ outToOtherScript ::
   ValidatorHash ->
   Value ->
   a ->
-  ContextFragment p
+  ContextBuilder p 'Anonymous
 outToOtherScript hash val dt =
   let valueType = GeneralValue val
       utxoType = ScriptUTXO hash (toBuiltinData dt)
    in output $ SideUTXO utxoType valueType
 
-{- | Сontext fragment with an output to a script with the given 'Tokens' controlled
- by the 'MintingPolicy' for which the 'ScriptContext' is built.
+{- | Anonymous context with an output to a script with the given 'Tokens',
+ controlled by the 'MintingPolicy' for which the 'ScriptContext' is built.
 
  @since 2.0
 -}
@@ -396,13 +448,14 @@ outTokensToOtherScript ::
   ValidatorHash ->
   Tokens ->
   a ->
-  ContextFragment ( 'ForMinting r)
+  ContextBuilder ( 'ForMinting r) 'Anonymous
 outTokensToOtherScript hash (Tokens tn pos) dt =
   let valueType = TokensValue tn pos
       utxoType = ScriptUTXO hash (toBuiltinData dt)
    in output $ SideUTXO utxoType valueType
 
-{- | Context fragment with an input from given public key with the given 'Value'.
+{- | Anonymous context with an input from the given public key, with the given
+ 'Value'.
 
  @since 2.0
 -}
@@ -410,7 +463,7 @@ inFromPubKey ::
   forall (p :: Purpose).
   PubKeyHash ->
   Value ->
-  ContextFragment p
+  ContextBuilder p 'Anonymous
 inFromPubKey pkh value =
   let valueType = GeneralValue value
       utxoType = PubKeyUTXO pkh Nothing
@@ -426,14 +479,14 @@ inFromPubKeyWithDatum ::
   PubKeyHash ->
   Value ->
   a ->
-  ContextFragment p
+  ContextBuilder p 'Anonymous
 inFromPubKeyWithDatum pkh val dt =
   let valueType = GeneralValue val
       utxoType = PubKeyUTXO pkh (Just $ toBuiltinData dt)
    in input $ SideUTXO utxoType valueType
 
-{- | As 'inFromPubKey', but using 'Tokens'. These 'Tokens' are controlled
- by the 'MintingPolicy' for which the context is built.
+{- | As 'inFromPubKey', but using 'Tokens'. These 'Tokens' are controlled by the
+ 'MintingPolicy' for which the context is built.
 
  @since 2.0
 -}
@@ -441,15 +494,15 @@ inTokensFromPubKey ::
   forall (r :: Type).
   PubKeyHash ->
   Tokens ->
-  ContextFragment ( 'ForMinting r)
+  ContextBuilder ( 'ForMinting r) 'Anonymous
 inTokensFromPubKey pkh (Tokens tn pos) =
   let valueType = TokensValue tn pos
       utxoType = PubKeyUTXO pkh Nothing
    in input $ SideUTXO utxoType valueType
 
-{- | As 'inFromPubKey', but with the given datum.
+{- | As 'inTokensFromPubKey', but with the given datum.
 
- @since 1.0
+ @since 2.0
 -}
 inTokensFromPubKeyWithDatum ::
   forall (p :: Purpose) (a :: Type).
@@ -457,7 +510,7 @@ inTokensFromPubKeyWithDatum ::
   PubKeyHash ->
   Tokens ->
   a ->
-  ContextFragment p
+  ContextBuilder p 'Anonymous
 inTokensFromPubKeyWithDatum pkh (Tokens tn pos) dt =
   let valueType = TokensValue tn pos
       utxoType = PubKeyUTXO pkh (Just $ toBuiltinData dt)
@@ -471,10 +524,10 @@ inLovelaceFromPubKey ::
   forall (p :: Purpose).
   PubKeyHash ->
   Integer ->
-  ContextFragment p
+  ContextBuilder p 'Anonymous
 inLovelaceFromPubKey pkh = inFromPubKey pkh . lovelaceValueOf
 
-{- | As 'inLovelaceFromPubKey', but with attached datum.
+{- | As 'inLovelaceFromPubKey', but with an attached datum.
 
  @since 2.0
 -}
@@ -484,13 +537,13 @@ inLovelaceFromPubKeyWithDatum ::
   PubKeyHash ->
   Integer ->
   a ->
-  ContextFragment p
+  ContextBuilder p 'Anonymous
 inLovelaceFromPubKeyWithDatum pkh int dt =
   inFromPubKeyWithDatum pkh (lovelaceValueOf int) (toBuiltinData dt)
 
-{- | Context fragment with an input from the script that is associated
- with the 'ScriptContext' being built. This input won`t be used
- as 'Spending' in the 'ScriptPurpose' of the 'ScriptContext'.
+{- | Anonymous context with an input from the script associated with the
+ 'ScriptContext' being built. This input won't be used in the spending part of
+ the 'ScriptPurpose' in the resulting 'ScriptContext'.
 
  @since 2.0
 -}
@@ -500,11 +553,11 @@ inFromValidator ::
   Text ->
   Value ->
   d ->
-  ContextFragment ( 'ForSpending d r)
+  ContextBuilder ( 'ForSpending d r) 'Anonymous
 inFromValidator name val dt = validatorInput name (ValidatorUTXO dt val)
 
-{- | Сontext fragment with an input from a script that is not associated
- with the 'ScriptContext' being built.
+{- | Anonymous context with an input from a script /not/ associated with the
+ 'ScriptContext' being built.
 
  @since 2.0
 -}
@@ -514,14 +567,15 @@ inFromOtherScript ::
   ValidatorHash ->
   Value ->
   datum ->
-  ContextFragment p
+  ContextBuilder p 'Anonymous
 inFromOtherScript hash val dt =
   let valueType = GeneralValue val
       utxoType = ScriptUTXO hash (toBuiltinData dt)
    in input $ SideUTXO utxoType valueType
 
-{- | Сontext fragment with an input to a script with the given 'Tokens' controlled
- by the 'MintingPolicy' for which the 'ScriptContext' is built.
+{- | Anonymous context with an input to a script with the given 'Tokens',
+ controlled by the 'MintingPolicy' for which the 'ScriptContext' is being
+ built.
 
  @since 2.0
 -}
@@ -531,24 +585,57 @@ inTokensFromOtherScript ::
   ValidatorHash ->
   Tokens ->
   datum ->
-  ContextFragment ( 'ForMinting r)
+  ContextBuilder ( 'ForMinting r) 'Anonymous
 inTokensFromOtherScript hash (Tokens tn pos) dt =
   let valueType = TokensValue tn pos
       utxoType = ScriptUTXO hash (toBuiltinData dt)
    in input $ SideUTXO utxoType valueType
 
-{- | Context fragment with a minted 'Value'. The value is minted with a 'MintingPolicy'
- that is not associated with the 'ScriptContext' being built.
+{- | Anonymous context with a minted 'Value'. This 'Value' is minted with a
+ 'MintingPolicy' that is /not/ associated with the 'ScriptContext' being
+ built.
 
- @since 1.0
+ @since 2.0
 -}
 mintedValue ::
   forall (p :: Purpose).
   Value ->
-  ContextFragment p
+  ContextBuilder p 'Anonymous
 mintedValue = minting . Mint
 
-{- | Create 'PubKeyHash' from 'Wallet'.
+{- | Turns an arbitrary 'ContextFragment' into an anonymous 'ContextBuilder'.
+
+ = Note
+
+ This is a low-level operation designed for maximum control. If possible, use
+ the other, higher-level, operations in this module instead.
+
+ @since 2.0
+-}
+liftContextFragment ::
+  forall (p :: Purpose).
+  ContextFragment p ->
+  ContextBuilder p 'Anonymous
+liftContextFragment = NoNames
+
+{- | Turns an arbitrary 'ContextFragment' into a named 'ContextBuilder',
+ labelling with the given name.
+
+ = Note
+
+ This is a low-level operation designed for maximum control. If possible, use
+ the other, higher-level, operations in this module instead.
+
+ @since 2.0
+-}
+liftNamedContextFragment ::
+  forall (p :: Purpose).
+  Text ->
+  ContextFragment p ->
+  ContextBuilder p 'Named
+liftNamedContextFragment name cf = NoNames cf `named` name
+
+{- | Create a 'PubKeyHash' from a 'Wallet'.
 
  @since 1.0
 -}

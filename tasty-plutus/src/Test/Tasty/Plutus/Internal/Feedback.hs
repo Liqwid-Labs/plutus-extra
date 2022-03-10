@@ -19,7 +19,7 @@ import Plutus.V1.Ledger.Api (
   ScriptContext,
  )
 import Plutus.V1.Pretty (scriptContextToValue)
-import Test.Plutus.ContextBuilder (ContextBuilder, Purpose, TransactionConfig)
+import Test.Plutus.ContextBuilder (ContextBuilder, Naming, Purpose, TransactionConfig)
 import Test.Tasty.Plutus.Internal.Env (getScriptContext)
 import Test.Tasty.Plutus.Options (
   PlutusTracing (Always, OnlyOnFail),
@@ -133,9 +133,9 @@ didn'tLog getDumpedState env =
       $+$ getDumpedState env
 
 dumpState ::
-  forall (a :: Type) (p :: Purpose).
+  forall (a :: Type) (p :: Purpose) (n :: Naming).
   (a -> TransactionConfig) ->
-  (a -> ContextBuilder p) ->
+  (a -> ContextBuilder p n) ->
   (a -> TestData p) ->
   [Text] ->
   a ->
@@ -165,9 +165,9 @@ dumpState getConf getCb getTd logs env =
           $+$ ppDoc v
 
 dumpState' ::
-  forall (a :: Type) (p :: Purpose).
+  forall (a :: Type) (p :: Purpose) (n :: Naming).
   (a -> TransactionConfig) ->
-  (a -> ContextBuilder p) ->
+  (a -> ContextBuilder p n) ->
   (a -> TestData p) ->
   [Text] ->
   a ->

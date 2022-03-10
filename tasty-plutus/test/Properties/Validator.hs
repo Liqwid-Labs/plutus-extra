@@ -12,6 +12,7 @@ import Ledger.Crypto (PubKeyHash)
 import Plutus.V1.Ledger.Value (Value)
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
+  Naming (Anonymous),
   Purpose (ForSpending),
   outToPubKey,
  )
@@ -90,7 +91,7 @@ genForSimple = Methodology gen' genericShrink
 -- | Creates TestItems with an arbitrary sum used in Redeemer
 transformForSimple1 ::
   (Integer, Integer, Integer, Integer, Value) ->
-  TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer))
+  TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer)) 'Anonymous
 transformForSimple1 (i1, i2, iSum, _, val) =
   ItemsForSpending
     { spendDatum = (i1, i2)
@@ -100,15 +101,15 @@ transformForSimple1 (i1, i2, iSum, _, val) =
     , spendOutcome = out
     }
   where
-    cb :: ContextBuilder ( 'ForSpending (Integer, Integer) (Integer, Integer))
-    cb = outToPubKey "outToUser" userPKHash val
+    cb :: ContextBuilder ( 'ForSpending (Integer, Integer) (Integer, Integer)) 'Anonymous
+    cb = outToPubKey userPKHash val
     out :: Outcome
     out = if iSum == i1 + i2 then Pass else Fail
 
 -- | Creates TestItems with an arbitrary product used in Redeemer
 transformForSimple2 ::
   (Integer, Integer, Integer, Integer, Value) ->
-  TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer))
+  TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer)) 'Anonymous
 transformForSimple2 (i1, i2, _, iProd, val) =
   ItemsForSpending
     { spendDatum = (i1, i2)
@@ -118,15 +119,15 @@ transformForSimple2 (i1, i2, _, iProd, val) =
     , spendOutcome = out
     }
   where
-    cb :: ContextBuilder ( 'ForSpending (Integer, Integer) (Integer, Integer))
-    cb = outToPubKey "outToUser" userPKHash val
+    cb :: ContextBuilder ( 'ForSpending (Integer, Integer) (Integer, Integer)) 'Anonymous
+    cb = outToPubKey userPKHash val
     out :: Outcome
     out = passIf $ iProd == i1 * i2
 
 -- | Always creates TestItems with correct sum and product
 transformForSimple3 ::
   (Integer, Integer, Integer, Integer, Value) ->
-  TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer))
+  TestItems ( 'ForSpending (Integer, Integer) (Integer, Integer)) 'Anonymous
 transformForSimple3 (i1, i2, _, _, val) =
   ItemsForSpending
     { spendDatum = (i1, i2)
@@ -136,8 +137,8 @@ transformForSimple3 (i1, i2, _, _, val) =
     , spendOutcome = out
     }
   where
-    cb :: ContextBuilder ( 'ForSpending (Integer, Integer) (Integer, Integer))
-    cb = outToPubKey "outToUser" userPKHash val
+    cb :: ContextBuilder ( 'ForSpending (Integer, Integer) (Integer, Integer)) 'Anonymous
+    cb = outToPubKey userPKHash val
     out :: Outcome
     out = Pass
 
@@ -181,7 +182,7 @@ genForParam = Methodology gen genericShrink
 -- | Creates TestItems with an arbitrary sum used in Redeemer
 transformForParam ::
   (Integer, Integer, Value) ->
-  TestItems ( 'ForSpending () Integer)
+  TestItems ( 'ForSpending () Integer) 'Anonymous
 transformForParam (secret, guess, val) =
   ItemsForSpending
     { spendDatum = ()
@@ -191,8 +192,8 @@ transformForParam (secret, guess, val) =
     , spendOutcome = out
     }
   where
-    cb :: ContextBuilder ( 'ForSpending () Integer)
-    cb = outToPubKey "outToUser" userPKHash val
+    cb :: ContextBuilder ( 'ForSpending () Integer) 'Anonymous
+    cb = outToPubKey userPKHash val
     out :: Outcome
     out = if secret == guess then Pass else Fail
 
