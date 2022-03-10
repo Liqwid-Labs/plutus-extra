@@ -25,6 +25,7 @@ module Test.Plutus.ContextBuilder.Internal (
 
 import Control.Arrow ((***))
 import Data.Bifunctor (first)
+import Data.Foldable (fold)
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
@@ -326,7 +327,7 @@ data ContextBuilder (p :: Purpose) (n :: Naming) where
 -- | @since 2.0
 deriving stock instance Show (ContextBuilder p n)
 
-{- | Anonymous 'ContextBuilder's preserve all the informations of each \'half\'
+{- | Anonymous 'ContextBuilder's preserve all the information of each \'half\'
  when '<>'d. Named 'ContextBuilder's instead combine all the named fragments
  in each \'half\'.
 
@@ -539,9 +540,7 @@ baseTxInfo ::
   TxInfo
 baseTxInfo conf = \case
   NoNames cf -> go cf
-  WithNames cfs -> case Map.minView cfs of
-    Nothing -> starterTxInfo
-    Just (cf, rest) -> Map.foldl' combineTxi (go cf) rest
+  WithNames cfs -> go . fold $ cfs
   where
     go :: ContextFragment p -> TxInfo
     go cf =
@@ -562,16 +561,6 @@ baseTxInfo conf = \case
                   <> mapMaybe sideUtxoToDatum insList
                   <> mapMaybe sideUtxoToDatum outsList
                   <> dats
-            }
-    combineTxi :: TxInfo -> ContextFragment p -> TxInfo
-    combineTxi txi cf =
-      let txi' = go cf
-       in starterTxInfo
-            { txInfoMint = txInfoMint txi <> txInfoMint txi'
-            , txInfoInputs = txInfoInputs txi <> txInfoInputs txi'
-            , txInfoOutputs = txInfoOutputs txi <> txInfoOutputs txi'
-            , txInfoSignatories = txInfoSignatories txi <> txInfoSignatories txi'
-            , txInfoData = txInfoData txi <> txInfoData txi'
             }
     toUsefulValue :: Minting -> Value
     toUsefulValue (Mint val) = filterValue filterCS val
