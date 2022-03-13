@@ -50,8 +50,14 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
+import Plutus.V1.Ledger.Api (ExBudget (ExBudget), ExCPU (ExCPU), ExMemory (ExMemory))
 import Plutus.V1.Ledger.Contexts (ScriptContext)
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError, EvaluationException, MalformedScript))
+import Plutus.V1.Ledger.Scripts (
+  ScriptError (EvaluationError, EvaluationException, MalformedScript),
+  evaluateScript,
+  getMintingPolicy,
+  getValidator,
+ )
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
@@ -66,6 +72,7 @@ import Test.QuickCheck (
   counterexample,
   cover,
   forAllShrinkShow,
+  generate,
   property,
   quickCheckWithResult,
   stdArgs,
@@ -81,11 +88,13 @@ import Test.Tasty.Plutus.Internal.Env (
  )
 import Test.Tasty.Plutus.Internal.Feedback (
   dumpState',
+  errorNoEstimate,
   internalError,
   malformedScript,
   noOutcome,
   noParse,
   ourStyle,
+  reportBudgets,
   scriptException,
   unexpectedFailure,
   unexpectedSuccess,
@@ -113,6 +122,7 @@ import Test.Tasty.Plutus.Internal.WithScript (
  )
 import Test.Tasty.Plutus.Options (
   Fee,
+  PlutusEstimate (EstimateOnly, NoEstimates),
   ScriptInputPosition,
   TestCurrencySymbol,
   TestTxId,
@@ -397,12 +407,36 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
     let PropertyTestCount testCount' = lookupOption opts
     let PropertyMaxSize maxSize' = lookupOption opts
     let args = stdArgs {maxSuccess = testCount', maxSize = maxSize'}
-    res <- quickCheckWithResult args go
-    pure $ case res of
-      Success {} -> testPassed ""
-      GaveUp {} -> testFailed "Internal error: gave up."
-      Failure {} -> testFailed ""
-      NoExpectedFailure {} -> testFailed "Internal error: expected failure but saw none."
+    let estimate = lookupOption opts
+    case estimate of
+      EstimateOnly -> case vt of
+        Spender gen _ fVal _ _ -> do
+          x <- generate gen
+          let script = getValidator . getTestValidator . fVal $ x
+          pure $ case evaluateScript script of
+            Left err -> testFailed $ case err of
+              EvaluationError logs msg -> errorNoEstimate logs msg
+              EvaluationException name msg -> scriptException name msg
+              MalformedScript msg -> malformedScript msg
+            Right (ExBudget (ExCPU bCPU) (ExMemory bMem), _) ->
+              testPassed $ reportBudgets (fromIntegral bCPU) (fromIntegral bMem)
+        Minter gen _ fMp _ _ -> do
+          x <- generate gen
+          let script = getMintingPolicy . getTestMintingPolicy . fMp $ x
+          pure $ case evaluateScript script of
+            Left err -> testFailed $ case err of
+              EvaluationError logs msg -> errorNoEstimate logs msg
+              EvaluationException name msg -> scriptException name msg
+              MalformedScript msg -> malformedScript msg
+            Right (ExBudget (ExCPU bCPU) (ExMemory bMem), _) ->
+              testPassed $ reportBudgets (fromIntegral bCPU) (fromIntegral bMem)
+      NoEstimates -> do
+        res <- quickCheckWithResult args go
+        pure $ case res of
+          Success {} -> testPassed ""
+          GaveUp {} -> testFailed "Internal error: gave up."
+          Failure {} -> testFailed ""
+          NoExpectedFailure {} -> testFailed "Internal error: expected failure but saw none."
     where
       go :: Property
       go = case vt of
@@ -422,6 +456,7 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
       , Option @PropertyTestCount Proxy
       , Option @PropertyMaxSize Proxy
       , Option @ScriptInputPosition Proxy
+      , Option @PlutusEstimate Proxy
       ]
 
 spenderProperty ::

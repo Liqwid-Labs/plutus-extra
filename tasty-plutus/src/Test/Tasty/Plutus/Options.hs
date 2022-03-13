@@ -20,6 +20,7 @@ module Test.Tasty.Plutus.Options (
   TestValidatorHash (..),
   PlutusTracing (..),
   ScriptInputPosition (..),
+  PlutusEstimate (..),
 
   -- * Property test options
   PropertyTestCount,
@@ -197,6 +198,30 @@ instance IsOption PlutusTracing where
   optionHelp = Tagged "Always provide Plutus traces for unit tests."
   showDefaultValue = const . Just $ "Only on failure"
   optionCLParser = mkFlagCLParser mempty Always
+
+{- | Whether we should run the tests, or only present estimates of the scripts.
+
+ The default value is 'NoEstimates'. The option is controlled purely by a
+ flag; if you want to use it, pass @--estimate-only@.
+
+ @since 8.1
+-}
+data PlutusEstimate = NoEstimates | EstimateOnly
+  deriving stock
+    ( -- | @since 8.1
+      Eq
+    , -- | @since 8.1
+      Show
+    )
+
+-- | @since 8.1
+instance IsOption PlutusEstimate where
+  defaultValue = NoEstimates
+  parseValue = const (Just EstimateOnly)
+  optionName = Tagged "estimate-only"
+  optionHelp = Tagged "Don't run tests; only show estimates of resource use."
+  showDefaultValue = const . Just $ "Run tests, don't estimate"
+  optionCLParser = mkFlagCLParser mempty EstimateOnly
 
 {- | Where to place the script input in 'txInfoInputs' when generating a
  'ScriptContext'.

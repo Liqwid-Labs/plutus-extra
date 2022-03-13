@@ -11,6 +11,8 @@ module Test.Tasty.Plutus.Internal.Feedback (
   dumpState,
   dumpState',
   ourStyle,
+  errorNoEstimate,
+  reportBudgets,
 ) where
 
 import Data.Kind (Type)
@@ -31,6 +33,7 @@ import Text.PrettyPrint (
   colon,
   hang,
   int,
+  integer,
   renderStyle,
   style,
   text,
@@ -44,6 +47,13 @@ import Prelude hiding ((<>))
 
 ourStyle :: Style
 ourStyle = style {lineLength = 80}
+
+reportBudgets :: Integer -> Integer -> String
+reportBudgets bCPU bMem =
+  renderStyle ourStyle $
+    "Resource estimates:"
+      $+$ hang "CPU" 4 (integer bCPU <+> "picoseconds")
+      $+$ hang "Memory" 4 (integer bMem <+> "machine words")
 
 unexpectedFailure ::
   forall (a :: Type).
@@ -67,6 +77,13 @@ malformedScript msg =
   renderStyle ourStyle $
     "Script was malformed"
       $+$ hang "Details" 4 (text msg)
+
+errorNoEstimate :: [Text] -> String -> String
+errorNoEstimate logs msg =
+  renderStyle ourStyle $
+    "Could not provide estimate due to script error"
+      $+$ hang "Description" 4 (text msg)
+      $+$ hang "Logs" 4 (dumpLogs logs)
 
 noOutcome ::
   forall (a :: Type).
