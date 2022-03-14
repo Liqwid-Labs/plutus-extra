@@ -31,9 +31,12 @@ import Text.PrettyPrint (
   Doc,
   Style (lineLength),
   colon,
+  comma,
   hang,
+  hcat,
   int,
   integer,
+  punctuate,
   renderStyle,
   style,
   text,
@@ -51,9 +54,26 @@ ourStyle = style {lineLength = 80}
 reportBudgets :: Integer -> Integer -> String
 reportBudgets bCPU bMem =
   renderStyle ourStyle $
-    "Resource estimates:"
-      $+$ hang "CPU" 4 (integer bCPU <+> "picoseconds")
-      $+$ hang "Memory" 4 (integer bMem <+> "machine words")
+    "Script resource estimates:"
+      $+$ hang "CPU:" 4 cpuBudget
+      $+$ hang "Memory:" 4 (memoryBudget <+> "machine words")
+  where
+    cpuBudget :: Doc
+    cpuBudget =
+      let chunked = thousandsChunks bCPU
+       in case chunked of
+            [nanos, picos] ->
+              nanos <> "." <> picos <+> "nanoseconds"
+            [micros, nanos, _] ->
+              "~" <> micros <> "." <> nanos <+> "microseconds"
+            [millis, micros, _, _] ->
+              "~" <> millis <> "." <> micros <+> "milliseconds"
+            [secs, millis, _, _, _] ->
+              "~" <> secs <> "." <> millis <+> "seconds"
+            -- default to comma-separated picos
+            _ -> commaSep chunked <+> "picoseconds"
+    memoryBudget :: Doc
+    memoryBudget = commaSep . thousandsChunks $ bMem
 
 unexpectedFailure ::
   forall (a :: Type).
@@ -203,3 +223,14 @@ dumpLogs = vcat . fmap go . zip [1 ..]
   where
     go :: (Int, Text) -> Doc
     go (ix, line) = (int ix <> colon) <+> (text . show $ line)
+
+-- Helpers
+
+commaSep :: [Doc] -> Doc
+commaSep = hcat . punctuate comma
+
+thousandsChunks :: Integer -> [Doc]
+thousandsChunks i = case quotRem i 1000 of
+  (0, 0) -> []
+  (0, r) -> [integer r]
+  (d, r) -> thousandsChunks d ++ [integer r]
