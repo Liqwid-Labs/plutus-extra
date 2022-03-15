@@ -2,7 +2,7 @@
 
 {- |
  Module: Test.Tasty.Plutus.Script.Unit
- Copyright: (C) MLabs 2021
+ Copyright: (C) MLabs 2021-2022
  License: Apache 2.0
  Maintainer: Koz Ross <koz@mlabs.city>
  Portability: GHC only
@@ -40,7 +40,12 @@ import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Data.Vector (Vector)
 import Data.Vector qualified as Vector
-import Plutus.V1.Ledger.Api (ScriptContext)
+import Plutus.V1.Ledger.Api (
+  ExBudget (ExBudget),
+  ExCPU (ExCPU),
+  ExMemory (ExMemory),
+  ScriptContext,
+ )
 import Plutus.V1.Ledger.Scripts (
   ScriptError (
     EvaluationError,
@@ -65,14 +70,17 @@ import Test.Tasty.Plutus.Internal.Env (
   getScriptResult,
   prepareConf,
  )
+import Test.Tasty.Plutus.Internal.Estimate (minterEstimate, spenderEstimate)
 import Test.Tasty.Plutus.Internal.Feedback (
   didn'tLog,
   doPass,
   dumpState,
+  errorNoEstimate,
   internalError,
   malformedScript,
   noOutcome,
   noParse,
+  reportBudgets,
   scriptException,
   unexpectedFailure,
   unexpectedSuccess,
@@ -96,6 +104,7 @@ import Test.Tasty.Plutus.Internal.WithScript (
  )
 import Test.Tasty.Plutus.Options (
   Fee,
+  PlutusEstimate (EstimateOnly, NoEstimates),
   PlutusTracing,
   ScriptInputPosition,
   TestCurrencySymbol,
@@ -106,6 +115,7 @@ import Test.Tasty.Plutus.Options (
 import Test.Tasty.Plutus.TestData (
   Outcome (Fail, Pass),
   TestData (MintingTest, SpendingTest),
+  TestItems (ItemsForMinting, ItemsForSpending),
  )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
@@ -293,18 +303,36 @@ getDumpedState ::
 getDumpedState = dumpState getConf getCB getTestData
 
 instance (Typeable p) => IsTest (ScriptTest p) where
-  run opts vt _ = pure $ case result of
-    Left err -> runReader (handleError err) env
-    Right (logs, sr) -> runReader (deliverResult logs sr) env
+  run opts vt _ = pure $ case lookupOption opts of
+    EstimateOnly -> case tryEstimate of
+      Left err -> testFailed $ case err of
+        EvaluationError logs msg -> errorNoEstimate logs msg
+        EvaluationException name msg -> scriptException name msg
+        MalformedScript msg -> malformedScript msg
+      Right (ExBudget (ExCPU bCPU) (ExMemory bMem)) ->
+        testPassed $ reportBudgets (fromIntegral bCPU) (fromIntegral bMem)
+    NoEstimates -> runReader go env
     where
+      tryEstimate :: Either ScriptError ExBudget
+      tryEstimate = case vt of
+        Spender _ _ td cb ts -> case td of
+          SpendingTest dat red v ->
+            let ti = ItemsForSpending dat red v cb Pass
+             in spenderEstimate opts ts ti
+        Minter _ _ td cb ts -> case td of
+          MintingTest red tasks ->
+            let ti = ItemsForMinting red tasks cb Pass
+             in minterEstimate opts ts ti
+      go :: Reader (UnitEnv p) Result
+      go = case getScriptResult getScript getTestData (getContext getSC) env of
+        Left err -> handleError err
+        Right (logs, sr) -> deliverResult logs sr
       env :: UnitEnv p
       env =
         UnitEnv
           { envOpts = opts
           , envScriptTest = vt
           }
-      result :: Either ScriptError ([Text], ScriptResult)
-      result = getScriptResult getScript getTestData (getContext getSC) env
   testOptions =
     Tagged
       [ Option @Fee Proxy
@@ -314,6 +342,7 @@ instance (Typeable p) => IsTest (ScriptTest p) where
       , Option @TestValidatorHash Proxy
       , Option @PlutusTracing Proxy
       , Option @ScriptInputPosition Proxy
+      , Option @PlutusEstimate Proxy
       ]
 
 handleError ::

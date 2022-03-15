@@ -2,7 +2,7 @@
 
 {- |
  Module: Test.Tasty.Plutus.Options
- Copyright: (C) MLabs 2021
+ Copyright: (C) MLabs 2021-2022
  License: Apache 2.0
  Maintainer: Koz Ross <koz@mlabs.city>
  Portability: GHC only
@@ -203,6 +203,11 @@ instance IsOption PlutusTracing where
 
  The default value is 'NoEstimates'. The option is controlled purely by a
  flag; if you want to use it, pass @--estimate-only@.
+
+ = Note
+
+ This does not affect size tests, as there's no general way to run the code
+ they are passed.
 
  @since 8.1
 -}
