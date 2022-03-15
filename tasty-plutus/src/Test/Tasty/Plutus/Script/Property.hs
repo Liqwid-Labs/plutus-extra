@@ -45,23 +45,34 @@ module Test.Tasty.Plutus.Script.Property (
 
 import Control.Monad.RWS.Strict (MonadReader (ask), tell)
 import Control.Monad.Reader (Reader, asks, runReader)
+import Data.Bifunctor (second)
 import Data.Kind (Type)
 import Data.Proxy (Proxy (Proxy))
 import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
-import Plutus.V1.Ledger.Api (ExBudget (ExBudget), ExCPU (ExCPU), ExMemory (ExMemory))
+import Plutus.V1.Ledger.Api (
+  ExBudget (ExBudget),
+  ExCPU (ExCPU),
+  ExMemory (ExMemory),
+  toBuiltinData,
+ )
 import Plutus.V1.Ledger.Contexts (ScriptContext)
 import Plutus.V1.Ledger.Scripts (
+  Context (Context),
+  Datum (Datum),
+  Redeemer (Redeemer),
   ScriptError (EvaluationError, EvaluationException, MalformedScript),
-  evaluateScript,
-  getMintingPolicy,
-  getValidator,
+  runMintingPolicyScript,
+  runScript,
  )
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
+  TestUTXO (TestUTXO),
   TransactionConfig,
+  mintingScriptContext,
+  spendingScriptContext,
  )
 import Test.QuickCheck (
   Args (maxSize, maxSuccess),
@@ -113,7 +124,7 @@ import Test.Tasty.Plutus.Internal.Run (
   ),
  )
 import Test.Tasty.Plutus.Internal.TestScript (
-  TestScript,
+  TestScript (TestMintingPolicy, TestValidator),
   getTestMintingPolicy,
   getTestValidator,
  )
@@ -409,27 +420,38 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
     let args = stdArgs {maxSuccess = testCount', maxSize = maxSize'}
     let estimate = lookupOption opts
     case estimate of
-      EstimateOnly -> case vt of
-        Spender gen _ fVal _ _ -> do
-          x <- generate gen
-          let script = getValidator . getTestValidator . fVal $ x
-          pure $ case evaluateScript script of
-            Left err -> testFailed $ case err of
-              EvaluationError logs msg -> errorNoEstimate logs msg
-              EvaluationException name msg -> scriptException name msg
-              MalformedScript msg -> malformedScript msg
-            Right (ExBudget (ExCPU bCPU) (ExMemory bMem), _) ->
-              testPassed $ reportBudgets (fromIntegral bCPU) (fromIntegral bMem)
-        Minter gen _ fMp _ _ -> do
-          x <- generate gen
-          let script = getMintingPolicy . getTestMintingPolicy . fMp $ x
-          pure $ case evaluateScript script of
-            Left err -> testFailed $ case err of
-              EvaluationError logs msg -> errorNoEstimate logs msg
-              EvaluationException name msg -> scriptException name msg
-              MalformedScript msg -> malformedScript msg
-            Right (ExBudget (ExCPU bCPU) (ExMemory bMem), _) ->
-              testPassed $ reportBudgets (fromIntegral bCPU) (fromIntegral bMem)
+      EstimateOnly -> do
+        estimate' <- tryEstimate
+        pure $ case estimate' of
+          Left err -> testFailed $ case err of
+            EvaluationError logs msg -> errorNoEstimate logs msg
+            EvaluationException name msg -> scriptException name msg
+            MalformedScript msg -> malformedScript msg
+          Right (ExBudget (ExCPU bCPU) (ExMemory bMem)) ->
+            testPassed $ reportBudgets (fromIntegral bCPU) (fromIntegral bMem)
+      {-
+        EstimateOnly -> case vt of
+          Spender gen _ fVal _ _ -> do
+            x <- generate gen
+            let script = getValidator . getTestValidator . fVal $ x
+            pure $ case evaluateScript script of
+              Left err -> testFailed $ case err of
+                EvaluationError logs msg -> errorNoEstimate logs msg
+                EvaluationException name msg -> scriptException name msg
+                MalformedScript msg -> malformedScript msg
+              Right (ExBudget (ExCPU bCPU) (ExMemory bMem), _) ->
+                testPassed $ reportBudgets (fromIntegral bCPU) (fromIntegral bMem)
+          Minter gen _ fMp _ _ -> do
+            x <- generate gen
+            let script = getMintingPolicy . getTestMintingPolicy . fMp $ x
+            pure $ case evaluateScript script of
+              Left err -> testFailed $ case err of
+                EvaluationError logs msg -> errorNoEstimate logs msg
+                EvaluationException name msg -> scriptException name msg
+                MalformedScript msg -> malformedScript msg
+              Right (ExBudget (ExCPU bCPU) (ExMemory bMem), _) ->
+                testPassed $ reportBudgets (fromIntegral bCPU) (fromIntegral bMem)
+        -}
       NoEstimates -> do
         res <- quickCheckWithResult args go
         pure $ case res of
@@ -446,6 +468,18 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
         Minter gen shrinker fMp fTi out ->
           forAllShrinkShow gen shrinker (prettyMinter fTi out) $
             minterProperty opts fMp fTi out
+      tryEstimate :: IO (Either ScriptError ExBudget)
+      tryEstimate = case vt of
+        Spender gen _ fVal fTi _ -> do
+          x <- generate gen
+          let val = fVal x
+          let ti = fTi x
+          pure . spenderEstimate opts val $ ti
+        Minter gen _ fMp fTi _ -> do
+          x <- generate gen
+          let mp = fMp x
+          let ti = fTi x
+          pure . minterEstimate opts mp $ ti
   testOptions =
     Tagged
       [ Option @Fee Proxy
@@ -458,6 +492,37 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
       , Option @ScriptInputPosition Proxy
       , Option @PlutusEstimate Proxy
       ]
+
+spenderEstimate ::
+  forall (d :: Type) (r :: Type).
+  OptionSet ->
+  TestScript ( 'ForSpending d r) ->
+  TestItems ( 'ForSpending d r) ->
+  Either ScriptError ExBudget
+spenderEstimate opts ts ti = case ti of
+  ItemsForSpending dat red v cb _ -> case ts of
+    TestValidator _ val ->
+      let conf = prepareConf id opts
+          context = spendingScriptContext conf cb (TestUTXO dat v)
+          dat' = Datum . toBuiltinData $ dat
+          red' = Redeemer . toBuiltinData $ red
+          context' = Context . toBuiltinData $ context
+       in second fst . runScript context' val dat' $ red'
+
+minterEstimate ::
+  forall (r :: Type).
+  OptionSet ->
+  TestScript ( 'ForMinting r) ->
+  TestItems ( 'ForMinting r) ->
+  Either ScriptError ExBudget
+minterEstimate opts ts ti = case ti of
+  ItemsForMinting red tasks cb _ -> case ts of
+    TestMintingPolicy _ mp ->
+      let conf = prepareConf id opts
+          context = mintingScriptContext conf cb tasks
+          red' = Redeemer . toBuiltinData $ red
+          context' = Context . toBuiltinData $ context
+       in second fst . runMintingPolicyScript context' mp $ red'
 
 spenderProperty ::
   forall (a :: Type) (d :: Type) (r :: Type).
