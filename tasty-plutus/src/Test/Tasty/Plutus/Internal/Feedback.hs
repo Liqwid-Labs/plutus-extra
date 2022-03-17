@@ -13,6 +13,8 @@ module Test.Tasty.Plutus.Internal.Feedback (
   ourStyle,
   errorNoEstimate,
   reportBudgets,
+  explainFailureEstimation,
+  explainFailureExhaustion,
 ) where
 
 import Data.Kind (Type)
@@ -50,6 +52,27 @@ import Prelude hiding ((<>))
 
 ourStyle :: Style
 ourStyle = style {lineLength = 80}
+
+explainFailureExhaustion :: String
+explainFailureExhaustion =
+  renderStyle ourStyle $
+    "Gave up trying to generate a successful run for estimation."
+      $+$ "This can happen due to what \'failure\' means for a script in tasty-plutus:"
+      $+$ hang " * " 4 "The script ran successfully, but didn't log a success from its wrapper; or"
+      $+$ hang " * " 4 "The script crashed or failed to evaluate."
+      $+$ "Because of how the CEK evaluator for scripts works, we can only establish an estimate for the first case."
+      $+$ "As property tests generate inputs pseudorandomly, even tests where failure is not guaranteed, if success isn't likely enough, we might never see an instrumentable case."
+      $+$ "If you are seeing this message, this is exactly what happened."
+
+explainFailureEstimation :: String
+explainFailureEstimation =
+  renderStyle ourStyle $
+    "Cannot provide estimates for test cases whose scripts are designed to fail."
+      $+$ "The reason for this relates to what \'failure\' can mean for a script in tasty-plutus:"
+      $+$ hang " * " 4 "The script ran successfully, but didn't log a success from its wrapper; or"
+      $+$ hang " * " 4 "The script crashed or failed to evaluate."
+      $+$ "Because of how the CEK evaluator for scripts works, we can only establish an estimate for the first case."
+      $+$ "Since we can't tell these cases apart in general, we provide no estimates in this situation."
 
 reportBudgets :: Integer -> Integer -> String
 reportBudgets bCPU bMem =
@@ -102,8 +125,8 @@ errorNoEstimate :: [Text] -> String -> String
 errorNoEstimate logs msg =
   renderStyle ourStyle $
     "Could not provide estimate due to script error"
-      $+$ hang "Description" 4 (text msg)
-      $+$ hang "Logs" 4 (dumpLogs logs)
+      $+$ hang "Description:" 4 (text msg)
+      $+$ hang "Logs:" 4 (dumpLogs logs)
 
 noOutcome ::
   forall (a :: Type).

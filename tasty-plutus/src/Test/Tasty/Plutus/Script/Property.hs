@@ -90,7 +90,8 @@ import Test.Tasty.Plutus.Internal.Env (
 import Test.Tasty.Plutus.Internal.Estimate (minterEstimate, spenderEstimate)
 import Test.Tasty.Plutus.Internal.Feedback (
   dumpState',
-  errorNoEstimate,
+  explainFailureEstimation,
+  explainFailureExhaustion,
   internalError,
   malformedScript,
   noOutcome,
@@ -360,6 +361,14 @@ data PropertyTest (a :: Type) (p :: Purpose) where
     OutcomeKind ->
     PropertyTest a ( 'ForMinting r)
 
+getOutcomeKind ::
+  forall (a :: Type) (p :: Purpose).
+  PropertyTest a p ->
+  OutcomeKind
+getOutcomeKind = \case
+  Spender _ _ _ _ ok -> ok
+  Minter _ _ _ _ ok -> ok
+
 data OutcomeKind
   = OutcomeAlwaysFail
   | OutcomeAlwaysPass
@@ -409,17 +418,15 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
     let PropertyTestCount testCount' = lookupOption opts
     let PropertyMaxSize maxSize' = lookupOption opts
     let args = stdArgs {maxSuccess = testCount', maxSize = maxSize'}
-    let estimate = lookupOption opts
-    case estimate of
-      EstimateOnly -> do
-        estimate' <- tryEstimate
-        pure $ case estimate' of
-          Left err -> testFailed $ case err of
-            EvaluationError logs msg -> errorNoEstimate logs msg
-            EvaluationException name msg -> scriptException name msg
-            MalformedScript msg -> malformedScript msg
-          Right (ExBudget (ExCPU bCPU) (ExMemory bMem)) ->
-            testPassed $ reportBudgets (fromIntegral bCPU) (fromIntegral bMem)
+    case lookupOption opts of
+      EstimateOnly -> case getOutcomeKind vt of
+        OutcomeAlwaysFail -> pure . testPassed $ explainFailureEstimation
+        _ -> do
+          estimate' <- untilJustUpTo 100 tryEstimate
+          pure . testPassed $ case estimate' of
+            Nothing -> explainFailureExhaustion
+            Just (ExBudget (ExCPU bCPU) (ExMemory bMem)) ->
+              reportBudgets (fromIntegral bCPU) (fromIntegral bMem)
       NoEstimates -> do
         res <- quickCheckWithResult args go
         pure $ case res of
@@ -436,18 +443,22 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
         Minter gen shrinker fMp fTi out ->
           forAllShrinkShow gen shrinker (prettyMinter fTi out) $
             minterProperty opts fMp fTi out
-      tryEstimate :: IO (Either ScriptError ExBudget)
+      tryEstimate :: IO (Maybe ExBudget)
       tryEstimate = case vt of
         Spender gen _ fVal fTi _ -> do
           x <- generate gen
           let val = fVal x
           let ti = fTi x
-          pure . spenderEstimate opts val $ ti
+          pure $ case spenderEstimate opts val ti of
+            Left _ -> Nothing
+            Right exb -> pure exb
         Minter gen _ fMp fTi _ -> do
           x <- generate gen
           let mp = fMp x
           let ti = fTi x
-          pure . minterEstimate opts mp $ ti
+          pure $ case minterEstimate opts mp ti of
+            Left _ -> Nothing
+            Right exb -> pure exb
   testOptions =
     Tagged
       [ Option @Fee Proxy
@@ -591,6 +602,20 @@ prettyMinter f outKind seed = case f seed of
 
 counter :: String -> Property
 counter s = counterexample s False
+
+untilJustUpTo ::
+  forall (a :: Type) (m :: Type -> Type).
+  (Monad m) =>
+  Int ->
+  m (Maybe a) ->
+  m (Maybe a)
+untilJustUpTo i comp
+  | i <= 0 = pure Nothing
+  | otherwise = do
+    res <- comp
+    case res of
+      Nothing -> untilJustUpTo (i - 1) comp
+      Just x -> pure . pure $ x
 
 produceResult ::
   Either ScriptError ([Text], ScriptResult) ->

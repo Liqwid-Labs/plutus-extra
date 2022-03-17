@@ -76,6 +76,7 @@ import Test.Tasty.Plutus.Internal.Feedback (
   doPass,
   dumpState,
   errorNoEstimate,
+  explainFailureEstimation,
   internalError,
   malformedScript,
   noOutcome,
@@ -227,6 +228,14 @@ data ScriptTest (p :: Purpose) where
     TestScript ( 'ForMinting r) ->
     ScriptTest ( 'ForMinting r)
 
+getOutcome ::
+  forall (p :: Purpose).
+  ScriptTest p ->
+  Outcome
+getOutcome = \case
+  Spender out _ _ _ _ -> out
+  Minter out _ _ _ _ -> out
+
 data UnitEnv (p :: Purpose) = UnitEnv
   { envOpts :: OptionSet
   , envScriptTest :: ScriptTest p
@@ -304,24 +313,26 @@ getDumpedState = dumpState getConf getCB getTestData
 
 instance (Typeable p) => IsTest (ScriptTest p) where
   run opts vt _ = pure $ case lookupOption opts of
-    EstimateOnly -> case tryEstimate of
-      Left err -> testFailed $ case err of
-        EvaluationError logs msg -> errorNoEstimate logs msg
-        EvaluationException name msg -> scriptException name msg
-        MalformedScript msg -> malformedScript msg
-      Right (ExBudget (ExCPU bCPU) (ExMemory bMem)) ->
-        testPassed $ reportBudgets (fromIntegral bCPU) (fromIntegral bMem)
+    EstimateOnly -> case getOutcome vt of
+      Fail -> testPassed explainFailureEstimation
+      _ -> case tryEstimate of
+        Left err -> testFailed $ case err of
+          EvaluationError logs msg -> errorNoEstimate logs msg
+          EvaluationException name msg -> scriptException name msg
+          MalformedScript msg -> malformedScript msg
+        Right (ExBudget (ExCPU bCPU) (ExMemory bMem)) ->
+          testPassed $ reportBudgets (fromIntegral bCPU) (fromIntegral bMem)
     NoEstimates -> runReader go env
     where
       tryEstimate :: Either ScriptError ExBudget
       tryEstimate = case vt of
-        Spender _ _ td cb ts -> case td of
+        Spender out _ td cb ts -> case td of
           SpendingTest dat red v ->
-            let ti = ItemsForSpending dat red v cb Pass
+            let ti = ItemsForSpending dat red v cb out
              in spenderEstimate opts ts ti
-        Minter _ _ td cb ts -> case td of
+        Minter out _ td cb ts -> case td of
           MintingTest red tasks ->
-            let ti = ItemsForMinting red tasks cb Pass
+            let ti = ItemsForMinting red tasks cb out
              in minterEstimate opts ts ti
       go :: Reader (UnitEnv p) Result
       go = case getScriptResult getScript getTestData (getContext getSC) env of
