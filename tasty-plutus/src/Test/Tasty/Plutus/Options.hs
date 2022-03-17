@@ -207,7 +207,46 @@ instance IsOption PlutusTracing where
  = Note
 
  This does not affect size tests, as there's no general way to run the code
- they are passed.
+ they are passed. This also won't affect any tests defined using anything not
+ provided by @tasty-plutus@, as we can't affect their execution in general.
+ This is a limitation of @tasty@ that we can't do anything about.
+
+ = Estimation and scripts which can fail
+
+ Both the unit and property testing interfaces can work with scripts which are
+ designed to fail: unit tests can be asked to ensure that a particular case
+ will fail, while property tests can specify under what conditions failure is
+ the norm.
+
+ The meaning of \'failure\' under @tasty-plutus@, due to how the CEK evaluator
+ for on-chain code works, is two-fold:
+
+ * The script ran successfully, but didn't log a success from its wrapper; or
+ * The script crashed or failed to evaluate.
+
+ Due to the implementation choices of the Plutus CEK evaluator, we can only
+ establish an estimate for the first case of \'failure\'. This poses several
+ problems for tests \'designed to fail\': firstly, we can't (in general)
+ determine which case such a test will fall into; and secondly, since
+ property tests are pseudorandom, we may never (or not for a long time) get a
+ case which _will_ give an estimate, failing or not.
+
+ We therefore take the following approach:
+
+ * For unit tests that check failure, or property tests where the generator
+   is expected to always produce failing cases, we do not attempt to provide
+   estimates at all.
+ * For property tests that /might/ produce estimatable cases, we try
+   generating cases repeatedly until we either get one that estimates
+   successfully, or reach a built-in limit (currently 100), at which point we
+   give up.
+
+ When either of these occur, instead of giving an estimate, we specify which
+ condition we ran into. This is quite likely to happen if 'PlutusEstimate' is
+ enabled \'globally\', rather than per-suite or per-test. If you see any
+ messages stating we are in one, or both, of these cases, try only enabling
+ 'PlutusEstimate' for those tests or suites where there are no tests
+ \'designed to fail\'.
 
  @since 8.1
 -}
