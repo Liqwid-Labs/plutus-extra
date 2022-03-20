@@ -41,13 +41,6 @@ import Data.Text (Text)
 import Data.Vector (Vector)
 import Data.Vector qualified as Vector
 import Plutus.V1.Ledger.Api (ScriptContext)
-import Plutus.V1.Ledger.Scripts (
-  ScriptError (
-    EvaluationError,
-    EvaluationException,
-    MalformedScript
-  ),
- )
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
@@ -69,9 +62,7 @@ import Test.Tasty.Plutus.Internal.Feedback (
   didn'tLog,
   doPass,
   dumpState,
-  internalError,
   malformedScript,
-  noOutcome,
   noParse,
   scriptException,
   unexpectedFailure,
@@ -79,11 +70,10 @@ import Test.Tasty.Plutus.Internal.Feedback (
  )
 import Test.Tasty.Plutus.Internal.Run (
   ScriptResult (
-    InternalError,
-    NoOutcome,
     ParseFailed,
-    ScriptFailed,
-    ScriptPassed
+    PlutusEvaluationException,
+    PlutusMalformedScript,
+    ScriptFailed
   ),
  )
 import Test.Tasty.Plutus.Internal.TestScript (
@@ -295,7 +285,7 @@ getDumpedState = dumpState getConf getCB getTestData
 instance (Typeable p) => IsTest (ScriptTest p) where
   run opts vt _ = pure $ case result of
     Left err -> runReader (handleError err) env
-    Right (logs, sr) -> runReader (deliverResult logs sr) env
+    Right logs -> runReader (deliverResult logs) env
     where
       env :: UnitEnv p
       env =
@@ -303,7 +293,7 @@ instance (Typeable p) => IsTest (ScriptTest p) where
           { envOpts = opts
           , envScriptTest = vt
           }
-      result :: Either ScriptError ([Text], ScriptResult)
+      result :: Either ScriptResult [Text]
       result = getScriptResult getScript getTestData (getContext getSC) env
   testOptions =
     Tagged
@@ -318,34 +308,29 @@ instance (Typeable p) => IsTest (ScriptTest p) where
 
 handleError ::
   forall (p :: Purpose).
-  ScriptError ->
+  ScriptResult ->
   Reader (UnitEnv p) Result
 handleError = \case
-  EvaluationError logs msg ->
+  ScriptFailed logs msg ->
     asks getExpected >>= \case
       Pass -> asks (testFailed . unexpectedFailure (getDumpedState logs) msg)
       Fail -> asks getMPred >>= (`tryPass` logs)
-  EvaluationException name msg -> pure . testFailed $ scriptException name msg
-  MalformedScript msg -> pure . testFailed $ malformedScript msg
+  ParseFailed logs t ->
+    asks (testFailed . noParse (getDumpedState logs) t)
+  PlutusEvaluationException name msg ->
+    pure . testFailed $ scriptException name msg
+  PlutusMalformedScript msg ->
+    pure . testFailed $ malformedScript msg
 
 deliverResult ::
   forall (p :: Purpose).
   [Text] ->
-  ScriptResult ->
   Reader (UnitEnv p) Result
-deliverResult logs result = do
+deliverResult logs = do
   expected <- asks getExpected
-  case (expected, result) of
-    (_, NoOutcome) -> asks (testFailed . noOutcome state)
-    (Fail, ScriptPassed) -> asks (testFailed . unexpectedSuccess state)
-    (Fail, ScriptFailed) -> asks getMPred >>= (`tryPass` logs)
-    (Pass, ScriptPassed) -> asks getMPred >>= (`tryPass` logs)
-    (Pass, ScriptFailed) -> asks (testFailed . unexpectedFailure state mempty)
-    (_, InternalError t) -> asks (testFailed . internalError state t)
-    (_, ParseFailed t) -> asks (testFailed . noParse state t)
-  where
-    state :: UnitEnv p -> Doc
-    state = getDumpedState logs
+  case expected of
+    Fail -> asks (testFailed . unexpectedSuccess (getDumpedState logs))
+    Pass -> asks getMPred >>= (`tryPass` logs)
 
 tryPass :: Maybe (Vector Text -> Bool) -> [Text] -> Reader (UnitEnv p) Result
 tryPass mPred logs = case mPred of

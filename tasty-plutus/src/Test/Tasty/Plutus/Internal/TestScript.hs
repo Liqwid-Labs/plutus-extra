@@ -23,9 +23,10 @@ import Plutus.V1.Ledger.Api (
   mkValidatorScript,
  )
 import PlutusTx (CompiledCode, applyCode)
-import PlutusTx.Builtins (BuiltinData, BuiltinString, appendString, trace)
+import PlutusTx.Builtins (BuiltinData, BuiltinString, appendString)
 import PlutusTx.IsData.Class (FromData (fromBuiltinData))
 import PlutusTx.TH (compile)
+import PlutusTx.Trace (traceError)
 import Test.Plutus.ContextBuilder (Purpose (ForMinting, ForSpending))
 
 {- | Typed wrapper for the 'Validator' and 'MintingPolicy' used to match
@@ -280,16 +281,13 @@ toTestMintingPolicy f = WrappedMintingPolicy $ \r p ->
 
 {-# INLINEABLE reportParseFailed #-}
 reportParseFailed :: BuiltinString -> ()
-reportParseFailed what = report ("Parse failed: " `appendString` what)
+reportParseFailed what =
+  traceError ("tasty-plutus: Parse failed: " `appendString` what)
 
 {-# INLINEABLE reportPass #-}
 reportPass :: ()
-reportPass = report "Pass"
+reportPass = ()
 
 {-# INLINEABLE reportFail #-}
 reportFail :: ()
-reportFail = report "Fail"
-
-{-# INLINEABLE report #-}
-report :: BuiltinString -> ()
-report what = trace ("tasty-plutus: " `appendString` what) ()
+reportFail = traceError "tasty-plutus: Fail"

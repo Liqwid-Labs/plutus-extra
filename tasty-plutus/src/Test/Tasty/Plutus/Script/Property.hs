@@ -51,7 +51,6 @@ import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
 import Plutus.V1.Ledger.Contexts (ScriptContext)
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError, EvaluationException, MalformedScript))
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
@@ -81,9 +80,7 @@ import Test.Tasty.Plutus.Internal.Env (
  )
 import Test.Tasty.Plutus.Internal.Feedback (
   dumpState',
-  internalError,
   malformedScript,
-  noOutcome,
   noParse,
   ourStyle,
   scriptException,
@@ -95,13 +92,7 @@ import Test.Tasty.Plutus.Internal.Options (
   PropertyTestCount (PropertyTestCount),
  )
 import Test.Tasty.Plutus.Internal.Run (
-  ScriptResult (
-    InternalError,
-    NoOutcome,
-    ParseFailed,
-    ScriptFailed,
-    ScriptPassed
-  ),
+  ScriptResult (ParseFailed, PlutusEvaluationException, PlutusMalformedScript, ScriptFailed),
  )
 import Test.Tasty.Plutus.Internal.TestScript (
   TestScript,
@@ -556,29 +547,25 @@ counter :: String -> Property
 counter s = counterexample s False
 
 produceResult ::
-  Either ScriptError ([Text], ScriptResult) ->
+  Either ScriptResult [Text] ->
   Reader (PropertyEnv p) Property
 produceResult sr = do
   outcome <- asks envOutcome
   case sr of
     Left err -> case err of
-      EvaluationError logs msg ->
-        asks envOutcome >>= \case
+      ScriptFailed logs msg ->
+        case outcome of
           Pass -> asks (counter . unexpectedFailure (getDumpedState logs) msg)
           Fail -> pass
-      EvaluationException name msg -> pure . counter $ scriptException name msg
-      MalformedScript msg -> pure . counter $ malformedScript msg
-    Right (logs, res) -> case (outcome, res) of
-      (_, NoOutcome) -> asks (counter . noOutcome state)
-      (Fail, ScriptPassed) -> asks (counter . unexpectedSuccess state)
-      (Fail, ScriptFailed) -> pass
-      (Pass, ScriptPassed) -> pass
-      (Pass, ScriptFailed) -> asks (counter . unexpectedFailure state mempty)
-      (_, InternalError t) -> asks (counter . internalError state t)
-      (_, ParseFailed t) -> asks (counter . noParse state t)
-      where
-        state :: PropertyEnv p -> Doc
-        state = getDumpedState logs
+      ParseFailed logs t ->
+        asks (counter . noParse (getDumpedState logs) t)
+      PlutusEvaluationException name msg ->
+        pure . counter $ scriptException name msg
+      PlutusMalformedScript msg ->
+        pure . counter $ malformedScript msg
+    Right logs -> case outcome of
+      Fail -> asks (counter . unexpectedSuccess (getDumpedState logs))
+      Pass -> pass
   where
     pass :: Reader (PropertyEnv p) Property
     pass = pure $ property True
