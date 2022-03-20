@@ -4,6 +4,13 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 8.1 - 2022-03-20
+
+### Added
+
+* `mkTestValidatorUntyped` and `mkTestMintingPolicyUntyped` for constructing
+  `TestScript`s out of untyped code
+
 ## 8.0 - 2022-02-08
 
 ### Changed
@@ -11,7 +18,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 * `ContextBuilder` with all related types and constructors moved to separate
   `plutus-context-builder` library. At the same time, the internal structure
   of the `ContextBuilder` has changed, as well as the basic building blocks.
-  
+
 ## 7.3 - 2022-02-07
 
 ### Changed
@@ -42,8 +49,8 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 ## 7.0 -- 2022-01-21
 
 ### Changed
-  
-* Plutus upgrade: `plutus` pinned to `65bad0fd53e432974c3c203b1b1999161b6c2dce`, 
+
+* Plutus upgrade: `plutus` pinned to `65bad0fd53e432974c3c203b1b1999161b6c2dce`,
   `plutus-apps` pinned to `34fe6eeff441166fee0cd0ceba68c1439f0e93d2`
 
 ## 6.0 -- 2022-01-19
