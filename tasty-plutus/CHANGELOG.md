@@ -4,7 +4,7 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
-## 9.0 -- 2022-03-10
+## 9.0 -- 2022-03-22
 
 ### Changed
 
@@ -12,6 +12,13 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
   `plutus-context-builder`. These changes are technically breaking, but
   shouldn't have issues in themselves, as long as the `ContextBuilder`s are
   updated.
+
+## 8.1 - 2022-03-16
+
+### Added
+
+* `PlutusEstimate` option, which displays estimated memory and CPU use for
+  scripts instead of testing them.
 
 ## 8.0 - 2022-02-08
 
