@@ -15,6 +15,7 @@ import Plutus.V1.Ledger.Scripts (
   runScript,
  )
 import Test.Plutus.ContextBuilder (
+  Naming,
   Purpose (ForMinting, ForSpending),
   TestUTXO (TestUTXO),
   mintingScriptContext,
@@ -30,10 +31,10 @@ import Test.Tasty.Plutus.TestData (
  )
 
 spenderEstimate ::
-  forall (d :: Type) (r :: Type).
+  forall (d :: Type) (r :: Type) (n :: Naming).
   OptionSet ->
   TestScript ( 'ForSpending d r) ->
-  TestItems ( 'ForSpending d r) ->
+  TestItems ( 'ForSpending d r) n ->
   Either ScriptError ExBudget
 spenderEstimate opts ts ti = case ti of
   ItemsForSpending dat red v cb _ -> case ts of
@@ -46,10 +47,10 @@ spenderEstimate opts ts ti = case ti of
        in second fst . runScript context' val dat' $ red'
 
 minterEstimate ::
-  forall (r :: Type).
+  forall (r :: Type) (n :: Naming).
   OptionSet ->
   TestScript ( 'ForMinting r) ->
-  TestItems ( 'ForMinting r) ->
+  TestItems ( 'ForMinting r) n ->
   Either ScriptError ExBudget
 minterEstimate opts ts ti = case ti of
   ItemsForMinting red tasks cb _ -> case ts of
