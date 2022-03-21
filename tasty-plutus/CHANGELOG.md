@@ -4,6 +4,13 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 8.1 - 2022-03-16
+
+### Added
+
+* `PlutusEstimate` option, which displays estimated memory and CPU use for
+  scripts instead of testing them.
+
 ## 8.0 - 2022-02-08
 
 ### Changed

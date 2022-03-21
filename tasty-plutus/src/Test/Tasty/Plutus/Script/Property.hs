@@ -2,7 +2,7 @@
 
 {- |
  Module: Test.Tasty.Plutus.Script.Property
- Copyright: (C) MLabs 2021
+ Copyright: (C) MLabs 2021-2022
  License: Apache 2.0
  Maintainer: Koz Ross <koz@mlabs.city>
  Portability: GHC only
@@ -50,8 +50,15 @@ import Data.Proxy (Proxy (Proxy))
 import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
 import Data.Text (Text)
+import Plutus.V1.Ledger.Api (
+  ExBudget (ExBudget),
+  ExCPU (ExCPU),
+  ExMemory (ExMemory),
+ )
 import Plutus.V1.Ledger.Contexts (ScriptContext)
-import Plutus.V1.Ledger.Scripts (ScriptError (EvaluationError, EvaluationException, MalformedScript))
+import Plutus.V1.Ledger.Scripts (
+  ScriptError (EvaluationError, EvaluationException, MalformedScript),
+ )
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
   Purpose (ForMinting, ForSpending),
@@ -66,6 +73,7 @@ import Test.QuickCheck (
   counterexample,
   cover,
   forAllShrinkShow,
+  generate,
   property,
   quickCheckWithResult,
   stdArgs,
@@ -79,13 +87,17 @@ import Test.Tasty.Plutus.Internal.Env (
   getScriptResult,
   prepareConf,
  )
+import Test.Tasty.Plutus.Internal.Estimate (minterEstimate, spenderEstimate)
 import Test.Tasty.Plutus.Internal.Feedback (
   dumpState',
+  explainFailureEstimation,
+  explainFailureExhaustion,
   internalError,
   malformedScript,
   noOutcome,
   noParse,
   ourStyle,
+  reportBudgets,
   scriptException,
   unexpectedFailure,
   unexpectedSuccess,
@@ -113,6 +125,7 @@ import Test.Tasty.Plutus.Internal.WithScript (
  )
 import Test.Tasty.Plutus.Options (
   Fee,
+  PlutusEstimate (EstimateOnly, NoEstimates),
   ScriptInputPosition,
   TestCurrencySymbol,
   TestTxId,
@@ -348,6 +361,14 @@ data PropertyTest (a :: Type) (p :: Purpose) where
     OutcomeKind ->
     PropertyTest a ( 'ForMinting r)
 
+getOutcomeKind ::
+  forall (a :: Type) (p :: Purpose).
+  PropertyTest a p ->
+  OutcomeKind
+getOutcomeKind = \case
+  Spender _ _ _ _ ok -> ok
+  Minter _ _ _ _ ok -> ok
+
 data OutcomeKind
   = OutcomeAlwaysFail
   | OutcomeAlwaysPass
@@ -397,12 +418,22 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
     let PropertyTestCount testCount' = lookupOption opts
     let PropertyMaxSize maxSize' = lookupOption opts
     let args = stdArgs {maxSuccess = testCount', maxSize = maxSize'}
-    res <- quickCheckWithResult args go
-    pure $ case res of
-      Success {} -> testPassed ""
-      GaveUp {} -> testFailed "Internal error: gave up."
-      Failure {} -> testFailed ""
-      NoExpectedFailure {} -> testFailed "Internal error: expected failure but saw none."
+    case lookupOption opts of
+      EstimateOnly -> case getOutcomeKind vt of
+        OutcomeAlwaysFail -> pure . testPassed $ explainFailureEstimation
+        _ -> do
+          estimate' <- untilJustUpTo 100 tryEstimate
+          pure . testPassed $ case estimate' of
+            Nothing -> explainFailureExhaustion
+            Just (ExBudget (ExCPU bCPU) (ExMemory bMem)) ->
+              reportBudgets (fromIntegral bCPU) (fromIntegral bMem)
+      NoEstimates -> do
+        res <- quickCheckWithResult args go
+        pure $ case res of
+          Success {} -> testPassed ""
+          GaveUp {} -> testFailed "Internal error: gave up."
+          Failure {} -> testFailed ""
+          NoExpectedFailure {} -> testFailed "Internal error: expected failure but saw none."
     where
       go :: Property
       go = case vt of
@@ -412,6 +443,22 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
         Minter gen shrinker fMp fTi out ->
           forAllShrinkShow gen shrinker (prettyMinter fTi out) $
             minterProperty opts fMp fTi out
+      tryEstimate :: IO (Maybe ExBudget)
+      tryEstimate = case vt of
+        Spender gen _ fVal fTi _ -> do
+          x <- generate gen
+          let val = fVal x
+          let ti = fTi x
+          pure $ case spenderEstimate opts val ti of
+            Left _ -> Nothing
+            Right exb -> pure exb
+        Minter gen _ fMp fTi _ -> do
+          x <- generate gen
+          let mp = fMp x
+          let ti = fTi x
+          pure $ case minterEstimate opts mp ti of
+            Left _ -> Nothing
+            Right exb -> pure exb
   testOptions =
     Tagged
       [ Option @Fee Proxy
@@ -422,6 +469,7 @@ instance (Show a, Typeable a, Typeable p) => IsTest (PropertyTest a p) where
       , Option @PropertyTestCount Proxy
       , Option @PropertyMaxSize Proxy
       , Option @ScriptInputPosition Proxy
+      , Option @PlutusEstimate Proxy
       ]
 
 spenderProperty ::
@@ -554,6 +602,20 @@ prettyMinter f outKind seed = case f seed of
 
 counter :: String -> Property
 counter s = counterexample s False
+
+untilJustUpTo ::
+  forall (a :: Type) (m :: Type -> Type).
+  (Monad m) =>
+  Int ->
+  m (Maybe a) ->
+  m (Maybe a)
+untilJustUpTo i comp
+  | i <= 0 = pure Nothing
+  | otherwise = do
+    res <- comp
+    case res of
+      Nothing -> untilJustUpTo (i - 1) comp
+      Just x -> pure . pure $ x
 
 produceResult ::
   Either ScriptError ([Text], ScriptResult) ->
