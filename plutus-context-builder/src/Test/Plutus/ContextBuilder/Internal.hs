@@ -335,14 +335,14 @@ deriving stock instance Show (ContextBuilder p n)
 
  When combining named 'ContextBuilder's, if both \'halves\' have a fragment
  associated to a specific name, the fragment in the /second/ argument will
- overwrite the first.
+ everything in /both/ fragments.
 
  @since 2.0
 -}
 instance Semigroup (ContextBuilder p n) where
   {-# INLINEABLE (<>) #-}
   NoNames cf <> NoNames cf' = NoNames $ cf <> cf'
-  WithNames cfs <> WithNames cfs' = WithNames $ cfs <> cfs'
+  WithNames cfs <> WithNames cfs' = WithNames . Map.unionWith (<>) cfs $ cfs'
 
 -- | @since 2.0
 instance Monoid (ContextBuilder p 'Anonymous) where
