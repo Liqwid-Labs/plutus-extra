@@ -36,6 +36,7 @@ import Data.Semigroup (sconcat)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import Data.Text (Text)
+import Data.Typeable (Typeable)
 import GHC.Exts (toList)
 import Ledger.Scripts (datumHash)
 import Plutus.V1.Ledger.Address (pubKeyHashAddress, scriptHashAddress)
@@ -305,6 +306,8 @@ data Naming = Anonymous | Named
       Eq
     , -- | @since 2.0
       Show
+    , -- | @since 2.0
+      Typeable
     )
 
 {- | A way to incrementally build up a 'ScriptContext'.
