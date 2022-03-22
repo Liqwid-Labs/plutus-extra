@@ -23,9 +23,10 @@ import Plutus.V1.Ledger.Api (
   mkValidatorScript,
  )
 import PlutusTx (CompiledCode, applyCode)
-import PlutusTx.Builtins (BuiltinData, BuiltinString, appendString, trace)
+import PlutusTx.Builtins (BuiltinData, BuiltinString, appendString)
 import PlutusTx.IsData.Class (FromData (fromBuiltinData))
 import PlutusTx.TH (compile)
+import PlutusTx.Trace (traceError)
 import Test.Plutus.ContextBuilder (Purpose (ForMinting, ForSpending))
 
 {- | Typed wrapper for the 'Validator' and 'MintingPolicy' used to match
@@ -42,15 +43,15 @@ import Test.Plutus.ContextBuilder (Purpose (ForMinting, ForSpending))
 data TestScript (p :: Purpose) where
   -- | since 6.0
   TestValidator ::
-    forall (d :: Type) (r :: Type) (datum :: Type) (redeemer :: Type) (ctx :: Type).
-    { getTestValidatorCode :: CompiledCode (datum -> redeemer -> ctx -> Bool)
+    forall (d :: Type) (r :: Type) (code :: Type).
+    { getTestValidatorCode :: CompiledCode code
     , getTestValidator :: Validator
     } ->
     TestScript ( 'ForSpending d r)
   -- | since 6.0
   TestMintingPolicy ::
-    forall (r :: Type) (redeemer :: Type) (ctx :: Type).
-    { getTestMintingPolicyCode :: CompiledCode (redeemer -> ctx -> Bool)
+    forall (r :: Type) (code :: Type).
+    { getTestMintingPolicyCode :: CompiledCode code
     , getTestMintingPolicy :: MintingPolicy
     } ->
     TestScript ( 'ForMinting r)
@@ -141,6 +142,33 @@ mkTestValidatorUnsafe v wr =
       applyCode $$(compile [||getWrappedValidator||]) $
         wr `applyCode` v
 
+{- | Like 'mkTestValidator', but accepts an untyped validator. You need to
+ manually annotate the return type and make sure they correspond correctly
+ to the 'BuiltinData's handled by the validator.
+
+ = Note
+
+ This is not safe and may result in an error when the script is run.
+
+ = Usage
+
+ > myValidator :: BuiltinData -> BuiltinData -> BuiltinData -> ()
+ > myValidator d r ctx = ...
+
+ > testValidator ::
+ >     TestScript ( 'ForSpending SomeDatumType SomeRedeemerType)
+ > testValidator =
+ >  mkTestValidatorUntyped $$(compile [||myValidator||])
+
+ @since 9.1
+-}
+mkTestValidatorUntyped ::
+  forall (d :: Type) (r :: Type).
+  CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) ->
+  TestScript ( 'ForSpending d r)
+mkTestValidatorUntyped vl =
+  TestValidator vl $ mkValidatorScript vl
+
 {- | Create a 'TestScript' with the given 'MintingPolicy', parameterized
  with proper redeemer type.
 
@@ -196,6 +224,33 @@ mkTestMintingPolicyUnsafe mp wr =
     mkMintingPolicyScript $
       applyCode $$(compile [||getWrappedMintingPolicy||]) $
         wr `applyCode` mp
+
+{- | Like 'mkTestMintingPolicy', but accepts an untyped one. You need to
+ manually annotate the return type and make sure they correspond correctly
+ to the 'BuiltinData's handled by the minting policy.
+
+ = Note
+
+ This is not safe and may result in an error when the script is run.
+
+ = Usage
+
+ > myMintingPolicy :: BuiltinData -> BuiltinData -> ()
+ > myMintingPolicy r ctx = ...
+
+ > testMintingPolicy ::
+ >     TestScript ( 'ForMinting SomeRedeemerType)
+ > testMintingPolicy =
+ >  mkTestMintingPolicyUntyped $$(compile [||myMintingPolicy||])
+
+ @since 9.1
+-}
+mkTestMintingPolicyUntyped ::
+  forall (r :: Type).
+  CompiledCode (BuiltinData -> BuiltinData -> ()) ->
+  TestScript ( 'ForMinting r)
+mkTestMintingPolicyUntyped mp =
+  TestMintingPolicy mp $ mkMintingPolicyScript mp
 
 {- | A wrapper for validators. Use this to construct @TestScript ForSpending@.
 
@@ -280,16 +335,13 @@ toTestMintingPolicy f = WrappedMintingPolicy $ \r p ->
 
 {-# INLINEABLE reportParseFailed #-}
 reportParseFailed :: BuiltinString -> ()
-reportParseFailed what = report ("Parse failed: " `appendString` what)
+reportParseFailed what =
+  traceError ("tasty-plutus: Parse failed: " `appendString` what)
 
 {-# INLINEABLE reportPass #-}
 reportPass :: ()
-reportPass = report "Pass"
+reportPass = ()
 
 {-# INLINEABLE reportFail #-}
 reportFail :: ()
-reportFail = report "Fail"
-
-{-# INLINEABLE report #-}
-report :: BuiltinString -> ()
-report what = trace ("tasty-plutus: " `appendString` what) ()
+reportFail = traceError "tasty-plutus: Fail"

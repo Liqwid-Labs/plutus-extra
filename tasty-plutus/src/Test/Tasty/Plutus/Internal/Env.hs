@@ -22,7 +22,7 @@ import Plutus.V1.Ledger.Api (
   ValidatorHash,
   Value,
  )
-import Plutus.V1.Ledger.Scripts (Context (Context), ScriptError)
+import Plutus.V1.Ledger.Scripts (Context (Context))
 import Test.Tasty.Options (OptionSet, lookupOption)
 
 import Test.Plutus.ContextBuilder (
@@ -121,7 +121,7 @@ getScriptResult ::
   (a -> TestData p) ->
   (a -> Context) ->
   a ->
-  Either ScriptError ([Text], ScriptResult)
+  Either ScriptResult [Text]
 getScriptResult getScript getTd getCtx env =
   case (getScript env, getTd env) of
     (SomeSpender val, SpendingTest d r _) ->

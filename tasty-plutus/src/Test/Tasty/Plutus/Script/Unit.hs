@@ -78,9 +78,7 @@ import Test.Tasty.Plutus.Internal.Feedback (
   dumpState,
   errorNoEstimate,
   explainFailureEstimation,
-  internalError,
   malformedScript,
-  noOutcome,
   noParse,
   reportBudgets,
   scriptException,
@@ -89,11 +87,10 @@ import Test.Tasty.Plutus.Internal.Feedback (
  )
 import Test.Tasty.Plutus.Internal.Run (
   ScriptResult (
-    InternalError,
-    NoOutcome,
     ParseFailed,
-    ScriptFailed,
-    ScriptPassed
+    PlutusEvaluationException,
+    PlutusMalformedScript,
+    ScriptFailed
   ),
  )
 import Test.Tasty.Plutus.Internal.TestScript (
@@ -338,7 +335,7 @@ instance (Typeable p, Typeable n) => IsTest (ScriptTest p n) where
       go :: Reader (UnitEnv p n) Result
       go = case getScriptResult getScript getTestData (getContext getSC) env of
         Left err -> handleError err
-        Right (logs, sr) -> deliverResult logs sr
+        Right logs -> deliverResult logs
       env :: UnitEnv p n
       env =
         UnitEnv
@@ -359,34 +356,29 @@ instance (Typeable p, Typeable n) => IsTest (ScriptTest p n) where
 
 handleError ::
   forall (p :: Purpose) (n :: Naming).
-  ScriptError ->
+  ScriptResult ->
   Reader (UnitEnv p n) Result
 handleError = \case
-  EvaluationError logs msg ->
+  ScriptFailed logs msg ->
     asks getExpected >>= \case
       Pass -> asks (testFailed . unexpectedFailure (getDumpedState logs) msg)
       Fail -> asks getMPred >>= (`tryPass` logs)
-  EvaluationException name msg -> pure . testFailed $ scriptException name msg
-  MalformedScript msg -> pure . testFailed $ malformedScript msg
+  ParseFailed logs t ->
+    asks (testFailed . noParse (getDumpedState logs) t)
+  PlutusEvaluationException name msg ->
+    pure . testFailed $ scriptException name msg
+  PlutusMalformedScript msg ->
+    pure . testFailed $ malformedScript msg
 
 deliverResult ::
   forall (p :: Purpose) (n :: Naming).
   [Text] ->
-  ScriptResult ->
   Reader (UnitEnv p n) Result
-deliverResult logs result = do
+deliverResult logs = do
   expected <- asks getExpected
-  case (expected, result) of
-    (_, NoOutcome) -> asks (testFailed . noOutcome state)
-    (Fail, ScriptPassed) -> asks (testFailed . unexpectedSuccess state)
-    (Fail, ScriptFailed) -> asks getMPred >>= (`tryPass` logs)
-    (Pass, ScriptPassed) -> asks getMPred >>= (`tryPass` logs)
-    (Pass, ScriptFailed) -> asks (testFailed . unexpectedFailure state mempty)
-    (_, InternalError t) -> asks (testFailed . internalError state t)
-    (_, ParseFailed t) -> asks (testFailed . noParse state t)
-  where
-    state :: UnitEnv p n -> Doc
-    state = getDumpedState logs
+  case expected of
+    Fail -> asks (testFailed . unexpectedSuccess (getDumpedState logs))
+    Pass -> asks getMPred >>= (`tryPass` logs)
 
 tryPass ::
   forall (p :: Purpose) (n :: Naming).
