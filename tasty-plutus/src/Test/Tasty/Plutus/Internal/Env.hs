@@ -28,6 +28,7 @@ import Test.Tasty.Options (OptionSet, lookupOption)
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
   InputPosition,
+  Naming,
   Purpose (ForMinting, ForSpending),
   TestUTXO (TestUTXO),
   TransactionConfig (TransactionConfig),
@@ -92,9 +93,9 @@ prepareConf getOpts env =
     ScriptInputPosition inputPosition' = lookupOption opts
 
 getScriptContext ::
-  forall (a :: Type) (p :: Purpose).
+  forall (a :: Type) (p :: Purpose) (n :: Naming).
   (a -> TransactionConfig) ->
-  (a -> ContextBuilder p) ->
+  (a -> ContextBuilder p n) ->
   (a -> TestData p) ->
   a ->
   ScriptContext
@@ -104,7 +105,7 @@ getScriptContext getConf getCb getTd env = case getTd env of
   where
     conf :: TransactionConfig
     conf = getConf env
-    cb :: ContextBuilder p
+    cb :: ContextBuilder p n
     cb = getCb env
 
 getContext ::

@@ -160,7 +160,7 @@ mkTestValidatorUnsafe v wr =
  > testValidator =
  >  mkTestValidatorUntyped $$(compile [||myValidator||])
 
- @since 8.1
+ @since 9.1
 -}
 mkTestValidatorUntyped ::
   forall (d :: Type) (r :: Type).
@@ -243,7 +243,7 @@ mkTestMintingPolicyUnsafe mp wr =
  > testMintingPolicy =
  >  mkTestMintingPolicyUntyped $$(compile [||myMintingPolicy||])
 
- @since 8.1
+ @since 9.1
 -}
 mkTestMintingPolicyUntyped ::
   forall (r :: Type).

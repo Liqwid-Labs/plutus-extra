@@ -10,7 +10,9 @@ module Test.Plutus.ContextBuilder.Internal (
   ValidatorUTXOs (..),
   TestUTXO (..),
   Minting (..),
+  Naming (..),
   ContextBuilder (..),
+  ContextFragment (..),
 
   -- * Utilities functions
   spendingScriptContext,
@@ -23,13 +25,18 @@ module Test.Plutus.ContextBuilder.Internal (
 
 import Control.Arrow ((***))
 import Data.Bifunctor (first)
+import Data.Foldable (fold)
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
 import Data.List.NonEmpty qualified as NonEmpty
+import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Semigroup (sconcat)
+import Data.Sequence (Seq)
+import Data.Sequence qualified as Seq
 import Data.Text (Text)
+import GHC.Exts (toList)
 import Ledger.Scripts (datumHash)
 import Plutus.V1.Ledger.Address (pubKeyHashAddress, scriptHashAddress)
 import Plutus.V1.Ledger.Api (
@@ -217,30 +224,30 @@ This UTxO won't be used as 'Spending' in the 'ScriptPurpose'
 of the builded 'ScriptContext'. For the representation of a 'Spending' UTxO
 use 'TestUTXO'.
 
- @since 1.0
+ @since 2.0
 -}
-data ValidatorUTXO (datum :: Type) = (ToData datum) =>
-  ValidatorUTXO
+data ValidatorUTXO (datum :: Type) = ValidatorUTXO
   { vUtxoDatum :: datum
   , vUtxoValue :: Value
   }
-
--- | @since 1.0
-deriving stock instance (Show d) => Show (ValidatorUTXO d)
+  deriving stock
+    ( -- | @since 1.0
+      Show
+    )
 
 {- | UTxO at the tested validator address. It will be used as 'Spending'
  in the 'ScriptPurpose' of the builded 'ScriptContext'.
 
- @since 1.0
+ @since 2.0
 -}
-data TestUTXO (datum :: Type) = (ToData datum) =>
-  TestUTXO
+data TestUTXO (datum :: Type) = TestUTXO
   { tUtxoDatum :: datum
   , tUtxoValue :: Value
   }
-
--- | @since 1.0
-deriving stock instance (Show d) => Show (TestUTXO d)
+  deriving stock
+    ( -- | @since 1.0
+      Show
+    )
 
 {- | ValidatorUTXOs represents a set of 'ValidatorUTXO's.
  It is type compatible with 'ContextBuider'.
@@ -288,79 +295,131 @@ data Minting
       Show
     )
 
-{- | A way to incrementally build up a script context.
+{- | Indicates whether a 'ContextBuilder' has named components or not.
 
- It is tagged with a 'Purpose' as a marker for what kind of 'ScriptPurpose'
- will be used in the constructed 'ScriptContext'.
+ @since 2.0
+-}
+data Naming = Anonymous | Named
+  deriving stock
+    ( -- | @since 2.0
+      Eq
+    , -- | @since 2.0
+      Show
+    )
+
+{- | A way to incrementally build up a 'ScriptContext'.
+
+ This has two \'tags\':
+
+ * A 'Purpose' to indicate what kind of 'ScriptPurpose' will be used in the
+ resulting 'ScriptContext'; and
+ * a 'Naming' to indicate whether named fragments are in use or not.
 
  You can use the 'Semigroup' instance of this type to build up larger
- contexts. For example:
+ contexts.
 
- > let cb = paysToWallet "userWalletOut" aWallet someValue <>
- >          signedWith "userSignature" aHash <>
- >          tagged "specialTag" aUniqueTag
-
- @since 1.0
+ @since 2.0
 -}
-data ContextBuilder (p :: Purpose) = ContextBuilder
-  { -- | @since 1.0
-    cbInputs :: Map.Map Text SideUTXO
-  , -- | @since 1.0
-    cbOutputs :: Map.Map Text SideUTXO
-  , -- | @since 1.0
-    cbSignatures :: Map.Map Text PubKeyHash
-  , -- | @since 1.0
-    cbDatums :: Map.Map Text BuiltinData
-  , -- | @since 1.0
-    cbMinting :: Map.Map Text Minting
-  , -- | @since 1.0
-    cbValidatorInputs :: ValidatorUTXOs p
-  , -- | @since 1.0
-    cbValidatorOutputs :: ValidatorUTXOs p
-  }
+data ContextBuilder (p :: Purpose) (n :: Naming) where
+  NoNames :: ContextFragment p -> ContextBuilder p 'Anonymous
+  WithNames :: Map Text (ContextFragment p) -> ContextBuilder p 'Named
 
--- | @since 1.0
-deriving stock instance Show (ContextBuilder p)
+-- | @since 2.0
+deriving stock instance Show (ContextBuilder p n)
 
--- | @since 1.0
-instance Semigroup (ContextBuilder p) where
+{- | Anonymous 'ContextBuilder's preserve all the information of each \'half\'
+ when '<>'d. Named 'ContextBuilder's instead combine all the named fragments
+ in each \'half\'.
+
+ = Important note
+
+ When combining named 'ContextBuilder's, if both \'halves\' have a fragment
+ associated to a specific name, the fragment in the /second/ argument will
+ everything in /both/ fragments.
+
+ @since 2.0
+-}
+instance Semigroup (ContextBuilder p n) where
   {-# INLINEABLE (<>) #-}
-  (ContextBuilder is os pkhs ds ms vis vos)
-    <> (ContextBuilder is' os' pkhs' ds' ms' vis' vos') =
-      ContextBuilder
-        (is <> is')
-        (os <> os')
-        (pkhs <> pkhs')
+  NoNames cf <> NoNames cf' = NoNames $ cf <> cf'
+  WithNames cfs <> WithNames cfs' = WithNames . Map.unionWith (<>) cfs $ cfs'
+
+-- | @since 2.0
+instance Monoid (ContextBuilder p 'Anonymous) where
+  {-# INLINEABLE mempty #-}
+  mempty = NoNames mempty
+
+-- | @since 2.0
+instance Monoid (ContextBuilder p 'Named) where
+  {-# INLINEABLE mempty #-}
+  mempty = WithNames mempty
+
+{- | Optionally-nameable piece of script context.
+
+ @since 2.0
+-}
+data ContextFragment (p :: Purpose) = ContextFragment
+  { -- | @since 2.0
+    cfInputs :: Seq SideUTXO
+  , -- | @since 2.0
+    cfOutputs :: Seq SideUTXO
+  , -- | @since 2.0
+    cfSignatures :: Seq PubKeyHash
+  , -- | @since 2.0
+    cfDatums :: Seq BuiltinData
+  , -- | @since 2.0
+    cfMinting :: Seq Minting
+  , -- | @since 2.0
+    cfValidatorInputs :: ValidatorUTXOs p
+  , -- | @since 2.0
+    cfValidatorOutputs :: ValidatorUTXOs p
+  }
+  deriving stock
+    ( -- | @since 2.0
+      Show
+    )
+
+-- | @since 2.0
+instance Semigroup (ContextFragment p) where
+  {-# INLINEABLE (<>) #-}
+  ContextFragment ins outs sigs ds ms vins vouts
+    <> ContextFragment ins' outs' sigs' ds' ms' vins' vouts' =
+      ContextFragment
+        (ins <> ins')
+        (outs <> outs')
+        (sigs <> sigs')
         (ds <> ds')
         (ms <> ms')
-        (vis <> vis')
-        (vos <> vos')
+        (vins <> vins')
+        (vouts <> vouts')
 
--- | @since 1.0
-instance Monoid (ContextBuilder p) where
+-- | @since 2.0
+instance Monoid (ContextFragment p) where
   {-# INLINEABLE mempty #-}
-  mempty = ContextBuilder mempty mempty mempty mempty mempty mempty mempty
+  mempty = ContextFragment mempty mempty mempty mempty mempty mempty mempty
 
 {- | As 'spendingScriptContext', but with the default
 transaction config 'defTransactionConfig'.
 
- @since 1.0
+ @since 2.0
 -}
 spendingScriptContextDef ::
-  forall (datum :: Type) (redeemer :: Type).
-  ContextBuilder ( 'ForSpending datum redeemer) ->
+  forall (datum :: Type) (redeemer :: Type) (n :: Naming).
+  (ToData datum) =>
+  ContextBuilder ( 'ForSpending datum redeemer) n ->
   TestUTXO datum ->
   ScriptContext
 spendingScriptContextDef = spendingScriptContext defTransactionConfig
 
 {- | Construct 'ScriptContext' with 'Spending' 'ScriptPurpose' from the provided blocks.
 
- @since 1.0
+ @since 2.0
 -}
 spendingScriptContext ::
-  forall (datum :: Type) (redeemer :: Type).
+  forall (datum :: Type) (redeemer :: Type) (n :: Naming).
+  (ToData datum) =>
   TransactionConfig ->
-  ContextBuilder ( 'ForSpending datum redeemer) ->
+  ContextBuilder ( 'ForSpending datum redeemer) n ->
   TestUTXO datum ->
   ScriptContext
 spendingScriptContext conf cb (TestUTXO d v) =
@@ -388,8 +447,8 @@ transaction config 'defTransactionConfig'.
  @since 1.0
 -}
 mintingScriptContextDef ::
-  forall (r :: Type).
-  ContextBuilder ( 'ForMinting r) ->
+  forall (r :: Type) (n :: Naming).
+  ContextBuilder ( 'ForMinting r) n ->
   NonEmpty MintingPolicyTask ->
   ScriptContext
 mintingScriptContextDef = mintingScriptContext defTransactionConfig
@@ -399,9 +458,9 @@ mintingScriptContextDef = mintingScriptContext defTransactionConfig
  @since 1.0
 -}
 mintingScriptContext ::
-  forall (r :: Type).
+  forall (r :: Type) (n :: Naming).
   TransactionConfig ->
-  ContextBuilder ( 'ForMinting r) ->
+  ContextBuilder ( 'ForMinting r) n ->
   NonEmpty MintingPolicyTask ->
   ScriptContext
 mintingScriptContext conf cb toks =
@@ -475,37 +534,52 @@ makeIncompleteContexts ctxs = map (first sconcat) ctxs2
 -- Helpers
 
 baseTxInfo ::
-  forall (p :: Purpose).
+  forall (p :: Purpose) (n :: Naming).
   TransactionConfig ->
-  ContextBuilder p ->
+  ContextBuilder p n ->
   TxInfo
-baseTxInfo conf (ContextBuilder ins outs pkhs dats mints vins vouts) =
-  let value = foldMap (filterValue filterCS . unMint) mints
-      insLst = filter (checkSideUtxoAddress conf) . Map.elems $ ins
-      outsLst = filter (checkSideUtxoAddress conf) . Map.elems $ outs
-   in TxInfo
-        { txInfoInputs = createTxInInfos conf insLst vins
-        , txInfoOutputs = createTxOuts conf outsLst vouts
+baseTxInfo conf = \case
+  NoNames cf -> go cf
+  WithNames cfs -> go . fold $ cfs
+  where
+    go :: ContextFragment p -> TxInfo
+    go cf =
+      let value = foldMap toUsefulValue . cfMinting $ cf
+          insList = toList . Seq.filter (checkSideUtxoAddress conf) . cfInputs $ cf
+          outsList = toList . Seq.filter (checkSideUtxoAddress conf) . cfOutputs $ cf
+          vins = cfValidatorInputs cf
+          vouts = cfValidatorOutputs cf
+          pkhs = toList . cfSignatures $ cf
+          dats = toList . fmap datumWithHash . cfDatums $ cf
+       in starterTxInfo
+            { txInfoMint = value
+            , txInfoInputs = createTxInInfos conf insList vins
+            , txInfoOutputs = createTxOuts conf outsList vouts
+            , txInfoSignatories = pkhs
+            , txInfoData =
+                validatorUtxosToDatum vins
+                  <> mapMaybe sideUtxoToDatum insList
+                  <> mapMaybe sideUtxoToDatum outsList
+                  <> dats
+            }
+    toUsefulValue :: Minting -> Value
+    toUsefulValue (Mint val) = filterValue filterCS val
+    filterCS :: CurrencySymbol -> TokenName -> Integer -> Bool
+    filterCS cs _ _ = cs /= testCurrencySymbol conf
+    starterTxInfo :: TxInfo
+    starterTxInfo =
+      TxInfo
+        { txInfoInputs = []
+        , txInfoOutputs = []
         , txInfoFee = testFee conf
-        , txInfoMint = value
+        , txInfoMint = mempty
         , txInfoDCert = []
         , txInfoWdrl = []
         , txInfoValidRange = testTimeRange conf
-        , txInfoSignatories = Map.elems pkhs
-        , txInfoData =
-            validatorUtxosToDatum vins
-              <> validatorUtxosToDatum vouts
-              <> mapMaybe sideUtxoToDatum insLst
-              <> mapMaybe sideUtxoToDatum outsLst
-              <> (fmap datumWithHash . Map.elems $ dats)
+        , txInfoSignatories = []
+        , txInfoData = []
         , txInfoId = TxId "testTx"
         }
-  where
-    unMint :: Minting -> Value
-    unMint (Mint val) = val
-
-    filterCS :: CurrencySymbol -> TokenName -> Integer -> Bool
-    filterCS cs _ _ = cs /= testCurrencySymbol conf
 
 checkSideUtxoAddress :: TransactionConfig -> SideUTXO -> Bool
 checkSideUtxoAddress conf (SideUTXO typ _) =
@@ -544,6 +618,7 @@ sideUtxoToTxOut conf (SideUTXO typ valType) =
 
 validatorUtxoToTxOut ::
   forall (d :: Type).
+  (ToData d) =>
   TransactionConfig ->
   ValidatorUTXO d ->
   TxOut

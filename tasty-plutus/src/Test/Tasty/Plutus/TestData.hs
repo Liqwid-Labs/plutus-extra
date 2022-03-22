@@ -38,6 +38,7 @@ import Test.Plutus.ContextBuilder (
   ContextBuilder,
   MintingPolicyAction (BurnAction, MintAction),
   MintingPolicyTask (MPTask),
+  Naming,
   Purpose (ForMinting, ForSpending),
   Tokens (Tokens),
   burnTokens,
@@ -150,41 +151,42 @@ static x = Methodology (pure x) (const [])
 {- | Contains a means of generating a seed and a function
  for creating 'TestItems' from the seed.
 
- @since 5.0
+ @since 9.0
 -}
-data Generator (a :: Type) (p :: Purpose) where
-  -- | @since 5.0
+data Generator (a :: Type) (p :: Purpose) (n :: Naming) where
+  -- | @since 9.0
   GenForSpending ::
-    forall (a :: Type) (d :: Type) (r :: Type).
+    forall (a :: Type) (d :: Type) (r :: Type) (n :: Naming).
     (Show a) =>
     -- | 'Methodology' for seed
     -- @since 5.0
     Methodology a ->
     -- | Function for producing 'TestItems' from the seed
-    -- @since 5.0
-    (a -> TestItems ( 'ForSpending d r)) ->
-    Generator a ( 'ForSpending d r)
+    -- @since 9.0
+    (a -> TestItems ( 'ForSpending d r) n) ->
+    Generator a ( 'ForSpending d r) n
+  -- | @since 9.0
   GenForMinting ::
-    forall (a :: Type) (r :: Type).
+    forall (a :: Type) (r :: Type) (n :: Naming).
     (Show a) =>
     -- | 'Methodology' for seed
     -- @since 5.0
     Methodology a ->
     -- | Function for producing 'TestItems' from the seed
-    -- @since 5.0
-    (a -> TestItems ( 'ForMinting r)) ->
-    Generator a ( 'ForMinting r)
+    -- @since 9.0
+    (a -> TestItems ( 'ForMinting r) n) ->
+    Generator a ( 'ForMinting r) n
 
 {- | Сontains the necessary data set for script checking.
  This dataset does not cover any set of tests or conditions.
  It is used only to check the result of calling the script with certain values.
 
- @since 5.0
+ @since 9.0
 -}
-data TestItems (p :: Purpose) where
-  -- | @since 5.0
+data TestItems (p :: Purpose) (n :: Naming) where
+  -- | @since 9.0
   ItemsForSpending ::
-    forall (datum :: Type) (redeemer :: Type).
+    forall (datum :: Type) (redeemer :: Type) (n :: Naming).
     ( ToData datum
     , ToData redeemer
     , FromData datum
@@ -202,16 +204,16 @@ data TestItems (p :: Purpose) where
       -- @since 5.0
       spendValue :: Value
     , -- | ContextBuilder used for creating ScriptContext
-      -- @since 5.0
-      spendCB :: ContextBuilder ( 'ForSpending datum redeemer)
+      -- @since 9.0
+      spendCB :: ContextBuilder ( 'ForSpending datum redeemer) n
     , -- | Result expected from calling the Validator
       -- | @since 5.0
       spendOutcome :: Outcome
     } ->
-    TestItems ( 'ForSpending datum redeemer)
-  -- | @since 5.0
+    TestItems ( 'ForSpending datum redeemer) n
+  -- | @since 9.0
   ItemsForMinting ::
-    forall (redeemer :: Type).
+    forall (redeemer :: Type) (n :: Naming).
     ( ToData redeemer
     , FromData redeemer
     , Show redeemer
@@ -223,13 +225,13 @@ data TestItems (p :: Purpose) where
       -- @since 6.0
       mpTasks :: NonEmpty MintingPolicyTask
     , -- | ContextBuilder used for creating ScriptContext
-      -- @since 5.0
-      mpCB :: ContextBuilder ( 'ForMinting redeemer)
+      -- @since 9.0
+      mpCB :: ContextBuilder ( 'ForMinting redeemer) n
     , -- | Result expected from calling the MintingPolicy
       -- | @since 5.0
       mpOutcome :: Outcome
     } ->
-    TestItems ( 'ForMinting redeemer)
+    TestItems ( 'ForMinting redeemer) n
 
--- | @since 6.0
-deriving stock instance Show (TestItems p)
+-- | @since 9.0
+deriving stock instance Show (TestItems p n)

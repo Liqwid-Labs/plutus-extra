@@ -11,6 +11,10 @@ module Test.Tasty.Plutus.Internal.Feedback (
   dumpState,
   dumpState',
   ourStyle,
+  errorNoEstimate,
+  reportBudgets,
+  explainFailureEstimation,
+  explainFailureExhaustion,
 ) where
 
 import Data.Kind (Type)
@@ -19,7 +23,7 @@ import Plutus.V1.Ledger.Api (
   ScriptContext,
  )
 import Plutus.V1.Pretty (scriptContextToValue)
-import Test.Plutus.ContextBuilder (ContextBuilder, Purpose, TransactionConfig)
+import Test.Plutus.ContextBuilder (ContextBuilder, Naming, Purpose, TransactionConfig)
 import Test.Tasty.Plutus.Internal.Env (getScriptContext)
 import Test.Tasty.Plutus.Options (
   PlutusTracing (Always, OnlyOnFail),
@@ -29,8 +33,12 @@ import Text.PrettyPrint (
   Doc,
   Style (lineLength),
   colon,
+  comma,
   hang,
+  hcat,
   int,
+  integer,
+  punctuate,
   renderStyle,
   style,
   text,
@@ -44,6 +52,42 @@ import Prelude hiding ((<>))
 
 ourStyle :: Style
 ourStyle = style {lineLength = 80}
+
+explainFailureExhaustion :: String
+explainFailureExhaustion =
+  renderStyle ourStyle $
+    "Gave up trying to generate a successful run for estimation."
+      $+$ "See documentation for PlutusEstimate for an explanation."
+
+explainFailureEstimation :: String
+explainFailureEstimation =
+  renderStyle ourStyle $
+    "Cannot provide estimates for test cases whose scripts are designed to fail."
+      $+$ "See documentation for PlutusEstimate for an explanation."
+
+reportBudgets :: Integer -> Integer -> String
+reportBudgets bCPU bMem =
+  renderStyle ourStyle $
+    "Script resource estimates:"
+      $+$ hang "CPU:" 4 cpuBudget
+      $+$ hang "Memory:" 4 (memoryBudget <+> "machine words")
+  where
+    cpuBudget :: Doc
+    cpuBudget =
+      let chunked = thousandsChunks bCPU
+       in case chunked of
+            [nanos, picos] ->
+              nanos <> "." <> picos <+> "nanoseconds"
+            [micros, nanos, _] ->
+              "~" <> micros <> "." <> nanos <+> "microseconds"
+            [millis, micros, _, _] ->
+              "~" <> millis <> "." <> micros <+> "milliseconds"
+            [secs, millis, _, _, _] ->
+              "~" <> secs <> "." <> millis <+> "seconds"
+            -- default to comma-separated picos
+            _ -> commaSep chunked <+> "picoseconds"
+    memoryBudget :: Doc
+    memoryBudget = commaSep . thousandsChunks $ bMem
 
 unexpectedFailure ::
   forall (a :: Type).
@@ -67,6 +111,13 @@ malformedScript msg =
   renderStyle ourStyle $
     "Script was malformed"
       $+$ hang "Details" 4 (text msg)
+
+errorNoEstimate :: [Text] -> String -> String
+errorNoEstimate logs msg =
+  renderStyle ourStyle $
+    "Could not provide estimate due to script error"
+      $+$ hang "Description:" 4 (text msg)
+      $+$ hang "Logs:" 4 (dumpLogs logs)
 
 noOutcome ::
   forall (a :: Type).
@@ -133,9 +184,9 @@ didn'tLog getDumpedState env =
       $+$ getDumpedState env
 
 dumpState ::
-  forall (a :: Type) (p :: Purpose).
+  forall (a :: Type) (p :: Purpose) (n :: Naming).
   (a -> TransactionConfig) ->
-  (a -> ContextBuilder p) ->
+  (a -> ContextBuilder p n) ->
   (a -> TestData p) ->
   [Text] ->
   a ->
@@ -165,9 +216,9 @@ dumpState getConf getCb getTd logs env =
           $+$ ppDoc v
 
 dumpState' ::
-  forall (a :: Type) (p :: Purpose).
+  forall (a :: Type) (p :: Purpose) (n :: Naming).
   (a -> TransactionConfig) ->
-  (a -> ContextBuilder p) ->
+  (a -> ContextBuilder p n) ->
   (a -> TestData p) ->
   [Text] ->
   a ->
@@ -186,3 +237,14 @@ dumpLogs = vcat . fmap go . zip [1 ..]
   where
     go :: (Int, Text) -> Doc
     go (ix, line) = (int ix <> colon) <+> (text . show $ line)
+
+-- Helpers
+
+commaSep :: [Doc] -> Doc
+commaSep = hcat . punctuate comma
+
+thousandsChunks :: Integer -> [Doc]
+thousandsChunks i = case quotRem i 1000 of
+  (0, 0) -> []
+  (0, r) -> [integer r]
+  (d, r) -> thousandsChunks d ++ [integer r]

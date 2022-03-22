@@ -12,6 +12,7 @@ import Prelude hiding (($), (&&), (*), (+), (==))
 import Ledger.Crypto (PubKeyHash)
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
+  Naming (Anonymous),
   Purpose (ForMinting),
   inTokensFromPubKey,
   outTokensToPubKey,
@@ -83,7 +84,7 @@ gen1 = Methodology gen' genericShrink
 -- | Creates TestItems with an arbitrary key used in Redeemer
 transform1 ::
   (Integer, Tokens, Tokens) ->
-  TestItems ( 'ForMinting Integer)
+  TestItems ( 'ForMinting Integer) 'Anonymous
 transform1 (key, toksMint, toksBurn) =
   ItemsForMinting
     { mpRedeemer = key
@@ -98,21 +99,21 @@ transform1 (key, toksMint, toksBurn) =
         <> burnTokens toksBurn
     out :: Outcome
     out = passIf $ key == secretKey
-    cb :: ContextBuilder ( 'ForMinting Integer)
+    cb :: ContextBuilder ( 'ForMinting Integer) 'Anonymous
     cb =
-      outTokensToPubKey "toUser" userPKHash1 toksMint
-        <> inTokensFromPubKey "fromUser" userPKHash2 toksBurn
-        <> signedWith "userSignature" userPKHash2
+      outTokensToPubKey userPKHash1 toksMint
+        <> inTokensFromPubKey userPKHash2 toksBurn
+        <> signedWith userPKHash2
 
 -- | Creates TestItems with correct secretKey used in Redeemer
 transform2 ::
   (Integer, Tokens, Tokens) ->
-  TestItems ( 'ForMinting Integer)
+  TestItems ( 'ForMinting Integer) 'Anonymous
 transform2 = transformItems . transform1
   where
     transformItems ::
-      TestItems ( 'ForMinting Integer) ->
-      TestItems ( 'ForMinting Integer)
+      TestItems ( 'ForMinting Integer) 'Anonymous ->
+      TestItems ( 'ForMinting Integer) 'Anonymous
     transformItems = \case
       ItemsForMinting _ t c o -> ItemsForMinting secretKey t c o
 
