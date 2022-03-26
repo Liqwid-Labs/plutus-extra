@@ -41,7 +41,7 @@ import Ledger.Credential (
   StakingCredential (StakingHash),
  )
 import Ledger.Crypto (PubKeyHash (PubKeyHash))
-import Plutus.Contract (ContractError (OtherError), throwError)
+import Plutus.Contract (ContractError (OtherContractError), throwError)
 import Plutus.Contract.CardanoAPI (fromCardanoAddress, toCardanoAddress)
 import Plutus.V1.Ledger.Value (Value)
 import PlutusCore.Pretty (Pretty (pretty))
@@ -146,6 +146,6 @@ mustPayToAddress addr =
     triple ->
       const $
         throwError $
-          OtherError $
+          OtherContractError $
             Text.pack $
               printf "Unkown type of address %s: %s" (show addr) (show triple)
