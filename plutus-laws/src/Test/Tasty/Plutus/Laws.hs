@@ -418,7 +418,7 @@ plutusEqLawsDirectWith gen shr =
       , forAllShrinkShow gen shr ppShow propRefl
       )
     ,
-      ( "if x == y, then y == x"
+      ( "x == y if and only if y == x"
       , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propSymm
       )
     ,
@@ -439,7 +439,7 @@ plutusEqLawsDirectWith gen shr =
         50.0
         ((x PlutusTx.== y) && (y PlutusTx.== z))
         "precondition satisfied"
-        $ ((x PlutusTx.== y) && (y PlutusTx.== z)) === (x PlutusTx.== z)
+        $ ((x PlutusTx.== y) && (y PlutusTx.== z)) ==> (x PlutusTx.== z)
 
 {- | Checks that the substitution property holds for @a@'s 'PlutusTx.Eq'
  instance; specifically, that for any pure function @f@, if @x == y@, then @f
@@ -625,7 +625,7 @@ plutusOrdLawsWith gen shr =
       , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propTotal
       )
     ,
-      ( "if x <= y and y <= x, then x == y"
+      ( "x == y if and only if x <= y and y <= x"
       , forAllShrinkShow (liftArbitrary gen) (liftShrink shr) ppShow propAntiSymm
       )
     ,
