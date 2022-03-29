@@ -57,12 +57,15 @@
             # Eventually we will probably want to build these with haskell.nix.
             nativeBuildInputs = [
               pkgs.cabal-install
-              pkgs.hlint
               pkgs.haskellPackages.fourmolu
               pkgs.entr
               pkgs.nixfmt
               pkgs.haskellPackages.cabal-fmt
             ];
+
+            tools = { 
+              hlint = "3.3.6";
+            };
 
             additional = ps: [
               ps.base-deriving-via
