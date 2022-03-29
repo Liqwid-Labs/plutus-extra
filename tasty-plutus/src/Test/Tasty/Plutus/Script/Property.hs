@@ -63,10 +63,10 @@ import Test.Plutus.ContextBuilder (
   TransactionConfig,
  )
 import Test.QuickCheck (
-  Args (maxSize, maxSuccess),
+  Args (chatty, maxSize, maxSuccess),
   Gen,
   Property,
-  Result (Failure, GaveUp, NoExpectedFailure, Success),
+  Result (Success, output),
   checkCoverage,
   counterexample,
   cover,
@@ -407,7 +407,7 @@ instance (Show a, Typeable a, Typeable p, Typeable n) => IsTest (PropertyTest a 
   run opts vt _ = do
     let PropertyTestCount testCount' = lookupOption opts
     let PropertyMaxSize maxSize' = lookupOption opts
-    let args = stdArgs {maxSuccess = testCount', maxSize = maxSize'}
+    let args = stdArgs {maxSuccess = testCount', maxSize = maxSize', chatty = False}
     case lookupOption opts of
       EstimateOnly -> case getOutcomeKind vt of
         OutcomeAlwaysFail -> pure . testPassed $ explainFailureEstimation
@@ -419,11 +419,10 @@ instance (Show a, Typeable a, Typeable p, Typeable n) => IsTest (PropertyTest a 
               reportBudgets (fromIntegral bCPU) (fromIntegral bMem)
       NoEstimates -> do
         res <- quickCheckWithResult args go
+        let logs = output res
         pure $ case res of
-          Success {} -> testPassed ""
-          GaveUp {} -> testFailed "Internal error: gave up."
-          Failure {} -> testFailed ""
-          NoExpectedFailure {} -> testFailed "Internal error: expected failure but saw none."
+          Success {} -> testPassed logs
+          _ -> testFailed logs
     where
       go :: Property
       go = case vt of
