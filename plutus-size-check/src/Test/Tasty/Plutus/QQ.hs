@@ -1,5 +1,5 @@
 {-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 
 module Test.Tasty.Plutus.QQ (bytes, kbytes) where
 

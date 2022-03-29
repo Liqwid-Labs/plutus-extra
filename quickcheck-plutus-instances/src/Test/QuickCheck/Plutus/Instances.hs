@@ -506,8 +506,7 @@ instance Arbitrary TxOutRef where
 
 -- | @since 1.0
 instance CoArbitrary TxOutRef where
-  coarbitrary (TxOutRef tid tidx) gen =
-    coarbitrary tid . coarbitrary tidx $ gen
+  coarbitrary (TxOutRef tid tidx) = coarbitrary tid . coarbitrary tidx
 
 -- | @since 1.0
 instance Function TxOutRef where
@@ -650,8 +649,7 @@ instance Arbitrary Address where
 
 -- | @since 1.1
 instance CoArbitrary Address where
-  coarbitrary (Address cred sCred) gen =
-    coarbitrary cred . coarbitrary sCred $ gen
+  coarbitrary (Address cred sCred) = coarbitrary cred . coarbitrary sCred
 
 -- | @since 1.1
 instance Function Address where
@@ -686,8 +684,8 @@ instance Arbitrary TxOut where
 
 -- | @since 1.1
 instance CoArbitrary TxOut where
-  coarbitrary (TxOut addr val mDatumHash) gen =
-    coarbitrary addr . coarbitrary val . coarbitrary mDatumHash $ gen
+  coarbitrary (TxOut addr val mDatumHash) =
+    coarbitrary addr . coarbitrary val . coarbitrary mDatumHash
 
 -- | @since 1.1
 instance Function TxOut where
