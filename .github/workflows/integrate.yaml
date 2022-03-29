@@ -4,7 +4,8 @@ on:
       - '**.hs'
       - '**.nix'
       - 'nix/sources.json'
-      - 'plutus-extra.cabal'
+      - '**.cabal'
+      - '.github/workflows/*'
     branches:
       - master
       - staging
@@ -13,43 +14,37 @@ on:
       - '**.hs'
       - '**.nix'
       - 'nix/sources.json'
-      - 'plutus-extra.cabal'
+      - '**.cabal'
+      - '.github/workflows/*'
 jobs:
   check-formatting:
+    name: Check source format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions/cache@v2.1.4
-        name: Cache Stack
+      - name: Checkout base repo
+        uses: actions/checkout@v2
+      - name: Cache Stack
+        uses: actions/cache@v2.1.4
         with:
           path: ~/.stack
           key: ${{ runner.os }}-stack-formatting
           restore-keys: ${{ runner.os }}-stack-
-
-      - run: stack install fourmolu
-        name: Setup
-
-      - run: ./.github/format.sh
-        name: "Run fourmolu"
-
+      - name: Install fourmolu
+        run: stack install fourmolu
+      - name: Run fourmolu
+        run: ./.github/format.sh
   lint:
+    name: Check HLint hints
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions/cache@v2.1.4
-        name: Cache Stack
+      - name: Checkout base repo
+        uses: actions/checkout@v2
+      - name: Set up HLint
+        uses: haskell/actions/hlint-setup@v1
         with:
-          path: ~/.stack
-          key: ${{ runner.os }}-stack-lint
-          restore-keys: ${{ runner.os }}-stack-
-
-      - run: stack install hlint
-        name: Setup
-
-      - run: ~/.local/bin/hlint $(git ls-tree -r HEAD --full-tree --name-only | grep -E '.*\.hs')
-        name: Lint
+          version: 3.3.6
+      - name: Lint
+        run: ./.github/lint.sh
   build:
     runs-on: ubuntu-latest
     steps:
