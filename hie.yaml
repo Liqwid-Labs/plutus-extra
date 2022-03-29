@@ -9,6 +9,9 @@ cradle:
     - path: "./plutus-collection/test/size"
       component: "plutus-collection:test:plutus-collection-size"
 
+    - path: "./plutus-context-builder/src"
+      component: "lib:plutus-context-builder"
+
     - path: "./plutus-deriving/src"
       component: "lib:plutus-deriving"
 
