@@ -46,6 +46,7 @@ jobs:
       - name: Lint
         run: ./.github/lint.sh
   build:
+    name: Build all sublibraries
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -70,4 +71,4 @@ jobs:
             dist-newstyle
           key: ${{ runner.os }}-cabal
       - name: Build the full ci derivation
-        run: nix build .#check.x86_64-linux --extra-experimental-features nix-command --extra-experimental-features flakes
+        run: nix develop --extra-experimental-features nix-command --extra-experimental-features flakes --command bash -c "cabal new-build all && cabal new-test all"
