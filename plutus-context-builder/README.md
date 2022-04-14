@@ -56,7 +56,7 @@ to the `SideUTXO` data type, and can be constructed by using `ToPubKey`,
 `FromPubKey`, `ToOtherScript` and `FromOtherScript`, as well as helpers
 operating on these. Inputs of type 2, as well as outputs of type 1, correspond
 to the `ValidatorUTXO` data type, and can be built using the helpers
-`inFromValidator` and `outFromValidator. Lastly, inputs of type 1 correspond to
+`inFromValidator` and `outFromValidator`. Lastly, inputs of type 1 correspond to
 the `TestUTXO` data type. Unlike the others, this is not part of the
 `ContextBuilder` abstraction, and needs to be provided directly to one of the
 functions that _consume_ a `ContextBuilder` (namely, `spendingScriptContext`).
