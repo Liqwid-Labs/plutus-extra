@@ -69,7 +69,7 @@ powNat ::
 powNat x (Natural n) =
   if n == zero
     then one
-    else expBySquaring x n
+    else expBySquaring (*) x n
 
 infixr 8 `powNat`
 
@@ -213,8 +213,8 @@ class (MultiplicativeMonoid a) => MultiplicativeGroup a where
   powInteger x i
     | i == zero = one
     | i == one = x
-    | i < zero = reciprocal . expBySquaring x . abs $ i
-    | otherwise = expBySquaring x i
+    | i < zero = reciprocal . expBySquaring (*) x . abs $ i
+    | otherwise = expBySquaring (*) x i
 
 infixr 8 `powInteger`
 
@@ -236,8 +236,8 @@ instance MultiplicativeGroup Rational where
             if i < zero
               then (negate i, Ratio.denominator r, Ratio.numerator r)
               else (i, Ratio.numerator r, Ratio.denominator r)
-          newNum = expBySquaring num i'
-          newDen = expBySquaring den i'
+          newNum = expBySquaring (*) num i'
+          newDen = expBySquaring (*) den i'
        in Ratio.unsafeRatio newNum newDen
 
 -- | @since 1.0
@@ -417,12 +417,16 @@ scaleNat ::
   Natural ->
   a ->
   a
-scaleNat (Natural i) a = go i
-  where
-    go :: Integer -> a
-    go x
-      | x == zero = zero
-      | otherwise = a + go (x - 1)
+scaleNat (Natural i) a =
+  if i == zero
+    then zero
+    else expBySquaring (+) a i
+
+-- Xiaoyan: these rules seems not picked up by Plutus.
+-- {-# RULES "scaleNat/Natural" scaleNat = (*) #-}
+-- {-# RULES "scaleNat/Integer" scaleNat = \(Natural i) a -> i * a #-}
+-- {-# RULES "scaleNat/Ratio" scaleNat = \(Natural i) a -> Ratio.fromInteger i * a #-}
+-- {-# RULES "scaleNat/NatRatio" scaleNat = \_ a -> a #-}
 
 -- Helpers
 
@@ -431,17 +435,17 @@ scaleNat (Natural i) a = go i
 {-# INLINEABLE expBySquaring #-}
 expBySquaring ::
   forall (a :: Type).
-  (MultiplicativeMonoid a) =>
+  (a -> a -> a) ->
   a ->
   Integer ->
   a
-expBySquaring acc i
+expBySquaring (*:) acc i
   | i == one = acc
-  | even' i = expBySquaring (square acc) . halve $ i
-  | otherwise = (acc *) . expBySquaring (square acc) . halve $ i
+  | even' i = expBySquaring (*:) (square acc) . halve $ i
+  | otherwise = (acc *:) . expBySquaring (*:) (square acc) . halve $ i
   where
     square :: a -> a
-    square y = y * y
+    square y = y *: y
     halve :: Integer -> Integer
     halve = (`divide` 2)
     even' :: Integer -> Bool
