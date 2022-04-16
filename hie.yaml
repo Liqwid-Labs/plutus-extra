@@ -51,6 +51,9 @@ cradle:
     - path: "./plutus-numeric/test/size"
       component: "plutus-numeric:test:size"
 
+    - path: "./plutus-numeric/bench"
+      component: "plutus-numeric:bench:benchmark"
+
     - path: "./plutus-pretty/src"
       component: "lib:plutus-pretty"
 
