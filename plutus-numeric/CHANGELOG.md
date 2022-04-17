@@ -2,6 +2,18 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 5.1 -- 2022-04-18
+
+### Added
+
+* `NFData` instance for `Natural`, `NatRatio`, `Rational` (orphan).
+
+### Changed
+
+* `scaleNat` now no longer requires _&Theta;(n)_ additions; we use
+  [exponentiation-by-squaring](https://en.wikipedia.org/wiki/Exponentiation_by_squaring)
+  in the general case, and specialized versions where possible.
+
 ## 5.0 -- 2022-01-21
 
 ### Added

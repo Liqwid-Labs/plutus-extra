@@ -410,7 +410,7 @@ infixr 8 ^
 
  @since 4.2
 -}
-{-# INLINEABLE scaleNat #-}
+{-# INLINEABLE [2] scaleNat #-}
 scaleNat ::
   forall (a :: Type).
   (AdditiveMonoid a) =>
@@ -422,13 +422,37 @@ scaleNat (Natural i) a =
     then zero
     else expBySquaring (+) a i
 
--- Xiaoyan: these rules seems not picked up by Plutus.
--- {-# RULES "scaleNat/Natural" scaleNat = (*) #-}
--- {-# RULES "scaleNat/Integer" scaleNat = \(Natural i) a -> i * a #-}
--- {-# RULES "scaleNat/Ratio" scaleNat = \(Natural i) a -> Ratio.fromInteger i * a #-}
--- {-# RULES "scaleNat/NatRatio" scaleNat = \_ a -> a #-}
+{-# RULES "scaleNat/Natural" scaleNat = scaleNatNatural #-}
+
+{-# RULES "scaleNat/Integer" scaleNat = scaleNatInteger #-}
+
+{-# RULES "scaleNat/NatRatio" scaleNat = scaleNatNR #-}
+
+{-# RULES "scaleNat/Rational" scaleNat = scaleNatRational #-}
 
 -- Helpers
+
+{-# INLINEABLE scaleNatNatural #-}
+scaleNatNatural :: Natural -> Natural -> Natural
+scaleNatNatural (Natural x) (Natural y) = Natural (x * y)
+
+{-# INLINEABLE scaleNatInteger #-}
+scaleNatInteger :: Natural -> Integer -> Integer
+scaleNatInteger (Natural x) i = x * i
+
+{-# INLINEABLE scaleNatNR #-}
+scaleNatNR :: Natural -> NatRatio -> NatRatio
+scaleNatNR (Natural i) (NatRatio r) =
+  let num = Ratio.numerator r
+      den = Ratio.denominator r
+   in NatRatio . Ratio.unsafeRatio (i * num) $ den
+
+{-# INLINEABLE scaleNatRational #-}
+scaleNatRational :: Natural -> Rational -> Rational
+scaleNatRational (Natural i) r =
+  let num = Ratio.numerator r
+      den = Ratio.denominator r
+   in Ratio.unsafeRatio (i * num) den
 
 {- HLint ignore expBySquaring -}
 -- We secretly know that i is always positive.

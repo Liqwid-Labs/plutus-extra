@@ -1,6 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE TemplateHaskell #-}
+-- We need an orphan for NFData Rational
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -fno-specialize #-}
 
 module PlutusTx.NatRatio.Internal (
@@ -19,6 +21,7 @@ module PlutusTx.NatRatio.Internal (
   nrMonus,
 ) where
 
+import Control.DeepSeq (NFData (rnf))
 import Control.Monad (guard)
 import Data.Aeson (
   FromJSON (parseJSON),
@@ -66,7 +69,7 @@ import Prelude qualified
 
  @since 1.0
 -}
-newtype NatRatio = NatRatio Ratio.Rational
+newtype NatRatio = NatRatio Rational
   deriving stock
     ( -- | @since 1.0
       Prelude.Show
@@ -92,6 +95,8 @@ newtype NatRatio = NatRatio Ratio.Rational
       ToJSON
     , -- | @since 1.0
       ToData
+    , -- | @since 5.1
+      NFData
     )
     via Rational
   deriving
@@ -103,6 +108,11 @@ newtype NatRatio = NatRatio Ratio.Rational
       PlutusSchema.ToArgument
     )
     via (NatRatioSchema ("numerator" ':%: "denominator"))
+
+-- | @since 5.1
+instance NFData Rational where
+  {-# INLINEABLE rnf #-}
+  rnf r = rnf (Ratio.numerator r) `Prelude.seq` rnf (Ratio.denominator r)
 
 {- | Represents this like a positive-only ratio.
 

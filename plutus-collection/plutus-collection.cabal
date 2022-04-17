@@ -53,7 +53,7 @@ library
 
   build-depends:
     , playground-common
-    , plutus-numeric     ^>=5.0
+    , plutus-numeric     ^>=5.1
     , plutus-tx
     , template-haskell   ^>=2.16.0.0
     , transformers       >=0.5.0.0 && < 0.7.0.0
@@ -67,7 +67,7 @@ test-suite plutus-collection-properties
   main-is:        Main.hs
   build-depends:
     , plutus-collection
-    , plutus-numeric    ^>=5.0
+    , plutus-numeric
     , plutus-tx
     , tasty             ^>=1.4.1
     , tasty-quickcheck  ^>=0.10.1.2
@@ -81,7 +81,7 @@ test-suite plutus-collection-size
   build-depends:
     , plutus-ledger-api
     , plutus-collection
-    , plutus-numeric     ^>=5.0
+    , plutus-numeric
     , plutus-size-check  ^>=2.0
     , plutus-tx
     , plutus-tx-plugin
