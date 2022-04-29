@@ -25,6 +25,7 @@ module Test.Plutus.ContextBuilder (
   ValueType (..),
   SideUTXO (..),
   ValidatorUTXO (..),
+  SomeValidatedUTXO (..),
   TestUTXO (..),
   ValidatorUTXOs (..),
   Minting (..),
@@ -42,8 +43,10 @@ module Test.Plutus.ContextBuilder (
   -- ** Basic construction
   input,
   validatorInput,
+  validatedInput,
   output,
   validatorOutput,
+  validatedOutput,
   signedWith,
   datum,
   addDatum,
@@ -123,8 +126,9 @@ import Test.Plutus.ContextBuilder.Internal (
   InputPosition (Head, Tail),
   Minting (Mint),
   Naming (Anonymous, Named),
-  Purpose (ForMinting, ForSpending),
+  Purpose (ForMinting, ForSpending, ForTransaction),
   SideUTXO (SideUTXO, sUtxoType, sUtxoValue),
+  SomeValidatedUTXO (SomeValidatedUTXO, someRedeemer, someSpendingScript, someUTxO),
   TestUTXO (TestUTXO, tUtxoDatum, tUtxoValue),
   TransactionConfig (
     TransactionConfig,
@@ -137,7 +141,7 @@ import Test.Plutus.ContextBuilder.Internal (
   ),
   UTXOType (PubKeyUTXO, ScriptUTXO),
   ValidatorUTXO (ValidatorUTXO, vUtxoDatum, vUtxoValue),
-  ValidatorUTXOs (NoValidatorUTXOs, ValidatorUTXOs),
+  ValidatorUTXOs (MultiValidatorUTXOs, NoValidatorUTXOs, ValidatorUTXOs),
   ValueType (GeneralValue, TokensValue),
   defTransactionConfig,
   makeIncompleteContexts,
@@ -185,7 +189,28 @@ validatorInput name x =
   NoNames $
     mempty
       { cfValidatorInputs =
-          ValidatorUTXOs $ Map.singleton name (x, Nothing)
+          ValidatorUTXOs $ Map.singleton name x
+      }
+
+{- | Anonymous context from a single 'SomeValidatedUTXO' input.
+
+ = Note
+
+ This input won't be used for spending in any 'ScriptPurpose' of any
+ 'ScriptContext' built from this.
+
+ @since 2.1
+-}
+validatedInput ::
+  -- | Name of the input
+  Text ->
+  SomeValidatedUTXO ->
+  ContextBuilder 'ForTransaction 'Anonymous
+validatedInput name x =
+  NoNames $
+    mempty
+      { cfValidatorInputs =
+          MultiValidatorUTXOs $ Map.singleton name x
       }
 
 {- | Anonymous context from a single 'SideUTXO' output.
@@ -212,7 +237,22 @@ validatorOutput name x =
   NoNames $
     mempty
       { cfValidatorOutputs =
-          ValidatorUTXOs $ Map.singleton name (x, Nothing)
+          ValidatorUTXOs $ Map.singleton name x
+      }
+
+{- | Anonymous context from a single 'SomeValidatedUTXO' output.
+
+ @since 2.1
+-}
+validatedOutput ::
+  Text ->
+  SomeValidatedUTXO ->
+  ContextBuilder 'ForTransaction 'Anonymous
+validatedOutput name x =
+  NoNames $
+    mempty
+      { cfValidatorOutputs =
+          MultiValidatorUTXOs $ Map.singleton name x
       }
 
 {- | Anonymous context signed with one signature.
