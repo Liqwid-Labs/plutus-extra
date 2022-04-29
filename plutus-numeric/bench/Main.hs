@@ -4,7 +4,7 @@ module Main (main) where
 
 import Helpers (
   hundred,
-  mkScaleNatBenches,
+  mkSemiscaleBench,
   ten,
   tenThousand,
   thousand,
@@ -20,10 +20,10 @@ import Prelude hiding (Rational)
 main :: IO ()
 main =
   defaultMain
-    [ mkScaleNatBenches "Natural" nTarget [ten, hundred, thousand, tenThousand]
-    , mkScaleNatBenches "Integer" iTarget [ten, hundred, thousand, tenThousand]
-    , mkScaleNatBenches "NatRatio" nrTarget [ten, hundred, thousand, tenThousand]
-    , mkScaleNatBenches "Rational" rTarget [ten, hundred, thousand, tenThousand]
+    [ mkSemiscaleBench "Natural" nTarget [ten, hundred, thousand, tenThousand]
+    , mkSemiscaleBench "Integer" iTarget [ten, hundred, thousand, tenThousand]
+    , mkSemiscaleBench "NatRatio" nrTarget [ten, hundred, thousand, tenThousand]
+    , mkSemiscaleBench "Rational" rTarget [ten, hundred, thousand, tenThousand]
     ]
   where
     nTarget :: Natural

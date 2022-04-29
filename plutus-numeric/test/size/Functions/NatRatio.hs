@@ -28,7 +28,7 @@ module Functions.NatRatio (
   nrFromBuiltinData,
   nrUnsafeFromBuiltinData,
   nrPowNat,
-  nrScaleNat,
+  nrSemiscale,
 ) where
 
 import PlutusTx.Code (CompiledCode)
@@ -44,7 +44,7 @@ import PlutusTx.Numeric.Extra (
   powInteger,
   powNat,
   reciprocal,
-  scaleNat,
+  semiscale,
   (/),
   (^-),
  )
@@ -133,5 +133,5 @@ nrUnsafeFromBuiltinData = $$(compile [||unsafeFromBuiltinData||])
 nrPowNat :: CompiledCode (NatRatio -> Natural -> NatRatio)
 nrPowNat = $$(compile [||powNat||])
 
-nrScaleNat :: CompiledCode (Natural -> NatRatio -> NatRatio)
-nrScaleNat = $$(compile [||scaleNat||])
+nrSemiscale :: CompiledCode (Natural -> NatRatio -> NatRatio)
+nrSemiscale = $$(compile [||semiscale||])

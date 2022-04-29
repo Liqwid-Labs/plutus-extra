@@ -80,6 +80,7 @@ library
     , playground-common
     , plutus-laws        ^>=3.0
     , plutus-tx
+    , plutus-ledger-api
     , pretty-show        ^>=1.10
     , QuickCheck         ^>=2.14.2
     , recursion-schemes  ^>=5.1.3
