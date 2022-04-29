@@ -32,6 +32,7 @@ module Test.Plutus.ContextBuilder.Internal (
   spendingScriptContextDef,
   mintingScriptContextDef,
   makeIncompleteContexts,
+  foldBuilt,
 ) where
 
 import Control.Arrow ((***))
@@ -608,9 +609,7 @@ baseTxInfo ::
   TransactionConfig ->
   ContextBuilder p n ->
   TxInfo
-baseTxInfo conf = \case
-  NoNames cf -> go cf
-  WithNames cfs -> go . fold $ cfs
+baseTxInfo conf = go . foldBuilt
   where
     go :: ContextFragment p -> TxInfo
     go cf =
@@ -650,6 +649,20 @@ baseTxInfo conf = \case
         , txInfoData = []
         , txInfoId = TxId "testTx"
         }
+
+{- | Turns an arbitrary 'ContextBuilder' into a 'ContextFragment'.
+
+= Note
+
+ This is a low-level operation designed for maximum control. If possible, use
+ the other, higher-level, operations in this module instead.
+
+   @since 2.1
+-}
+foldBuilt :: ContextBuilder p n -> ContextFragment p
+foldBuilt = \case
+  NoNames cf -> cf
+  WithNames cfs -> fold cfs
 
 checkSideUtxoAddress :: TransactionConfig -> SideUTXO -> Bool
 checkSideUtxoAddress conf (SideUTXO typ _) =

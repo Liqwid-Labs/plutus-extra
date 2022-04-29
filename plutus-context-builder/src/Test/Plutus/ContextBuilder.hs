@@ -88,6 +88,7 @@ module Test.Plutus.ContextBuilder (
   -- ** Direct
   liftContextFragment,
   liftNamedContextFragment,
+  foldBuilt,
 
   -- ** Build finished context
   spendingScriptContext,
@@ -144,6 +145,7 @@ import Test.Plutus.ContextBuilder.Internal (
   ValidatorUTXOs (MultiValidatorUTXOs, NoValidatorUTXOs, ValidatorUTXOs),
   ValueType (GeneralValue, TokensValue),
   defTransactionConfig,
+  foldBuilt,
   makeIncompleteContexts,
   mintingScriptContext,
   mintingScriptContextDef,
