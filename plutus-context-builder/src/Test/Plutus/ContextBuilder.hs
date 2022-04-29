@@ -182,7 +182,11 @@ validatorInput ::
   ValidatorUTXO d ->
   ContextBuilder ( 'ForSpending d r) 'Anonymous
 validatorInput name x =
-  NoNames $ mempty {cfValidatorInputs = ValidatorUTXOs $ Map.singleton name x}
+  NoNames $
+    mempty
+      { cfValidatorInputs =
+          ValidatorUTXOs $ Map.singleton name (x, Nothing)
+      }
 
 {- | Anonymous context from a single 'SideUTXO' output.
 
@@ -205,7 +209,11 @@ validatorOutput ::
   ValidatorUTXO d ->
   ContextBuilder ( 'ForSpending d r) 'Anonymous
 validatorOutput name x =
-  NoNames $ mempty {cfValidatorOutputs = ValidatorUTXOs $ Map.singleton name x}
+  NoNames $
+    mempty
+      { cfValidatorOutputs =
+          ValidatorUTXOs $ Map.singleton name (x, Nothing)
+      }
 
 {- | Anonymous context signed with one signature.
 

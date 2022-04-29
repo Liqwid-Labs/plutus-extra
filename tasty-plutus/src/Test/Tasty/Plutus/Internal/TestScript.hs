@@ -2,7 +2,14 @@
 
 module Test.Tasty.Plutus.Internal.TestScript (
   -- * Types
-  TestScript (..),
+  TestScript (
+    TestValidator,
+    getTestValidator,
+    getTestValidatorCode,
+    TestMintingPolicy,
+    getTestMintingPolicy,
+    getTestMintingPolicyCode
+  ),
   WrappedValidator (..),
   WrappedMintingPolicy (..),
 
@@ -16,9 +23,7 @@ module Test.Tasty.Plutus.Internal.TestScript (
 ) where
 
 import Data.Kind (Type)
-import Ledger.Typed.Scripts (Validator)
 import Plutus.V1.Ledger.Api (
-  MintingPolicy,
   mkMintingPolicyScript,
   mkValidatorScript,
  )
@@ -28,33 +33,16 @@ import PlutusTx.IsData.Class (FromData (fromBuiltinData))
 import PlutusTx.TH (compile)
 import PlutusTx.Trace (traceError)
 import Test.Plutus.ContextBuilder (Purpose (ForMinting, ForSpending))
-
-{- | Typed wrapper for the 'Validator' and 'MintingPolicy' used to match
- the datum and redeemer types of the 'Validator' and the data passed to it.
-
- We don't expose constructors. To create a 'TestScript', use helper functions,
- such as 'mkTestValidator' and 'mkTestMintingPolicy'. In case you intend
- to test something tricky, you can use 'mkTestValidatorUnsafe'
- and 'mkTestMintingPolicyUnsafe' to create a 'TestScript'
- that accepts a datum and/or redeemer inconsistent with its internal type.
-
- @since 6.0
--}
-data TestScript (p :: Purpose) where
-  -- | since 6.0
-  TestValidator ::
-    forall (d :: Type) (r :: Type) (code :: Type).
-    { getTestValidatorCode :: CompiledCode code
-    , getTestValidator :: Validator
-    } ->
-    TestScript ( 'ForSpending d r)
-  -- | since 6.0
-  TestMintingPolicy ::
-    forall (r :: Type) (code :: Type).
-    { getTestMintingPolicyCode :: CompiledCode code
-    , getTestMintingPolicy :: MintingPolicy
-    } ->
-    TestScript ( 'ForMinting r)
+import Test.Plutus.ContextBuilder.Internal (
+  TestScript (
+    TestMintingPolicy,
+    TestValidator,
+    getTestMintingPolicy,
+    getTestMintingPolicyCode,
+    getTestValidator,
+    getTestValidatorCode
+  ),
+ )
 
 {- | A wrapper for an untyped 'Validator'. This is similar
  to 'WrappedValidatorType' from the Plutus 'Ledger.Typed.Scripts' module.

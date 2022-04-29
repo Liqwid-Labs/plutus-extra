@@ -44,9 +44,10 @@ common lang
 
 library
   import:          lang
-  exposed-modules: Test.Plutus.ContextBuilder
+  exposed-modules:
+      Test.Plutus.ContextBuilder
+    , Test.Plutus.ContextBuilder.Internal
   other-modules:
-    Test.Plutus.ContextBuilder.Internal
     Test.Plutus.ContextBuilder.Minting
 
   build-depends:

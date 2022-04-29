@@ -1,5 +1,13 @@
 module Test.Plutus.ContextBuilder.Internal (
   -- * Types
+  TestScript (
+    TestValidator,
+    getTestValidator,
+    getTestValidatorCode,
+    TestMintingPolicy,
+    getTestMintingPolicy,
+    getTestMintingPolicyCode
+  ),
   TransactionConfig (..),
   InputPosition (..),
   Purpose (..),
@@ -37,6 +45,7 @@ import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import Data.Text (Text)
 import GHC.Exts (toList)
+import Ledger (scriptAddress)
 import Ledger.Scripts (datumHash)
 import Plutus.V1.Ledger.Address (pubKeyHashAddress, scriptHashAddress)
 import Plutus.V1.Ledger.Api (
@@ -45,6 +54,7 @@ import Plutus.V1.Ledger.Api (
   Datum (Datum),
   DatumHash,
   FromData,
+  MintingPolicy,
   PubKeyHash,
   ScriptContext (ScriptContext),
   ScriptPurpose (Minting, Spending),
@@ -76,6 +86,7 @@ import Plutus.V1.Ledger.Api (
     txOutValue
   ),
   TxOutRef (TxOutRef),
+  Validator,
   ValidatorHash,
   Value,
  )
@@ -83,6 +94,7 @@ import Plutus.V1.Ledger.Interval (Interval, always)
 import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Value.Extra (filterValue)
+import PlutusTx (CompiledCode)
 import PlutusTx.Positive (Positive, getPositive)
 import Test.Plutus.ContextBuilder.Minting (
   MintingPolicyAction (BurnAction, MintAction),
@@ -92,6 +104,33 @@ import Test.Plutus.ContextBuilder.Minting (
 
 import PlutusTx.Prelude (length)
 import Prelude hiding (length)
+
+{- | Typed wrapper for the 'Validator' and 'MintingPolicy' used to match
+ the datum and redeemer types of the 'Validator' and the data passed to it.
+
+ We don't expose constructors. To create a 'TestScript', use helper functions,
+ such as 'mkTestValidator' and 'mkTestMintingPolicy'. In case you intend
+ to test something tricky, you can use 'mkTestValidatorUnsafe'
+ and 'mkTestMintingPolicyUnsafe' to create a 'TestScript'
+ that accepts a datum and/or redeemer inconsistent with its internal type.
+
+ @since 6.0
+-}
+data TestScript (p :: Purpose) where
+  -- | since 6.0
+  TestValidator ::
+    forall (d :: Type) (r :: Type) (code :: Type).
+    { getTestValidatorCode :: CompiledCode code
+    , getTestValidator :: Validator
+    } ->
+    TestScript ( 'ForSpending d r)
+  -- | since 6.0
+  TestMintingPolicy ::
+    forall (r :: Type) (code :: Type).
+    { getTestMintingPolicyCode :: CompiledCode code
+    , getTestMintingPolicy :: MintingPolicy
+    } ->
+    TestScript ( 'ForMinting r)
 
 {- Config with the parameters necessary to build the context.
 
@@ -261,11 +300,13 @@ data ValidatorUTXOs (p :: Purpose) where
   ValidatorUTXOs ::
     forall (datum :: Type) (redeemer :: Type).
     (FromData datum, ToData datum, Show datum) =>
-    Map.Map Text (ValidatorUTXO datum) ->
+    Map.Map Text (ValidatorUTXO datum, Maybe (TestScript ( 'ForSpending datum redeemer), redeemer)) ->
     ValidatorUTXOs ( 'ForSpending datum redeemer)
 
 -- | @since 1.0
-deriving stock instance Show (ValidatorUTXOs p)
+instance Show (ValidatorUTXOs p) where
+  show NoValidatorUTXOs = "NoValidatorUTXOs"
+  show (ValidatorUTXOs utxos) = "ValidatorUTXOs " <> show (fst <$> utxos)
 
 -- | @since 1.0
 instance Semigroup (ValidatorUTXOs p) where
@@ -600,7 +641,7 @@ validatorUtxosToDatum ::
 validatorUtxosToDatum = \case
   NoValidatorUTXOs -> []
   ValidatorUTXOs m ->
-    map (\(ValidatorUTXO dt _) -> datumWithHash . toBuiltinData $ dt) $ Map.elems m
+    map (\(ValidatorUTXO dt _, _) -> datumWithHash . toBuiltinData $ dt) $ Map.elems m
 
 datumWithHash :: BuiltinData -> (DatumHash, Datum)
 datumWithHash dt = (datumHash dt', dt')
@@ -617,14 +658,20 @@ sideUtxoToTxOut conf (SideUTXO typ valType) =
           TxOut (scriptHashAddress hash) val . justDatumHash $ dat
 
 validatorUtxoToTxOut ::
-  forall (d :: Type).
+  forall (d :: Type) (r :: Type).
   (ToData d) =>
   TransactionConfig ->
-  ValidatorUTXO d ->
+  (ValidatorUTXO d, Maybe (TestScript ( 'ForSpending d r), r)) ->
   TxOut
-validatorUtxoToTxOut conf (ValidatorUTXO dat val) =
+validatorUtxoToTxOut conf (ValidatorUTXO dat val, Nothing) =
   TxOut
     { txOutAddress = scriptHashAddress $ testValidatorHash conf
+    , txOutValue = val
+    , txOutDatumHash = justDatumHash $ toBuiltinData dat
+    }
+validatorUtxoToTxOut _conf (ValidatorUTXO dat val, Just (validator, _red)) =
+  TxOut
+    { txOutAddress = scriptAddress $ getTestValidator validator
     , txOutValue = val
     , txOutDatumHash = justDatumHash $ toBuiltinData dat
     }
