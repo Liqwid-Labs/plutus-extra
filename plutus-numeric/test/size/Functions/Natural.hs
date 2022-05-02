@@ -20,7 +20,7 @@ module Functions.Natural (
   natUnsafeFromBuiltinData,
   natPowNat,
   natDivMod,
-  natScaleNat,
+  natSemiscale,
 ) where
 
 import PlutusTx.Code (CompiledCode)
@@ -33,7 +33,7 @@ import PlutusTx.Natural (Natural)
 import PlutusTx.Numeric.Extra (
   divMod,
   powNat,
-  scaleNat,
+  semiscale,
   (^-),
  )
 import PlutusTx.Prelude qualified as Plutus
@@ -97,5 +97,5 @@ natPowNat = $$(compile [||powNat||])
 natDivMod :: CompiledCode (Natural -> Natural -> (Natural, Natural))
 natDivMod = $$(compile [||divMod||])
 
-natScaleNat :: CompiledCode (Natural -> Natural -> Natural)
-natScaleNat = $$(compile [||scaleNat||])
+natSemiscale :: CompiledCode (Natural -> Natural -> Natural)
+natSemiscale = $$(compile [||semiscale||])

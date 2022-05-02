@@ -4,7 +4,7 @@ module PlutusTx.Numeric.Laws (
   euclideanClosedSignedLaws,
   multiplicativeGroupLaws,
   integralDomainLaws,
-  scaleNatLaws,
+  semimoduleLaws,
 ) where
 
 import Data.Kind (Type)
@@ -14,7 +14,7 @@ import PlutusTx.Numeric.Extra (
   EuclideanClosed (divMod),
   IntegralDomain (abs, addExtend, projectAbs, restrictMay, signum),
   MultiplicativeGroup (powInteger, reciprocal, (/)),
-  scaleNat,
+  Semimodule (semiscale),
  )
 import PlutusTx.Prelude qualified as PTx
 import Test.QuickCheck (
@@ -224,45 +224,45 @@ integralDomainLaws =
         Just _ -> abs x === x
 
 -- | @since 4.2
-scaleNatLaws ::
+semimoduleLaws ::
   forall (a :: Type).
-  (Show a, Eq a, PTx.AdditiveMonoid a) =>
+  (Show a, Eq a, Semimodule Natural a) =>
   Laws a
-scaleNatLaws =
-  law "scaleNat n (r1 + r2) = scaleNat n r1 + scaleNat n r2" scaleNatDist
-    <> law "scaleNat n1 (scaleNat n2 r) = scaleNat (n1 * n2) r" scaleNatComp
-    <> law "scaleNat one r = r" scaleNatOne
-    <> law "scaleNat zero r = zero" scaleNatZero
+semimoduleLaws =
+  law "semiscale x z + semiscale y z = semiscale (x + y) z" semiscaleDist
+    <> law "semiscale x (semiscale y z) = semiscale (x * y) z" semiscaleComp
+    <> law "semiscale zero x = zero" semiscaleZero
+    <> law "semiscale one x = x" semiscaleOne
   where
-    scaleNatDist :: Gen a -> (a -> [a]) -> Property
-    scaleNatDist gen shr =
+    semiscaleDist :: Gen a -> (a -> [a]) -> Property
+    semiscaleDist gen shr =
       forAllShrinkShow gen' shr' ppShow $
-        \(n, r1, r2) -> scaleNat n (r1 PTx.+ r2) === scaleNat n r1 PTx.+ scaleNat n r2
+        \(n, r1, r2) -> semiscale n (r1 PTx.+ r2) === semiscale n r1 PTx.+ semiscale n r2
       where
         gen' :: Gen (Natural, a, a)
         gen' = (,,) <$> arbitrary <*> gen <*> gen
         shr' :: (Natural, a, a) -> [(Natural, a, a)]
         shr' (n, a1, a2) = (,,) <$> shrink n <*> shr a1 <*> shr a2
 
-    scaleNatComp :: Gen a -> (a -> [a]) -> Property
-    scaleNatComp gen shr =
+    semiscaleComp :: Gen a -> (a -> [a]) -> Property
+    semiscaleComp gen shr =
       forAllShrinkShow gen' shr' ppShow $
-        \(n1, n2, r) -> scaleNat n1 (scaleNat n2 r) === scaleNat (n1 PTx.* n2) r
+        \(n1, n2, r) -> semiscale n1 (semiscale n2 r) === semiscale (n1 PTx.* n2) r
       where
         gen' :: Gen (Natural, Natural, a)
         gen' = (,,) <$> arbitrary <*> arbitrary <*> gen
         shr' :: (Natural, Natural, a) -> [(Natural, Natural, a)]
         shr' (n1, n2, a) = (,,) <$> shrink n1 <*> shrink n2 <*> shr a
 
-    scaleNatOne :: Gen a -> (a -> [a]) -> Property
-    scaleNatOne gen shr =
+    semiscaleZero :: Gen a -> (a -> [a]) -> Property
+    semiscaleZero gen shr =
       forAllShrinkShow gen shr ppShow $
-        \r -> scaleNat PTx.one r === r
+        \r -> semiscale PTx.zero r === PTx.zero
 
-    scaleNatZero :: Gen a -> (a -> [a]) -> Property
-    scaleNatZero gen shr =
+    semiscaleOne :: Gen a -> (a -> [a]) -> Property
+    semiscaleOne gen shr =
       forAllShrinkShow gen shr ppShow $
-        \r -> scaleNat PTx.zero r === PTx.zero
+        \r -> semiscale PTx.one r === r
 
 -- Helpers
 

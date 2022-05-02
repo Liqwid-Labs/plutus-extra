@@ -8,7 +8,7 @@ import PlutusTx.Numeric.Laws (
   euclideanClosedSignedLaws,
   integralDomainLaws,
   multiplicativeGroupLaws,
-  scaleNatLaws,
+  semimoduleLaws,
  )
 import PlutusTx.Positive (Positive)
 import PlutusTx.Ratio (Rational)
@@ -70,10 +70,10 @@ main =
     , laws @NatRatio "Multiplicative group" multiplicativeGroupLaws
     , laws @Integer "IntegralDomain" integralDomainLaws
     , laws @Rational "IntegralDomain" integralDomainLaws
-    , laws @Integer "scaleNat" scaleNatLaws
-    , laws @Natural "scaleNat" scaleNatLaws
-    , laws @NatRatio "scaleNat" scaleNatLaws
-    , laws @Rational "scaleNat" scaleNatLaws
+    , laws @Integer "Semimodule" semimoduleLaws
+    , laws @Natural "Semimodule" semimoduleLaws
+    , laws @NatRatio "Semimodule" semimoduleLaws
+    , laws @Rational "Semimodule" semimoduleLaws
     ]
   where
     testMinimum :: QuickCheckTests

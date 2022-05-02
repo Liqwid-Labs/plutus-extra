@@ -31,7 +31,7 @@ tests =
       [ fitsInto "+" [bytes| 12 |] . fromCompiledCode $ Nat.natPlus
       , fitsInto "zero" [bytes| 8 |] . fromCompiledCode $ Nat.natZero
       , fitsInto "^-" [bytes| 44 |] . fromCompiledCode $ Nat.natMonus
-      , fitsInto "scaleNat" [bytes| 109 |] .fromCompiledCode $ Nat.natScaleNat
+      , fitsInto "semiscale" [bytes| 216 |] . fromCompiledCode $ Nat.natSemiscale
       ]
   , testGroup
       "MultiplicativeMonoid"

@@ -10,6 +10,7 @@ module PlutusTx.Natural.Internal (
   parity,
 ) where
 
+import Control.DeepSeq (NFData)
 import Control.Monad (guard)
 import Data.Aeson (FromJSON (parseJSON), ToJSON)
 import Data.Kind (Type)
@@ -65,6 +66,8 @@ newtype Natural = Natural Integer
       PlutusSchema.ToSchema
     , -- | @since 1.0
       PlutusSchema.ToArgument
+    , -- | @since 5.1
+      NFData
     )
     via Integer
   deriving stock

@@ -75,7 +75,7 @@ library
     , plutus-core
     , plutus-ledger
     , plutus-ledger-api
-    , plutus-numeric          ^>=5.0
+    , plutus-numeric          ^>=5.1
     , plutus-pretty           ^>=3.0
     , plutus-tx
     , plutus-tx-plugin

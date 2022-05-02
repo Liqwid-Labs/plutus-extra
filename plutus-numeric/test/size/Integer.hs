@@ -31,7 +31,7 @@ tests =
       [ fitsInto "+" [bytes| 12 |] . fromCompiledCode $ I.iPlus
       , fitsInto "zero" [bytes| 8 |] . fromCompiledCode $ I.iZero
       , fitsInto "-" [bytes| 12 |] . fromCompiledCode $ I.iMinus
-      , fitsInto "scaleNat" [bytes| 109 |] .fromCompiledCode $ I.iScaleNat
+      , fitsInto "semiscale" [bytes| 216 |] . fromCompiledCode $ I.iSemiscale
       ]
   , testGroup
       "MultiplicativeMonoid"

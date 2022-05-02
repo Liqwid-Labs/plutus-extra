@@ -22,6 +22,7 @@ module PlutusTx.Numeric.Extra (
   EuclideanClosed (..),
   MultiplicativeGroup (..),
   IntegralDomain (..),
+  Semimodule (..),
 
   -- * Helper types
   Hemiring,
@@ -38,6 +39,7 @@ module PlutusTx.Numeric.Extra (
 ) where
 
 import Data.Kind (Type)
+import Plutus.V1.Ledger.Value (Value (Value))
 import PlutusTx.NatRatio.Internal (NatRatio (NatRatio), nrMonus)
 import PlutusTx.Natural.Internal (Natural (Natural))
 import PlutusTx.Prelude hiding (abs, divMod, even)
@@ -69,7 +71,7 @@ powNat ::
 powNat x (Natural n) =
   if n == zero
     then one
-    else expBySquaring x n
+    else expBySquaring (*) x n
 
 infixr 8 `powNat`
 
@@ -213,8 +215,8 @@ class (MultiplicativeMonoid a) => MultiplicativeGroup a where
   powInteger x i
     | i == zero = one
     | i == one = x
-    | i < zero = reciprocal . expBySquaring x . abs $ i
-    | otherwise = expBySquaring x i
+    | i < zero = reciprocal . expBySquaring (*) x . abs $ i
+    | otherwise = expBySquaring (*) x i
 
 infixr 8 `powInteger`
 
@@ -236,8 +238,8 @@ instance MultiplicativeGroup Rational where
             if i < zero
               then (negate i, Ratio.denominator r, Ratio.numerator r)
               else (i, Ratio.numerator r, Ratio.denominator r)
-          newNum = expBySquaring num i'
-          newDen = expBySquaring den i'
+          newNum = expBySquaring (*) num i'
+          newDen = expBySquaring (*) den i'
        in Ratio.unsafeRatio newNum newDen
 
 -- | @since 1.0
@@ -399,6 +401,49 @@ infixl 7 `rem`
 
 infixr 8 ^
 
+{- | Scale by a 'Semiring' multiplier.
+
+ = Laws
+
+1. @'semiscale' x z '+' 'semiscale' y z = 'semiscale' (x '+' y) z@
+2. @'semiscale' x ('semiscale' y z) = 'semiscale' (x '*' y) z@
+3. @'semiscale' 'zero' x = 'zero'@
+4. @'semiscale' 'one' x = x@
+-}
+class (Semiring s, AdditiveMonoid v) => Semimodule s v | v -> s where
+  semiscale :: s -> v -> v
+
+instance Semimodule Natural Natural where
+  {-# INLINEABLE semiscale #-}
+  semiscale :: Natural -> Natural -> Natural
+  semiscale (Natural x) (Natural y) = Natural $ x * y
+
+instance Semimodule Natural Integer where
+  {-# INLINEABLE semiscale #-}
+  semiscale :: Natural -> Integer -> Integer
+  semiscale (Natural x) i = x * i
+
+instance Semimodule Natural Rational where
+  {-# INLINEABLE semiscale #-}
+  semiscale :: Natural -> Rational -> Rational
+  semiscale (Natural i) r =
+    let num = Ratio.numerator r
+        den = Ratio.denominator r
+     in Ratio.unsafeRatio (i * num) den
+
+instance Semimodule Natural NatRatio where
+  {-# INLINEABLE semiscale #-}
+  semiscale :: Natural -> NatRatio -> NatRatio
+  semiscale (Natural i) (NatRatio r) =
+    let num = Ratio.numerator r
+        den = Ratio.denominator r
+     in NatRatio $ Ratio.unsafeRatio (i * num) den
+
+instance Semimodule Natural Value where
+  {-# INLINEABLE semiscale #-}
+  semiscale :: Natural -> Value -> Value
+  semiscale (Natural i) (Value v) = Value $ fmap (* i) <$> v
+
 {- | Scale by a 'Natural' multiplier.
 
  = Laws
@@ -410,6 +455,7 @@ infixr 8 ^
 
  @since 4.2
 -}
+{-# DEPRECATED scaleNat "Inefficient. Use 'semiscale' instead" #-}
 {-# INLINEABLE scaleNat #-}
 scaleNat ::
   forall (a :: Type).
@@ -417,12 +463,10 @@ scaleNat ::
   Natural ->
   a ->
   a
-scaleNat (Natural i) a = go i
-  where
-    go :: Integer -> a
-    go x
-      | x == zero = zero
-      | otherwise = a + go (x - 1)
+scaleNat (Natural i) a =
+  if i == zero
+    then zero
+    else expBySquaring (+) a i
 
 -- Helpers
 
@@ -431,17 +475,17 @@ scaleNat (Natural i) a = go i
 {-# INLINEABLE expBySquaring #-}
 expBySquaring ::
   forall (a :: Type).
-  (MultiplicativeMonoid a) =>
+  (a -> a -> a) ->
   a ->
   Integer ->
   a
-expBySquaring acc i
+expBySquaring (*:) acc i
   | i == one = acc
-  | even' i = expBySquaring (square acc) . halve $ i
-  | otherwise = (acc *) . expBySquaring (square acc) . halve $ i
+  | even' i = expBySquaring (*:) (square acc) . halve $ i
+  | otherwise = (acc *:) . expBySquaring (*:) (square acc) . halve $ i
   where
     square :: a -> a
-    square y = y * y
+    square y = y *: y
     halve :: Integer -> Integer
     halve = (`divide` 2)
     even' :: Integer -> Bool
