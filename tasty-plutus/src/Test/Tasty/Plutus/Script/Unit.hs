@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Trustworthy #-}
 
 {- |
@@ -28,12 +30,16 @@ module Test.Tasty.Plutus.Script.Unit (
   shouldn'tValidate,
   shouldValidateTracing,
   shouldn'tValidateTracing,
+  SomeMintingPolicy (SomeMintingPolicy)
 ) where
 
 import Control.Arrow ((>>>))
 import Control.Monad.Reader (Reader, asks, runReader)
 import Control.Monad.Writer (tell)
 import Data.Kind (Type)
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import Data.Monoid (Ap (Ap, getAp))
 import Data.Proxy (Proxy (Proxy))
 import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
@@ -41,11 +47,17 @@ import Data.Text (Text)
 import Data.Vector (Vector)
 import Data.Vector qualified as Vector
 import Plutus.V1.Ledger.Api (
+  CurrencySymbol,
   ExBudget (ExBudget),
   ExCPU (ExCPU),
   ExMemory (ExMemory),
   ScriptContext,
+  FromData,
+  ToData,
+  toBuiltinData,
+  unsafeFromBuiltinData,
  )
+import Plutus.V1.Ledger.Value (TokenName, Value, getValue)
 import Plutus.V1.Ledger.Scripts (
   ScriptError (
     EvaluationError,
@@ -53,17 +65,30 @@ import Plutus.V1.Ledger.Scripts (
     MalformedScript
   ),
  )
+import PlutusTx.AssocMap qualified as AssocMap
+import PlutusTx.Positive (Positive)
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
+  ContextFragment (cfValidatorInputs, cfValidatorOutputs),
+  MintingPolicyTask (MPTask),
+  MintingPolicyAction (BurnAction, MintAction),
   Naming,
-  Purpose (ForMinting, ForSpending),
+  Purpose (ForMinting, ForSpending, ForTransaction),
+  SomeValidatedUTXO (SomeValidatedUTXO, someRedeemer, someSpendingScript, someUTxO),
+  Tokens (Tokens),
   TransactionConfig,
+  ValidatorUTXO (vUtxoDatum, vUtxoValue),
+  ValidatorUTXOs (MultiValidatorUTXOs, NoValidatorUTXOs),
+  foldBuilt,
+  transactionMinting,
+  transactionSpending,
  )
 import Test.Tasty.Options (
   OptionDescription (Option),
   OptionSet,
   lookupOption,
  )
+import Test.Tasty.Plutus.Instances (ResultJoin (ResultJoin, getResultJoin))
 import Test.Tasty.Plutus.Internal.Env (
   SomeScript (SomeMinter, SomeSpender),
   getContext,
@@ -125,6 +150,9 @@ import Test.Tasty.Providers (
  )
 import Text.PrettyPrint (Doc)
 import Type.Reflection (Typeable)
+
+import PlutusTx.Prelude ((-))
+import Prelude hiding ((-))
 
 {- | Specify that, given this test data and context, the validation should
  succeed.
@@ -225,6 +253,18 @@ data ScriptTest (p :: Purpose) (n :: Naming) where
     ContextBuilder ( 'ForMinting r) n ->
     TestScript ( 'ForMinting r) ->
     ScriptTest ( 'ForMinting r) n
+  TransactionTester ::
+    forall (n :: Naming).
+    Outcome ->
+    Maybe (Vector Text -> Bool) ->
+    Map CurrencySymbol SomeMintingPolicy ->
+    ContextBuilder 'ForTransaction n ->
+    ScriptTest 'ForTransaction n
+
+data SomeMintingPolicy where
+  SomeMintingPolicy ::
+    (FromData r, ToData r, Show r, Typeable r) =>
+    TestScript ( 'ForMinting r) -> r -> SomeMintingPolicy
 
 getOutcome ::
   forall (p :: Purpose) (n :: Naming).
@@ -233,6 +273,7 @@ getOutcome ::
 getOutcome = \case
   Spender out _ _ _ _ -> out
   Minter out _ _ _ _ -> out
+  TransactionTester out _ _ _ -> out
 
 data UnitEnv (p :: Purpose) (n :: Naming) = UnitEnv
   { envOpts :: OptionSet
@@ -259,6 +300,7 @@ getCB =
   envScriptTest >>> \case
     Spender _ _ _ cb _ -> cb
     Minter _ _ _ cb _ -> cb
+    TransactionTester _ _ _ cb -> cb
 
 getTestData ::
   forall (p :: Purpose) (n :: Naming).
@@ -268,6 +310,7 @@ getTestData =
   envScriptTest >>> \case
     Spender _ _ td _ _ -> td
     Minter _ _ td _ _ -> td
+    TransactionTester{} -> error "There's no test data in TransactionTester"
 
 getScript ::
   forall (p :: Purpose) (n :: Naming).
@@ -277,6 +320,7 @@ getScript =
   envScriptTest >>> \case
     Spender _ _ _ _ val -> SomeSpender . getTestValidator $ val
     Minter _ _ _ _ mp -> SomeMinter . getTestMintingPolicy $ mp
+    TransactionTester{} -> error "There's more than one script in TransactionTester"
 
 getMPred ::
   forall (p :: Purpose) (n :: Naming).
@@ -286,15 +330,14 @@ getMPred =
   envScriptTest >>> \case
     Spender _ mPred _ _ _ -> mPred
     Minter _ mPred _ _ _ -> mPred
+    TransactionTester _ mPred _ _ -> mPred
 
 getExpected ::
   forall (p :: Purpose) (n :: Naming).
   UnitEnv p n ->
   Outcome
 getExpected =
-  envScriptTest >>> \case
-    Spender expected _ _ _ _ -> expected
-    Minter expected _ _ _ _ -> expected
+  envScriptTest >>> getOutcome
 
 getSC ::
   forall (p :: Purpose) (n :: Naming).
@@ -310,6 +353,8 @@ getDumpedState ::
 getDumpedState = dumpState getConf getCB getTestData
 
 instance (Typeable p, Typeable n) => IsTest (ScriptTest p n) where
+  run opts tt@TransactionTester{} x =
+    getResultJoin <$> getAp (foldTransactionTests (\t-> Ap $ ResultJoin <$> run opts t x) tt)
   run opts vt _ = pure $ case lookupOption opts of
     EstimateOnly -> case getOutcome vt of
       Fail -> testPassed explainFailureEstimation
@@ -332,6 +377,32 @@ instance (Typeable p, Typeable n) => IsTest (ScriptTest p n) where
           MintingTest red tasks ->
             let ti = ItemsForMinting red tasks cb out
              in minterEstimate opts ts ti
+        TransactionTester{} -> error "Should have been eliminated above"
+{-
+          | let context :: ContextFragment 'ForTransaction
+                context = foldBuilt cb
+                validatedInputs :: Map Text SomeValidatedUTXO
+                validatedInputs = case cfValidatorInputs context of
+                  MultiValidatorUTXOs inputs -> inputs
+                  NoValidatorUTXOs -> mempty
+                utxosTotalValue :: ValidatorUTXOs 'ForTransaction -> Value
+                utxosTotalValue NoValidatorUTXOs = mempty
+                utxosTotalValue (MultiValidatorUTXOs utxos) = foldMap theValue utxos
+                  where
+                    theValue SomeValidatedUTXO {someUTxO = x} = vUtxoValue x
+                utxoSpenderEstimate :: SomeValidatedUTXO -> Ap (Either ScriptError) ExBudget
+                utxoSpenderEstimate = undefined
+                utxoMinterEstimate :: Value -> Ap (Either ScriptError) ExBudget
+                utxoMinterEstimate = undefined
+            ->
+            getAp
+              ( foldMap utxoSpenderEstimate validatedInputs
+                  <> utxoMinterEstimate
+                    ( utxosTotalValue (cfValidatorOutputs context)
+                        - utxosTotalValue (cfValidatorInputs context)
+                    )
+              )
+-}
       go :: Reader (UnitEnv p n) Result
       go = case getScriptResult getScript getTestData (getContext getSC) env of
         Left err -> handleError err
@@ -353,6 +424,55 @@ instance (Typeable p, Typeable n) => IsTest (ScriptTest p n) where
       , Option @ScriptInputPosition Proxy
       , Option @PlutusEstimate Proxy
       ]
+
+foldTransactionTests ::
+  forall a (n :: Naming). Monoid a =>
+  (forall (p :: Purpose). Typeable p => ScriptTest p n -> a) ->
+  ScriptTest 'ForTransaction n ->
+  a
+foldTransactionTests test (TransactionTester outcome mPred mintScripts cb) =
+  foldMap testSpending validatedInputs
+  <>
+  foldMap testMinting (AssocMap.toList $ getValue valueDifference)
+  where
+    context :: ContextFragment 'ForTransaction
+    context = foldBuilt cb
+    valueDifference :: Value
+    valueDifference = utxosTotalValue (cfValidatorOutputs context) - utxosTotalValue (cfValidatorInputs context)
+    testMinting :: (CurrencySymbol, AssocMap.Map TokenName Integer) -> a
+    testMinting (symbol, tokenAmounts) =
+      case Map.lookup symbol mintScripts of
+        Nothing -> mempty
+        Just (SomeMintingPolicy mp redeemer)
+          | let testPair (name, amount)
+                  | amount < 0 = testPositive BurnAction name (toPositive $ negate amount)
+                  | amount > 0 = testPositive MintAction name (toPositive amount)
+                  | otherwise = mempty
+                testPositive action name amount =
+                  test $
+                    Minter outcome mPred (MintingTest redeemer $ pure $ MPTask action $ Tokens name amount)
+                      (transactionMinting mp cb)
+                      mp
+                toPositive :: Integer -> Positive
+                toPositive = unsafeFromBuiltinData . toBuiltinData
+            ->
+            foldMap testPair (AssocMap.toList tokenAmounts)
+    testSpending :: SomeValidatedUTXO -> a
+    testSpending SomeValidatedUTXO{someUTxO, someRedeemer, someSpendingScript} =
+      test $
+        Spender outcome mPred (SpendingTest (vUtxoDatum someUTxO) someRedeemer (vUtxoValue someUTxO))
+          (transactionSpending someSpendingScript someUTxO cb)
+          someSpendingScript
+    validatedInputs :: Map Text SomeValidatedUTXO
+    validatedInputs = case cfValidatorInputs context of
+      MultiValidatorUTXOs inputs -> inputs
+      NoValidatorUTXOs -> mempty
+    utxosTotalValue :: ValidatorUTXOs 'ForTransaction -> Value
+    utxosTotalValue NoValidatorUTXOs = mempty
+    utxosTotalValue (MultiValidatorUTXOs utxos) = foldMap theValue utxos
+      where
+        theValue SomeValidatedUTXO {someUTxO = x} = vUtxoValue x
+  
 
 handleError ::
   forall (p :: Purpose) (n :: Naming).

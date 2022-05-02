@@ -95,6 +95,8 @@ module Test.Plutus.ContextBuilder (
   mintingScriptContext,
   spendingScriptContextDef,
   mintingScriptContextDef,
+  transactionSpending,
+  transactionMinting,
 
   -- ** Utilities
   defTransactionConfig,
@@ -151,6 +153,8 @@ import Test.Plutus.ContextBuilder.Internal (
   mintingScriptContextDef,
   spendingScriptContext,
   spendingScriptContextDef,
+  transactionMinting,
+  transactionSpending,
  )
 import Test.Plutus.ContextBuilder.Minting (
   MintingPolicyAction (BurnAction, MintAction),
