@@ -41,6 +41,12 @@ your commit of Plutus matches ours (or you _will_ have trouble). Check
 `cabal.project` to be sure. We follow the [PVP](https://pvp.haskell.org), and
 will bump major versions whenever we update our Plutus dependencies.
 
+## Can I use this with Plutarch?
+
+You can try, but we don't promise it will work. Some of the sublibraries may
+work, but others are unlikely to: for example, `plutus-numeric` will basically
+not help you at all when it comes to Plutarch.
+
 ## What can I do with this?
 
 The code is licensed under Apache 2.0; check the LICENSE.md file for details.
