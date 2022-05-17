@@ -121,17 +121,17 @@ import Prelude hiding (length)
  and 'mkTestMintingPolicyUnsafe' to create a 'TestScript'
  that accepts a datum and/or redeemer inconsistent with its internal type.
 
- @since 6.0
+ @since 2.0.1
 -}
 data TestScript (p :: Purpose) where
-  -- | since 6.0
+  -- | since 2.0.1
   TestValidator ::
     forall (d :: Type) (r :: Type) (code :: Type).
     { getTestValidatorCode :: CompiledCode code
     , getTestValidator :: Validator
     } ->
     TestScript ( 'ForSpending d r)
-  -- | since 6.0
+  -- | since 2.0.1
   TestMintingPolicy ::
     forall (r :: Type) (code :: Type).
     { getTestMintingPolicyCode :: CompiledCode code
@@ -209,7 +209,7 @@ data Purpose where
     Purpose
   -- | This tag applies to whole-transaction testing.
   --
-  -- @since 2.1
+  -- @since 2.0.1
   ForTransaction :: Purpose
 
 {- | Represents metadata of UTxO at different types of address.
@@ -281,7 +281,7 @@ data ValidatorUTXO (datum :: Type) = ValidatorUTXO
   , vUtxoValue :: Value
   }
   deriving stock
-    ( -- | @since 2.1
+    ( -- | @since 2.0.1
       Eq
     , -- | @since 1.0
       Show
@@ -315,7 +315,7 @@ data ValidatorUTXOs (p :: Purpose) where
     (FromData datum, ToData datum, Show datum) =>
     Map.Map Text (ValidatorUTXO datum) ->
     ValidatorUTXOs ( 'ForSpending datum redeemer)
-  -- | @since 2.1
+  -- | @since 2.0.1
   MultiValidatorUTXOs ::
     Map.Map Text SomeValidatedUTXO ->
     ValidatorUTXOs 'ForTransaction
@@ -326,7 +326,7 @@ deriving stock instance Show (ValidatorUTXOs p)
 {- | An UTxO at a specified validator address. It will be used as 'Spending'
  in the 'ScriptPurpose' of the built 'ScriptContext'.
 
- @since 2.1
+ @since 2.0.1
 -}
 data SomeValidatedUTXO where
   SomeValidatedUTXO ::
@@ -372,7 +372,7 @@ newtype Minting
       Eq, Show
     )
   deriving newtype
-    ( -- | @since 2.1
+    ( -- | @since 2.0.1
       Semigroup, Monoid
     )
 
@@ -740,7 +740,7 @@ baseTxInfo conf = go . foldBuilt
  This is a low-level operation designed for maximum control. If possible, use
  the other, higher-level, operations in this module instead.
 
-   @since 2.1
+   @since 2.0.1
 -}
 foldBuilt :: ContextBuilder p n -> ContextFragment p
 foldBuilt = \case

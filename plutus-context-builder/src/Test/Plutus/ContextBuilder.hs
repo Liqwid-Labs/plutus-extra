@@ -205,7 +205,7 @@ validatorInput name x =
  This input won't be used for spending in any 'ScriptPurpose' of any
  'ScriptContext' built from this.
 
- @since 2.1
+ @since 2.0.1
 -}
 validatedInput ::
   -- | Name of the input
@@ -248,7 +248,7 @@ validatorOutput name x =
 
 {- | Anonymous context from a single 'SomeValidatedUTXO' output.
 
- @since 2.1
+ @since 2.0.1
 -}
 validatedOutput ::
   Text ->
