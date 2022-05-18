@@ -30,7 +30,7 @@ module Test.Tasty.Plutus.Script.Unit (
   shouldn'tValidate,
   shouldValidateTracing,
   shouldn'tValidateTracing,
-  SomeMintingPolicy (SomeMintingPolicy)
+  SomeMintingPolicy (SomeMintingPolicy),
 ) where
 
 import Control.Arrow ((>>>))
@@ -51,13 +51,12 @@ import Plutus.V1.Ledger.Api (
   ExBudget (ExBudget),
   ExCPU (ExCPU),
   ExMemory (ExMemory),
-  ScriptContext,
   FromData,
+  ScriptContext,
   ToData,
   toBuiltinData,
   unsafeFromBuiltinData,
  )
-import Plutus.V1.Ledger.Value (TokenName, Value, getValue)
 import Plutus.V1.Ledger.Scripts (
   ScriptError (
     EvaluationError,
@@ -65,13 +64,14 @@ import Plutus.V1.Ledger.Scripts (
     MalformedScript
   ),
  )
+import Plutus.V1.Ledger.Value (TokenName, Value, getValue)
 import PlutusTx.AssocMap qualified as AssocMap
 import PlutusTx.Positive (Positive)
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
   ContextFragment (cfValidatorInputs, cfValidatorOutputs),
-  MintingPolicyTask (MPTask),
   MintingPolicyAction (BurnAction, MintAction),
+  MintingPolicyTask (MPTask),
   Naming,
   Purpose (ForMinting, ForSpending, ForTransaction),
   SomeValidatedUTXO (SomeValidatedUTXO, someRedeemer, someSpendingScript, someUTxO),
@@ -264,7 +264,9 @@ data ScriptTest (p :: Purpose) (n :: Naming) where
 data SomeMintingPolicy where
   SomeMintingPolicy ::
     (FromData r, ToData r, Show r, Typeable r) =>
-    TestScript ( 'ForMinting r) -> r -> SomeMintingPolicy
+    TestScript ( 'ForMinting r) ->
+    r ->
+    SomeMintingPolicy
 
 getOutcome ::
   forall (p :: Purpose) (n :: Naming).
@@ -310,7 +312,7 @@ getTestData =
   envScriptTest >>> \case
     Spender _ _ td _ _ -> td
     Minter _ _ td _ _ -> td
-    TransactionTester{} -> error "There's no test data in TransactionTester"
+    TransactionTester {} -> error "There's no test data in TransactionTester"
 
 getScript ::
   forall (p :: Purpose) (n :: Naming).
@@ -320,7 +322,7 @@ getScript =
   envScriptTest >>> \case
     Spender _ _ _ _ val -> SomeSpender . getTestValidator $ val
     Minter _ _ _ _ mp -> SomeMinter . getTestMintingPolicy $ mp
-    TransactionTester{} -> error "There's more than one script in TransactionTester"
+    TransactionTester {} -> error "There's more than one script in TransactionTester"
 
 getMPred ::
   forall (p :: Purpose) (n :: Naming).
@@ -353,8 +355,8 @@ getDumpedState ::
 getDumpedState = dumpState getConf getCB getTestData
 
 instance (Typeable p, Typeable n) => IsTest (ScriptTest p n) where
-  run opts tt@TransactionTester{} x =
-    getResultJoin <$> getAp (foldTransactionTests (\t-> Ap $ ResultJoin <$> run opts t x) tt)
+  run opts tt@TransactionTester {} x =
+    getResultJoin <$> getAp (foldTransactionTests (\t -> Ap $ ResultJoin <$> run opts t x) tt)
   run opts vt _ = pure $ case lookupOption opts of
     EstimateOnly -> case getOutcome vt of
       Fail -> testPassed explainFailureEstimation
@@ -377,32 +379,32 @@ instance (Typeable p, Typeable n) => IsTest (ScriptTest p n) where
           MintingTest red tasks ->
             let ti = ItemsForMinting red tasks cb out
              in minterEstimate opts ts ti
-        TransactionTester{} -> error "Should have been eliminated above"
-{-
-          | let context :: ContextFragment 'ForTransaction
-                context = foldBuilt cb
-                validatedInputs :: Map Text SomeValidatedUTXO
-                validatedInputs = case cfValidatorInputs context of
-                  MultiValidatorUTXOs inputs -> inputs
-                  NoValidatorUTXOs -> mempty
-                utxosTotalValue :: ValidatorUTXOs 'ForTransaction -> Value
-                utxosTotalValue NoValidatorUTXOs = mempty
-                utxosTotalValue (MultiValidatorUTXOs utxos) = foldMap theValue utxos
-                  where
-                    theValue SomeValidatedUTXO {someUTxO = x} = vUtxoValue x
-                utxoSpenderEstimate :: SomeValidatedUTXO -> Ap (Either ScriptError) ExBudget
-                utxoSpenderEstimate = undefined
-                utxoMinterEstimate :: Value -> Ap (Either ScriptError) ExBudget
-                utxoMinterEstimate = undefined
-            ->
-            getAp
-              ( foldMap utxoSpenderEstimate validatedInputs
-                  <> utxoMinterEstimate
-                    ( utxosTotalValue (cfValidatorOutputs context)
-                        - utxosTotalValue (cfValidatorInputs context)
+        TransactionTester {} -> error "Should have been eliminated above"
+      {-
+                | let context :: ContextFragment 'ForTransaction
+                      context = foldBuilt cb
+                      validatedInputs :: Map Text SomeValidatedUTXO
+                      validatedInputs = case cfValidatorInputs context of
+                        MultiValidatorUTXOs inputs -> inputs
+                        NoValidatorUTXOs -> mempty
+                      utxosTotalValue :: ValidatorUTXOs 'ForTransaction -> Value
+                      utxosTotalValue NoValidatorUTXOs = mempty
+                      utxosTotalValue (MultiValidatorUTXOs utxos) = foldMap theValue utxos
+                        where
+                          theValue SomeValidatedUTXO {someUTxO = x} = vUtxoValue x
+                      utxoSpenderEstimate :: SomeValidatedUTXO -> Ap (Either ScriptError) ExBudget
+                      utxoSpenderEstimate = undefined
+                      utxoMinterEstimate :: Value -> Ap (Either ScriptError) ExBudget
+                      utxoMinterEstimate = undefined
+                  ->
+                  getAp
+                    ( foldMap utxoSpenderEstimate validatedInputs
+                        <> utxoMinterEstimate
+                          ( utxosTotalValue (cfValidatorOutputs context)
+                              - utxosTotalValue (cfValidatorInputs context)
+                          )
                     )
-              )
--}
+      -}
       go :: Reader (UnitEnv p n) Result
       go = case getScriptResult getScript getTestData (getContext getSC) env of
         Left err -> handleError err
@@ -426,14 +428,14 @@ instance (Typeable p, Typeable n) => IsTest (ScriptTest p n) where
       ]
 
 foldTransactionTests ::
-  forall a (n :: Naming). Monoid a =>
+  forall a (n :: Naming).
+  Monoid a =>
   (forall (p :: Purpose). Typeable p => ScriptTest p n -> a) ->
   ScriptTest 'ForTransaction n ->
   a
 foldTransactionTests test (TransactionTester outcome mPred mintScripts cb) =
   foldMap testSpending validatedInputs
-  <>
-  foldMap testMinting (AssocMap.toList $ getValue valueDifference)
+    <> foldMap testMinting (AssocMap.toList $ getValue valueDifference)
   where
     context :: ContextFragment 'ForTransaction
     context = foldBuilt cb
@@ -450,17 +452,22 @@ foldTransactionTests test (TransactionTester outcome mPred mintScripts cb) =
                   | otherwise = mempty
                 testPositive action name amount =
                   test $
-                    Minter outcome mPred (MintingTest redeemer $ pure $ MPTask action $ Tokens name amount)
+                    Minter
+                      outcome
+                      mPred
+                      (MintingTest redeemer $ pure $ MPTask action $ Tokens name amount)
                       (transactionMinting mp cb)
                       mp
                 toPositive :: Integer -> Positive
-                toPositive = unsafeFromBuiltinData . toBuiltinData
-            ->
+                toPositive = unsafeFromBuiltinData . toBuiltinData ->
             foldMap testPair (AssocMap.toList tokenAmounts)
     testSpending :: SomeValidatedUTXO -> a
-    testSpending SomeValidatedUTXO{someUTxO, someRedeemer, someSpendingScript} =
+    testSpending SomeValidatedUTXO {someUTxO, someRedeemer, someSpendingScript} =
       test $
-        Spender outcome mPred (SpendingTest (vUtxoDatum someUTxO) someRedeemer (vUtxoValue someUTxO))
+        Spender
+          outcome
+          mPred
+          (SpendingTest (vUtxoDatum someUTxO) someRedeemer (vUtxoValue someUTxO))
           (transactionSpending someSpendingScript someUTxO cb)
           someSpendingScript
     validatedInputs :: Map Text SomeValidatedUTXO
@@ -472,7 +479,6 @@ foldTransactionTests test (TransactionTester outcome mPred mintScripts cb) =
     utxosTotalValue (MultiValidatorUTXOs utxos) = foldMap theValue utxos
       where
         theValue SomeValidatedUTXO {someUTxO = x} = vUtxoValue x
-  
 
 handleError ::
   forall (p :: Purpose) (n :: Naming).

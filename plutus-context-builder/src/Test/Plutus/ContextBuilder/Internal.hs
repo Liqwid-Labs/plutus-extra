@@ -331,8 +331,15 @@ deriving stock instance Show (ValidatorUTXOs p)
 data SomeValidatedUTXO where
   SomeValidatedUTXO ::
     forall (datum :: Type) (redeemer :: Type).
-    (FromData datum, ToData datum, Show datum, Typeable datum,
-     FromData redeemer, ToData redeemer, Show redeemer, Typeable redeemer) =>
+    ( FromData datum
+    , ToData datum
+    , Show datum
+    , Typeable datum
+    , FromData redeemer
+    , ToData redeemer
+    , Show redeemer
+    , Typeable redeemer
+    ) =>
     { someUTxO :: ValidatorUTXO datum
     , someSpendingScript :: TestScript ( 'ForSpending datum redeemer)
     , someRedeemer :: redeemer
@@ -369,11 +376,13 @@ newtype Minting
     Mint Value
   deriving stock
     ( -- | @since 1.0
-      Eq, Show
+      Eq
+    , Show
     )
   deriving newtype
     ( -- | @since 2.0.1
-      Semigroup, Monoid
+      Semigroup
+    , Monoid
     )
 
 {- | Indicates whether a 'ContextBuilder' has named components or not.
@@ -584,29 +593,40 @@ transactionSpending script input (WithNames cfs) =
   WithNames (transactionSpendingFragment script input <$> cfs)
 
 transactionSpendingFragment ::
-  forall d r. (FromData d, ToData d, Show d) =>
+  forall d r.
+  (FromData d, ToData d, Show d) =>
   TestScript ( 'ForSpending d r) ->
   ValidatorUTXO d ->
-  ContextFragment 'ForTransaction -> ContextFragment ( 'ForSpending d r)
+  ContextFragment 'ForTransaction ->
+  ContextFragment ( 'ForSpending d r)
 transactionSpendingFragment
-  spendingScript utxoToSpend
-  ContextFragment{cfInputs, cfOutputs, cfSignatures, cfDatums, cfMinting, cfValidatorInputs, cfValidatorOutputs} =
-  ContextFragment{cfInputs = cfInputs <> Seq.fromList (Map.elems otherValidatorInputs),
-                  cfOutputs = cfOutputs <> Seq.fromList (Map.elems otherValidatorOutputs),
-                  cfSignatures, cfDatums, cfMinting,
-                  cfValidatorInputs = ValidatorUTXOs theValidatorInputs,
-                  cfValidatorOutputs = ValidatorUTXOs theValidatorOutputs}
-  where
-    otherValidatorInputs, otherValidatorOutputs :: Map Text SideUTXO
-    (otherValidatorInputs, theValidatorInputs) = Map.mapEither transactionSpendingUTxO (getUTxOs cfValidatorInputs)
-    (otherValidatorOutputs, theValidatorOutputs) = Map.mapEither transactionSpendingUTxO (getUTxOs cfValidatorOutputs)
-    transactionSpendingUTxO :: SomeValidatedUTXO -> Either SideUTXO (ValidatorUTXO d)
-    transactionSpendingUTxO SomeValidatedUTXO{someUTxO, someSpendingScript}
-      | encoded someUTxO == encoded utxoToSpend && getTestValidator someSpendingScript == getTestValidator spendingScript = Right utxoToSpend
-      | otherwise = Left SideUTXO{sUtxoType = ScriptUTXO (validatorHash $ getTestValidator someSpendingScript) $ toBuiltinData $ vUtxoDatum someUTxO,
-                                  sUtxoValue = GeneralValue $ vUtxoValue someUTxO}
-    encoded :: forall datum. ToData datum => ValidatorUTXO datum -> ValidatorUTXO BuiltinData
-    encoded (ValidatorUTXO d v) = ValidatorUTXO (toBuiltinData d) v
+  spendingScript
+  utxoToSpend
+  ContextFragment {cfInputs, cfOutputs, cfSignatures, cfDatums, cfMinting, cfValidatorInputs, cfValidatorOutputs} =
+    ContextFragment
+      { cfInputs = cfInputs <> Seq.fromList (Map.elems otherValidatorInputs)
+      , cfOutputs = cfOutputs <> Seq.fromList (Map.elems otherValidatorOutputs)
+      , cfSignatures
+      , cfDatums
+      , cfMinting
+      , cfValidatorInputs = ValidatorUTXOs theValidatorInputs
+      , cfValidatorOutputs = ValidatorUTXOs theValidatorOutputs
+      }
+    where
+      otherValidatorInputs, otherValidatorOutputs :: Map Text SideUTXO
+      (otherValidatorInputs, theValidatorInputs) = Map.mapEither transactionSpendingUTxO (getUTxOs cfValidatorInputs)
+      (otherValidatorOutputs, theValidatorOutputs) = Map.mapEither transactionSpendingUTxO (getUTxOs cfValidatorOutputs)
+      transactionSpendingUTxO :: SomeValidatedUTXO -> Either SideUTXO (ValidatorUTXO d)
+      transactionSpendingUTxO SomeValidatedUTXO {someUTxO, someSpendingScript}
+        | encoded someUTxO == encoded utxoToSpend && getTestValidator someSpendingScript == getTestValidator spendingScript = Right utxoToSpend
+        | otherwise =
+          Left
+            SideUTXO
+              { sUtxoType = ScriptUTXO (validatorHash $ getTestValidator someSpendingScript) $ toBuiltinData $ vUtxoDatum someUTxO
+              , sUtxoValue = GeneralValue $ vUtxoValue someUTxO
+              }
+      encoded :: forall datum. ToData datum => ValidatorUTXO datum -> ValidatorUTXO BuiltinData
+      encoded (ValidatorUTXO d v) = ValidatorUTXO (toBuiltinData d) v
 
 transactionMinting ::
   TestScript ( 'ForMinting r) ->
@@ -619,27 +639,33 @@ transactionMinting script (WithNames cfs) =
 
 transactionMintingFragment ::
   TestScript ( 'ForMinting r) ->
-  ContextFragment 'ForTransaction -> ContextFragment ( 'ForMinting r)
+  ContextFragment 'ForTransaction ->
+  ContextFragment ( 'ForMinting r)
 transactionMintingFragment
   mintingPolicy
-  ContextFragment{cfInputs, cfOutputs, cfSignatures, cfDatums, cfMinting, cfValidatorInputs, cfValidatorOutputs} =
-  ContextFragment{cfInputs = cfInputs <> Seq.fromList (Map.elems otherValidatorInputs),
-                  cfOutputs = cfOutputs <> Seq.fromList (Map.elems otherValidatorOutputs),
-                  cfSignatures, cfDatums,
-                  cfMinting = Seq.filter (/= mempty) (otherMint <$> cfMinting),
-                  cfValidatorInputs = mempty,
-                  cfValidatorOutputs = mempty}
-  where
-    otherMint :: Minting -> Minting
-    otherMint (Mint val) = Mint (filterValue otherSymbol val)
-    otherSymbol symbol _ _ = symbol /= Value.mpsSymbol (mintingPolicyHash $ getTestMintingPolicy mintingPolicy)
-    otherValidatorInputs, otherValidatorOutputs :: Map Text SideUTXO
-    otherValidatorInputs =  transactionUTxO <$> getUTxOs cfValidatorInputs
-    otherValidatorOutputs = transactionUTxO <$> getUTxOs cfValidatorOutputs
-    transactionUTxO :: SomeValidatedUTXO -> SideUTXO
-    transactionUTxO SomeValidatedUTXO{someUTxO, someSpendingScript} =
-      SideUTXO{sUtxoType = ScriptUTXO (validatorHash $ getTestValidator someSpendingScript) $ toBuiltinData $ vUtxoDatum someUTxO,
-               sUtxoValue = GeneralValue $ vUtxoValue someUTxO}
+  ContextFragment {cfInputs, cfOutputs, cfSignatures, cfDatums, cfMinting, cfValidatorInputs, cfValidatorOutputs} =
+    ContextFragment
+      { cfInputs = cfInputs <> Seq.fromList (Map.elems otherValidatorInputs)
+      , cfOutputs = cfOutputs <> Seq.fromList (Map.elems otherValidatorOutputs)
+      , cfSignatures
+      , cfDatums
+      , cfMinting = Seq.filter (/= mempty) (otherMint <$> cfMinting)
+      , cfValidatorInputs = mempty
+      , cfValidatorOutputs = mempty
+      }
+    where
+      otherMint :: Minting -> Minting
+      otherMint (Mint val) = Mint (filterValue otherSymbol val)
+      otherSymbol symbol _ _ = symbol /= Value.mpsSymbol (mintingPolicyHash $ getTestMintingPolicy mintingPolicy)
+      otherValidatorInputs, otherValidatorOutputs :: Map Text SideUTXO
+      otherValidatorInputs = transactionUTxO <$> getUTxOs cfValidatorInputs
+      otherValidatorOutputs = transactionUTxO <$> getUTxOs cfValidatorOutputs
+      transactionUTxO :: SomeValidatedUTXO -> SideUTXO
+      transactionUTxO SomeValidatedUTXO {someUTxO, someSpendingScript} =
+        SideUTXO
+          { sUtxoType = ScriptUTXO (validatorHash $ getTestValidator someSpendingScript) $ toBuiltinData $ vUtxoDatum someUTxO
+          , sUtxoValue = GeneralValue $ vUtxoValue someUTxO
+          }
 
 getUTxOs :: ValidatorUTXOs 'ForTransaction -> Map.Map Text SomeValidatedUTXO
 getUTxOs NoValidatorUTXOs = mempty
