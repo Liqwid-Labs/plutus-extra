@@ -30,6 +30,10 @@ module Test.Tasty.Plutus.Script.Unit (
   shouldn'tValidate,
   shouldValidateTracing,
   shouldn'tValidateTracing,
+
+  -- ** Whole-transaction testing
+  shouldValidateTransaction,
+  shouldValidateTransactionTracing,
   SomeMintingPolicy (SomeMintingPolicy),
 ) where
 
@@ -144,6 +148,7 @@ import Test.Tasty.Plutus.TestData (
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
   Result,
+  TestTree,
   singleTest,
   testFailed,
   testPassed,
@@ -185,6 +190,40 @@ shouldValidateTracing ::
   ContextBuilder p n ->
   WithScript p ()
 shouldValidateTracing name f = addUnitTest Pass (Just f) name
+
+{- | Specify that, given these minting policies and context, the whole
+   transaction should succeed.
+
+ @since 9.1.1
+-}
+shouldValidateTransaction ::
+  forall (n :: Naming).
+  Typeable n =>
+  String ->
+  Map CurrencySymbol SomeMintingPolicy ->
+  ContextBuilder 'ForTransaction n ->
+  TestTree
+shouldValidateTransaction name mintingPolicies cb =
+  singleTest name (TransactionTester Pass Nothing mintingPolicies cb)
+
+{- | Specify that, given these minting policies and context, as well as a
+ predicate on the entire trace:
+
+ * The transaction should succeed; and
+ * The trace that results should satisfy the predicate.
+
+ @since 9.1.1
+-}
+shouldValidateTransactionTracing ::
+  forall (n :: Naming).
+  Typeable n =>
+  String ->
+  (Vector Text -> Bool) ->
+  Map CurrencySymbol SomeMintingPolicy ->
+  ContextBuilder 'ForTransaction n ->
+  TestTree
+shouldValidateTransactionTracing name f mintingPolicies cb =
+  singleTest name (TransactionTester Pass (Just f) mintingPolicies cb)
 
 {- | Specify that, given this test data and context, the validation should fail.
 

@@ -14,7 +14,10 @@ import Test.Plutus.ContextBuilder (
   ContextBuilder,
   Naming (Anonymous),
   Purpose (ForSpending),
+  SomeValidatedUTXO (SomeValidatedUTXO),
+  ValidatorUTXO (ValidatorUTXO),
   outToPubKey,
+  validatedInput,
  )
 import Test.QuickCheck.Plutus.Instances ()
 import Test.Tasty (TestTree, testGroup)
@@ -23,6 +26,7 @@ import Test.Tasty.Plutus.Script.Property (
   scriptProperty,
   scriptPropertyPass,
  )
+import Test.Tasty.Plutus.Script.Unit (shouldValidateTransaction)
 import Test.Tasty.Plutus.TestData (
   Generator (GenForSpending),
   Methodology (Methodology),
@@ -77,6 +81,9 @@ tests =
         "Validator checks secret key"
         (\(secret, _, _) -> paramTestValidator secret)
         $ GenForSpending genForParam transformForParam
+    , shouldValidateTransaction "Unit transaction test" mempty $
+        validatedInput "input" $
+          SomeValidatedUTXO (ValidatorUTXO (1, 2) mempty) simpleTestValidator (3, 2)
     ]
 
 genForSimple :: Methodology (Integer, Integer, Integer, Integer, Value)

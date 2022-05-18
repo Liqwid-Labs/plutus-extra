@@ -40,4 +40,4 @@ a <+> b
   | otherwise = a <> " " <> b
 
 instance Monoid ResultJoin where
-  mempty = ResultJoin (testPassed "No tests to run")
+  mempty = ResultJoin (testPassed mempty)
