@@ -23,6 +23,15 @@
  >    shouldValidateTracing "Gotta get good messages" tracePred validData validContext
  >    shouldn'tValidateTracing "Oh damn" tracePred invalidData validContext
  >    ...
+
+ = Example with whole-transaction testing
+
+ > validatorTests :: TestTree
+ > validatorTests = do
+ >    shouldValidateTransaction "Valid transaction" validData mintingPolicies validTransactionContext
+ >    shouldValidateTransaction "Valid inputs" validData mempty validTransactionContext
+ >    shouldn'tValidateTransaction "Invalid transaction" validData mintingPolicies invalidTransactionContext
+ >    ...
 -}
 module Test.Tasty.Plutus.Script.Unit (
   -- * Testing API
@@ -192,7 +201,9 @@ shouldValidateTracing ::
 shouldValidateTracing name f = addUnitTest Pass (Just f) name
 
 {- | Specify that, given these minting policies and context, the whole
-   transaction should succeed.
+   transaction should succeed. Note that, if the transaction mints a currency
+   whose minting policy is /not/ provided by the @mintingPolicies@ map, it is
+   assumed to be passing.
 
  @since 9.1.1
 -}
@@ -209,8 +220,10 @@ shouldValidateTransaction name mintingPolicies cb =
 {- | Specify that, given these minting policies and context, as well as a
  predicate on the entire trace:
 
- * The transaction should succeed; and
- * The trace that results should satisfy the predicate.
+ * validation of every consumed input should succeed;
+ * every policy specified in @mintingPolicies@ whose currency was minted or
+   burned by the transaction should succeed; and
+ * the trace that results should satisfy the predicate.
 
  @since 9.1.1
 -}
@@ -300,6 +313,11 @@ data ScriptTest (p :: Purpose) (n :: Naming) where
     ContextBuilder 'ForTransaction n ->
     ScriptTest 'ForTransaction n
 
+{- | A wrapper for a @TestScript 'ForMinting@, meant to be stored in a map and
+   passed to functions like 'shouldValidateTransaction'.
+
+  @since 9.1.1
+-}
 data SomeMintingPolicy where
   SomeMintingPolicy ::
     (FromData r, ToData r, Show r, Typeable r) =>
