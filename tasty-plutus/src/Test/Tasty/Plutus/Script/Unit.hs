@@ -42,7 +42,9 @@ module Test.Tasty.Plutus.Script.Unit (
 
   -- ** Whole-transaction testing
   shouldValidateTransaction,
+  shouldn'tValidateTransaction,
   shouldValidateTransactionTracing,
+  shouldn'tValidateTransactionTracing,
   SomeMintingPolicy (SomeMintingPolicy),
 ) where
 
@@ -217,6 +219,23 @@ shouldValidateTransaction ::
 shouldValidateTransaction name mintingPolicies cb =
   singleTest name (TransactionTester Pass Nothing mintingPolicies cb)
 
+{- | Specify that, given these minting policies and context, the whole
+   transaction should /not/ succeed. Note that, if the transaction mints a
+   currency whose minting policy is /not/ provided by the @mintingPolicies@
+   map, the policy is assumed to be passing.
+
+ @since 9.1.1
+-}
+shouldn'tValidateTransaction ::
+  forall (n :: Naming).
+  Typeable n =>
+  String ->
+  Map CurrencySymbol SomeMintingPolicy ->
+  ContextBuilder 'ForTransaction n ->
+  TestTree
+shouldn'tValidateTransaction name mintingPolicies cb =
+  singleTest name (TransactionTester Fail Nothing mintingPolicies cb)
+
 {- | Specify that, given these minting policies and context, as well as a
  predicate on the entire trace:
 
@@ -237,6 +256,27 @@ shouldValidateTransactionTracing ::
   TestTree
 shouldValidateTransactionTracing name f mintingPolicies cb =
   singleTest name (TransactionTester Pass (Just f) mintingPolicies cb)
+
+{- | Specify that, given these minting policies and context, as well as a
+ predicate on the entire trace, at least one of these criteria fails:
+
+ * validation of an input consumed by the transaction;
+ * a policy specified in @mintingPolicies@ whose currency was minted or
+   burned by the transaction; or
+ * the trace predicate.
+
+ @since 9.1.1
+-}
+shouldn'tValidateTransactionTracing ::
+  forall (n :: Naming).
+  Typeable n =>
+  String ->
+  (Vector Text -> Bool) ->
+  Map CurrencySymbol SomeMintingPolicy ->
+  ContextBuilder 'ForTransaction n ->
+  TestTree
+shouldn'tValidateTransactionTracing name f mintingPolicies cb =
+  singleTest name (TransactionTester Fail (Just f) mintingPolicies cb)
 
 {- | Specify that, given this test data and context, the validation should fail.
 

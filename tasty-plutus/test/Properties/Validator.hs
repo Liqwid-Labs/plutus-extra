@@ -26,7 +26,10 @@ import Test.Tasty.Plutus.Script.Property (
   scriptProperty,
   scriptPropertyPass,
  )
-import Test.Tasty.Plutus.Script.Unit (shouldValidateTransaction)
+import Test.Tasty.Plutus.Script.Unit (
+  shouldValidateTransaction,
+  shouldn'tValidateTransaction,
+ )
 import Test.Tasty.Plutus.TestData (
   Generator (GenForSpending),
   Methodology (Methodology),
@@ -84,6 +87,9 @@ tests =
     , shouldValidateTransaction "Unit transaction test" mempty $
         validatedInput "input" $
           SomeValidatedUTXO (ValidatorUTXO (1, 2) mempty) simpleTestValidator (3, 2)
+    , shouldn'tValidateTransaction "Negative unit transaction test" mempty $
+        validatedInput "input" $
+          SomeValidatedUTXO (ValidatorUTXO (1, 2) mempty) simpleTestValidator (3, 4)
     ]
 
 genForSimple :: Methodology (Integer, Integer, Integer, Integer, Value)
