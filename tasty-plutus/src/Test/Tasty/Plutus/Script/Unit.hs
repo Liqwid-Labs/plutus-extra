@@ -464,31 +464,6 @@ instance (Typeable p, Typeable n) => IsTest (ScriptTest p n) where
             let ti = ItemsForMinting red tasks cb out
              in minterEstimate opts ts ti
         TransactionTester {} -> error "Should have been eliminated above"
-      {-
-                | let context :: ContextFragment 'ForTransaction
-                      context = foldBuilt cb
-                      validatedInputs :: Map Text SomeValidatedUTXO
-                      validatedInputs = case cfValidatorInputs context of
-                        MultiValidatorUTXOs inputs -> inputs
-                        NoValidatorUTXOs -> mempty
-                      utxosTotalValue :: ValidatorUTXOs 'ForTransaction -> Value
-                      utxosTotalValue NoValidatorUTXOs = mempty
-                      utxosTotalValue (MultiValidatorUTXOs utxos) = foldMap theValue utxos
-                        where
-                          theValue SomeValidatedUTXO {someUTxO = x} = vUtxoValue x
-                      utxoSpenderEstimate :: SomeValidatedUTXO -> Ap (Either ScriptError) ExBudget
-                      utxoSpenderEstimate = undefined
-                      utxoMinterEstimate :: Value -> Ap (Either ScriptError) ExBudget
-                      utxoMinterEstimate = undefined
-                  ->
-                  getAp
-                    ( foldMap utxoSpenderEstimate validatedInputs
-                        <> utxoMinterEstimate
-                          ( utxosTotalValue (cfValidatorOutputs context)
-                              - utxosTotalValue (cfValidatorInputs context)
-                          )
-                    )
-      -}
       go :: Reader (UnitEnv p n) Result
       go = case getScriptResult getScript getTestData (getContext getSC) env of
         Left err -> handleError err
