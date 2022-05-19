@@ -66,9 +66,7 @@ import Plutus.V1.Ledger.Api (
   ExBudget (ExBudget),
   ExCPU (ExCPU),
   ExMemory (ExMemory),
-  FromData,
   ScriptContext,
-  ToData,
   toBuiltinData,
   unsafeFromBuiltinData,
  )
@@ -153,6 +151,7 @@ import Test.Tasty.Plutus.Options (
  )
 import Test.Tasty.Plutus.TestData (
   Outcome (Fail, Pass),
+  SomeMintingPolicy (SomeMintingPolicy),
   TestData (MintingTest, SpendingTest),
   TestItems (ItemsForMinting, ItemsForSpending),
  )
@@ -352,18 +351,6 @@ data ScriptTest (p :: Purpose) (n :: Naming) where
     Map CurrencySymbol SomeMintingPolicy ->
     ContextBuilder 'ForTransaction n ->
     ScriptTest 'ForTransaction n
-
-{- | A wrapper for a @TestScript 'ForMinting@, meant to be stored in a map and
-   passed to functions like 'shouldValidateTransaction'.
-
-  @since 9.1.1
--}
-data SomeMintingPolicy where
-  SomeMintingPolicy ::
-    (FromData r, ToData r, Show r, Typeable r) =>
-    TestScript ( 'ForMinting r) ->
-    r ->
-    SomeMintingPolicy
 
 getOutcome ::
   forall (p :: Purpose) (n :: Naming).
