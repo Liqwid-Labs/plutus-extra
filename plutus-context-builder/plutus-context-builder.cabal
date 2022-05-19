@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-context-builder
-version:            2.0
+version:            2.0.1
 extra-source-files: CHANGELOG.md
 
 common lang
@@ -44,9 +44,10 @@ common lang
 
 library
   import:          lang
-  exposed-modules: Test.Plutus.ContextBuilder
+  exposed-modules:
+      Test.Plutus.ContextBuilder
+    , Test.Plutus.ContextBuilder.Internal
   other-modules:
-    Test.Plutus.ContextBuilder.Internal
     Test.Plutus.ContextBuilder.Minting
 
   build-depends:

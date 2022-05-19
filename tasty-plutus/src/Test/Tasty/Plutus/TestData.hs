@@ -15,6 +15,7 @@ module Test.Tasty.Plutus.TestData (
   Outcome (..),
   MintingPolicyAction (..),
   MintingPolicyTask (..),
+  SomeMintingPolicy (SomeMintingPolicy),
 
   -- * Helper functions
   passIf,
@@ -33,7 +34,7 @@ import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Semigroup (stimes, stimesIdempotent)
 import Plutus.V1.Ledger.Value (Value)
-import PlutusTx
+import PlutusTx (FromData, ToData)
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
   MintingPolicyAction (BurnAction, MintAction),
@@ -44,8 +45,10 @@ import Test.Plutus.ContextBuilder (
   burnTokens,
   mintTokens,
  )
+import Test.Tasty.Plutus.Internal.TestScript (TestScript)
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary, shrink))
 import Test.QuickCheck.Gen (Gen)
+import Type.Reflection (Typeable)
 import Prelude
 
 {- | All the data needed to test a validator or minting policy.
@@ -235,3 +238,19 @@ data TestItems (p :: Purpose) (n :: Naming) where
 
 -- | @since 9.0
 deriving stock instance Show (TestItems p n)
+
+{- | A wrapper for a @TestScript 'ForMinting@, meant to be stored in a map and
+   passed to functions like 'shouldValidateTransaction'.
+
+  @since 9.1.1
+-}
+data SomeMintingPolicy where
+  SomeMintingPolicy ::
+    (FromData r, ToData r, Show r, Typeable r) =>
+    TestScript ( 'ForMinting r) ->
+    r ->
+    SomeMintingPolicy
+
+-- | @since 9.1.1
+instance Show SomeMintingPolicy where
+  show = const "SomeMintingPolicy{}"

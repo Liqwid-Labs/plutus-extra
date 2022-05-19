@@ -1,11 +1,22 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 module Test.Plutus.ContextBuilder.Internal (
   -- * Types
+  TestScript (
+    TestValidator,
+    getTestValidator,
+    getTestValidatorCode,
+    TestMintingPolicy,
+    getTestMintingPolicy,
+    getTestMintingPolicyCode
+  ),
   TransactionConfig (..),
   InputPosition (..),
   Purpose (..),
   UTXOType (..),
   ValueType (..),
   SideUTXO (..),
+  SomeValidatedUTXO (..),
   ValidatorUTXO (..),
   ValidatorUTXOs (..),
   TestUTXO (..),
@@ -21,6 +32,9 @@ module Test.Plutus.ContextBuilder.Internal (
   spendingScriptContextDef,
   mintingScriptContextDef,
   makeIncompleteContexts,
+  foldBuilt,
+  transactionSpending,
+  transactionMinting,
 ) where
 
 import Control.Arrow ((***))
@@ -36,8 +50,10 @@ import Data.Semigroup (sconcat)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import Data.Text (Text)
+import Data.Typeable (Typeable)
 import GHC.Exts (toList)
-import Ledger.Scripts (datumHash)
+import Ledger (scriptAddress)
+import Ledger.Scripts (datumHash, mintingPolicyHash, validatorHash)
 import Plutus.V1.Ledger.Address (pubKeyHashAddress, scriptHashAddress)
 import Plutus.V1.Ledger.Api (
   BuiltinData,
@@ -45,6 +61,7 @@ import Plutus.V1.Ledger.Api (
   Datum (Datum),
   DatumHash,
   FromData,
+  MintingPolicy,
   PubKeyHash,
   ScriptContext (ScriptContext),
   ScriptPurpose (Minting, Spending),
@@ -76,6 +93,7 @@ import Plutus.V1.Ledger.Api (
     txOutValue
   ),
   TxOutRef (TxOutRef),
+  Validator,
   ValidatorHash,
   Value,
  )
@@ -83,6 +101,7 @@ import Plutus.V1.Ledger.Interval (Interval, always)
 import Plutus.V1.Ledger.Time (POSIXTime)
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.V1.Ledger.Value.Extra (filterValue)
+import PlutusTx (CompiledCode)
 import PlutusTx.Positive (Positive, getPositive)
 import Test.Plutus.ContextBuilder.Minting (
   MintingPolicyAction (BurnAction, MintAction),
@@ -92,6 +111,33 @@ import Test.Plutus.ContextBuilder.Minting (
 
 import PlutusTx.Prelude (length)
 import Prelude hiding (length)
+
+{- | Typed wrapper for the 'Validator' and 'MintingPolicy' used to match
+ the datum and redeemer types of the 'Validator' and the data passed to it.
+
+ We don't expose constructors. To create a 'TestScript', use helper functions,
+ such as 'mkTestValidator' and 'mkTestMintingPolicy'. In case you intend
+ to test something tricky, you can use 'mkTestValidatorUnsafe'
+ and 'mkTestMintingPolicyUnsafe' to create a 'TestScript'
+ that accepts a datum and/or redeemer inconsistent with its internal type.
+
+ @since 2.0.1
+-}
+data TestScript (p :: Purpose) where
+  -- | since 2.0.1
+  TestValidator ::
+    forall (d :: Type) (r :: Type) (code :: Type).
+    { getTestValidatorCode :: CompiledCode code
+    , getTestValidator :: Validator
+    } ->
+    TestScript ( 'ForSpending d r)
+  -- | since 2.0.1
+  TestMintingPolicy ::
+    forall (r :: Type) (code :: Type).
+    { getTestMintingPolicyCode :: CompiledCode code
+    , getTestMintingPolicy :: MintingPolicy
+    } ->
+    TestScript ( 'ForMinting r)
 
 {- Config with the parameters necessary to build the context.
 
@@ -161,6 +207,10 @@ data Purpose where
     -- | @since 1.0
     redeemer ->
     Purpose
+  -- | This tag applies to whole-transaction testing.
+  --
+  -- @since 2.0.1
+  ForTransaction :: Purpose
 
 {- | Represents metadata of UTxO at different types of address.
 
@@ -221,7 +271,7 @@ data SideUTXO = SideUTXO
 
 {- | An UTxO at the tested validator address.
 This UTxO won't be used as 'Spending' in the 'ScriptPurpose'
-of the builded 'ScriptContext'. For the representation of a 'Spending' UTxO
+of the built 'ScriptContext'. For the representation of a 'Spending' UTxO
 use 'TestUTXO'.
 
  @since 2.0
@@ -231,12 +281,14 @@ data ValidatorUTXO (datum :: Type) = ValidatorUTXO
   , vUtxoValue :: Value
   }
   deriving stock
-    ( -- | @since 1.0
+    ( -- | @since 2.0.1
+      Eq
+    , -- | @since 1.0
       Show
     )
 
 {- | UTxO at the tested validator address. It will be used as 'Spending'
- in the 'ScriptPurpose' of the builded 'ScriptContext'.
+ in the 'ScriptPurpose' of the built 'ScriptContext'.
 
  @since 2.0
 -}
@@ -263,15 +315,47 @@ data ValidatorUTXOs (p :: Purpose) where
     (FromData datum, ToData datum, Show datum) =>
     Map.Map Text (ValidatorUTXO datum) ->
     ValidatorUTXOs ( 'ForSpending datum redeemer)
+  -- | @since 2.0.1
+  MultiValidatorUTXOs ::
+    Map.Map Text SomeValidatedUTXO ->
+    ValidatorUTXOs 'ForTransaction
 
 -- | @since 1.0
 deriving stock instance Show (ValidatorUTXOs p)
+
+{- | An UTxO at a specified validator address. It will be used as 'Spending'
+ in the 'ScriptPurpose' of the built 'ScriptContext'.
+
+ @since 2.0.1
+-}
+data SomeValidatedUTXO where
+  SomeValidatedUTXO ::
+    forall (datum :: Type) (redeemer :: Type).
+    ( FromData datum
+    , ToData datum
+    , Show datum
+    , Typeable datum
+    , FromData redeemer
+    , ToData redeemer
+    , Show redeemer
+    , Typeable redeemer
+    ) =>
+    { someUTxO :: ValidatorUTXO datum
+    , someSpendingScript :: TestScript ( 'ForSpending datum redeemer)
+    , someRedeemer :: redeemer
+    } ->
+    SomeValidatedUTXO
+
+instance Show SomeValidatedUTXO where
+  show SomeValidatedUTXO {someUTxO, someRedeemer} =
+    "SomeValidatedUTXO{someUTxO= " <> shows someUTxO (", someRedeemer= " <> shows someRedeemer "}")
 
 -- | @since 1.0
 instance Semigroup (ValidatorUTXOs p) where
   NoValidatorUTXOs <> x = x
   x <> NoValidatorUTXOs = x
   (ValidatorUTXOs m1) <> (ValidatorUTXOs m2) = ValidatorUTXOs $ m1 <> m2
+  MultiValidatorUTXOs m1 <> MultiValidatorUTXOs m2 = MultiValidatorUTXOs $ m1 <> m2
 
 -- | @since 1.0
 instance Monoid (ValidatorUTXOs p) where
@@ -287,12 +371,18 @@ instance Monoid (ValidatorUTXOs p) where
 
  @since 1.0
 -}
-data Minting
+newtype Minting
   = -- | @since 1.0
     Mint Value
   deriving stock
     ( -- | @since 1.0
-      Show
+      Eq
+    , Show
+    )
+  deriving newtype
+    ( -- | @since 2.0.1
+      Semigroup
+    , Monoid
     )
 
 {- | Indicates whether a 'ContextBuilder' has named components or not.
@@ -491,6 +581,96 @@ mintingScriptContext conf cb toks =
             BurnAction -> negate $ getPositive pos
        in (tn, i)
 
+transactionSpending ::
+  (FromData d, ToData d, Show d) =>
+  TestScript ( 'ForSpending d r) ->
+  ValidatorUTXO d ->
+  ContextBuilder 'ForTransaction n ->
+  ContextBuilder ( 'ForSpending d r) n
+transactionSpending script input (NoNames cf) =
+  NoNames (transactionSpendingFragment script input cf)
+transactionSpending script input (WithNames cfs) =
+  WithNames (transactionSpendingFragment script input <$> cfs)
+
+transactionSpendingFragment ::
+  forall d r.
+  (FromData d, ToData d, Show d) =>
+  TestScript ( 'ForSpending d r) ->
+  ValidatorUTXO d ->
+  ContextFragment 'ForTransaction ->
+  ContextFragment ( 'ForSpending d r)
+transactionSpendingFragment
+  spendingScript
+  utxoToSpend
+  ContextFragment {cfInputs, cfOutputs, cfSignatures, cfDatums, cfMinting, cfValidatorInputs, cfValidatorOutputs} =
+    ContextFragment
+      { cfInputs = cfInputs <> Seq.fromList (Map.elems otherValidatorInputs)
+      , cfOutputs = cfOutputs <> Seq.fromList (Map.elems otherValidatorOutputs)
+      , cfSignatures
+      , cfDatums
+      , cfMinting
+      , cfValidatorInputs = ValidatorUTXOs theValidatorInputs
+      , cfValidatorOutputs = ValidatorUTXOs theValidatorOutputs
+      }
+    where
+      otherValidatorInputs, otherValidatorOutputs :: Map Text SideUTXO
+      (otherValidatorInputs, theValidatorInputs) = Map.mapEither transactionSpendingUTxO (getUTxOs cfValidatorInputs)
+      (otherValidatorOutputs, theValidatorOutputs) = Map.mapEither transactionSpendingUTxO (getUTxOs cfValidatorOutputs)
+      transactionSpendingUTxO :: SomeValidatedUTXO -> Either SideUTXO (ValidatorUTXO d)
+      transactionSpendingUTxO SomeValidatedUTXO {someUTxO, someSpendingScript}
+        | encoded someUTxO == encoded utxoToSpend && getTestValidator someSpendingScript == getTestValidator spendingScript = Right utxoToSpend
+        | otherwise =
+          Left
+            SideUTXO
+              { sUtxoType = ScriptUTXO (validatorHash $ getTestValidator someSpendingScript) $ toBuiltinData $ vUtxoDatum someUTxO
+              , sUtxoValue = GeneralValue $ vUtxoValue someUTxO
+              }
+      encoded :: forall datum. ToData datum => ValidatorUTXO datum -> ValidatorUTXO BuiltinData
+      encoded (ValidatorUTXO d v) = ValidatorUTXO (toBuiltinData d) v
+
+transactionMinting ::
+  TestScript ( 'ForMinting r) ->
+  ContextBuilder 'ForTransaction n ->
+  ContextBuilder ( 'ForMinting r) n
+transactionMinting script (NoNames cf) =
+  NoNames (transactionMintingFragment script cf)
+transactionMinting script (WithNames cfs) =
+  WithNames (transactionMintingFragment script <$> cfs)
+
+transactionMintingFragment ::
+  TestScript ( 'ForMinting r) ->
+  ContextFragment 'ForTransaction ->
+  ContextFragment ( 'ForMinting r)
+transactionMintingFragment
+  mintingPolicy
+  ContextFragment {cfInputs, cfOutputs, cfSignatures, cfDatums, cfMinting, cfValidatorInputs, cfValidatorOutputs} =
+    ContextFragment
+      { cfInputs = cfInputs <> Seq.fromList (Map.elems otherValidatorInputs)
+      , cfOutputs = cfOutputs <> Seq.fromList (Map.elems otherValidatorOutputs)
+      , cfSignatures
+      , cfDatums
+      , cfMinting = Seq.filter (/= mempty) (otherMint <$> cfMinting)
+      , cfValidatorInputs = mempty
+      , cfValidatorOutputs = mempty
+      }
+    where
+      otherMint :: Minting -> Minting
+      otherMint (Mint val) = Mint (filterValue otherSymbol val)
+      otherSymbol symbol _ _ = symbol /= Value.mpsSymbol (mintingPolicyHash $ getTestMintingPolicy mintingPolicy)
+      otherValidatorInputs, otherValidatorOutputs :: Map Text SideUTXO
+      otherValidatorInputs = transactionUTxO <$> getUTxOs cfValidatorInputs
+      otherValidatorOutputs = transactionUTxO <$> getUTxOs cfValidatorOutputs
+      transactionUTxO :: SomeValidatedUTXO -> SideUTXO
+      transactionUTxO SomeValidatedUTXO {someUTxO, someSpendingScript} =
+        SideUTXO
+          { sUtxoType = ScriptUTXO (validatorHash $ getTestValidator someSpendingScript) $ toBuiltinData $ vUtxoDatum someUTxO
+          , sUtxoValue = GeneralValue $ vUtxoValue someUTxO
+          }
+
+getUTxOs :: ValidatorUTXOs 'ForTransaction -> Map.Map Text SomeValidatedUTXO
+getUTxOs NoValidatorUTXOs = mempty
+getUTxOs (MultiValidatorUTXOs m) = m
+
 {- | Combine a list of partial contexts that should,
      when combined, validate, but fail when any one
      partial context is missing. The input is a list
@@ -538,9 +718,7 @@ baseTxInfo ::
   TransactionConfig ->
   ContextBuilder p n ->
   TxInfo
-baseTxInfo conf = \case
-  NoNames cf -> go cf
-  WithNames cfs -> go . fold $ cfs
+baseTxInfo conf = go . foldBuilt
   where
     go :: ContextFragment p -> TxInfo
     go cf =
@@ -581,6 +759,20 @@ baseTxInfo conf = \case
         , txInfoId = TxId "testTx"
         }
 
+{- | Turns an arbitrary 'ContextBuilder' into a 'ContextFragment'.
+
+= Note
+
+ This is a low-level operation designed for maximum control. If possible, use
+ the other, higher-level, operations in this module instead.
+
+   @since 2.0.1
+-}
+foldBuilt :: ContextBuilder p n -> ContextFragment p
+foldBuilt = \case
+  NoNames cf -> cf
+  WithNames cfs -> fold cfs
+
 checkSideUtxoAddress :: TransactionConfig -> SideUTXO -> Bool
 checkSideUtxoAddress conf (SideUTXO typ _) =
   let sideAddress = case typ of
@@ -601,6 +793,12 @@ validatorUtxosToDatum = \case
   NoValidatorUTXOs -> []
   ValidatorUTXOs m ->
     map (\(ValidatorUTXO dt _) -> datumWithHash . toBuiltinData $ dt) $ Map.elems m
+  MultiValidatorUTXOs m ->
+    map
+      ( \SomeValidatedUTXO {someUTxO = ValidatorUTXO dt _} ->
+          datumWithHash . toBuiltinData $ dt
+      )
+      $ Map.elems m
 
 datumWithHash :: BuiltinData -> (DatumHash, Datum)
 datumWithHash dt = (datumHash dt', dt')
@@ -629,6 +827,17 @@ validatorUtxoToTxOut conf (ValidatorUTXO dat val) =
     , txOutDatumHash = justDatumHash $ toBuiltinData dat
     }
 
+someValidatedUtxoToTxOut ::
+  SomeValidatedUTXO ->
+  TxOut
+someValidatedUtxoToTxOut
+  SomeValidatedUTXO {someUTxO = ValidatorUTXO dat val, someSpendingScript = validator} =
+    TxOut
+      { txOutAddress = scriptAddress $ getTestValidator validator
+      , txOutValue = val
+      , txOutDatumHash = justDatumHash $ toBuiltinData dat
+      }
+
 createTxInInfos ::
   forall (p :: Purpose).
   TransactionConfig ->
@@ -651,6 +860,7 @@ createTxOuts conf sideUtxos valUtxos =
       valTxOuts = case valUtxos of
         NoValidatorUTXOs -> []
         ValidatorUTXOs m -> fmap (validatorUtxoToTxOut conf) $ Map.elems m
+        MultiValidatorUTXOs m -> fmap someValidatedUtxoToTxOut $ Map.elems m
    in valTxOuts <> sideTxOuts
 
 createOwnTxInInfo :: TransactionConfig -> BuiltinData -> Value -> TxInInfo

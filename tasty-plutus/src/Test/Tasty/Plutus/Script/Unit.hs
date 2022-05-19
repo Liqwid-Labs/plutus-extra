@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE Trustworthy #-}
 
 {- |
@@ -21,6 +23,15 @@
  >    shouldValidateTracing "Gotta get good messages" tracePred validData validContext
  >    shouldn'tValidateTracing "Oh damn" tracePred invalidData validContext
  >    ...
+
+ = Example with whole-transaction testing
+
+ > validatorTests :: TestTree
+ > validatorTests = do
+ >    shouldValidateTransaction "Valid transaction" validData mintingPolicies validTransactionContext
+ >    shouldValidateTransaction "Valid inputs" validData mempty validTransactionContext
+ >    shouldn'tValidateTransaction "Invalid transaction" validData mintingPolicies invalidTransactionContext
+ >    ...
 -}
 module Test.Tasty.Plutus.Script.Unit (
   -- * Testing API
@@ -28,12 +39,22 @@ module Test.Tasty.Plutus.Script.Unit (
   shouldn'tValidate,
   shouldValidateTracing,
   shouldn'tValidateTracing,
+
+  -- ** Whole-transaction testing
+  shouldValidateTransaction,
+  shouldn'tValidateTransaction,
+  shouldValidateTransactionTracing,
+  shouldn'tValidateTransactionTracing,
+  SomeMintingPolicy (SomeMintingPolicy),
 ) where
 
 import Control.Arrow ((>>>))
 import Control.Monad.Reader (Reader, asks, runReader)
 import Control.Monad.Writer (tell)
 import Data.Kind (Type)
+import Data.Map.Strict (Map)
+import Data.Map.Strict qualified as Map
+import Data.Monoid (Ap (Ap, getAp))
 import Data.Proxy (Proxy (Proxy))
 import Data.Sequence qualified as Seq
 import Data.Tagged (Tagged (Tagged))
@@ -41,10 +62,13 @@ import Data.Text (Text)
 import Data.Vector (Vector)
 import Data.Vector qualified as Vector
 import Plutus.V1.Ledger.Api (
+  CurrencySymbol,
   ExBudget (ExBudget),
   ExCPU (ExCPU),
   ExMemory (ExMemory),
   ScriptContext,
+  toBuiltinData,
+  unsafeFromBuiltinData,
  )
 import Plutus.V1.Ledger.Scripts (
   ScriptError (
@@ -53,17 +77,31 @@ import Plutus.V1.Ledger.Scripts (
     MalformedScript
   ),
  )
+import Plutus.V1.Ledger.Value (TokenName, Value, getValue)
+import PlutusTx.AssocMap qualified as AssocMap
+import PlutusTx.Positive (Positive)
 import Test.Plutus.ContextBuilder (
   ContextBuilder,
+  ContextFragment (cfValidatorInputs, cfValidatorOutputs),
+  MintingPolicyAction (BurnAction, MintAction),
+  MintingPolicyTask (MPTask),
   Naming,
-  Purpose (ForMinting, ForSpending),
+  Purpose (ForMinting, ForSpending, ForTransaction),
+  SomeValidatedUTXO (SomeValidatedUTXO, someRedeemer, someSpendingScript, someUTxO),
+  Tokens (Tokens),
   TransactionConfig,
+  ValidatorUTXO (vUtxoDatum, vUtxoValue),
+  ValidatorUTXOs (MultiValidatorUTXOs, NoValidatorUTXOs),
+  foldBuilt,
+  transactionMinting,
+  transactionSpending,
  )
 import Test.Tasty.Options (
   OptionDescription (Option),
   OptionSet,
   lookupOption,
  )
+import Test.Tasty.Plutus.Instances (ResultJoin (ResultJoin, getResultJoin))
 import Test.Tasty.Plutus.Internal.Env (
   SomeScript (SomeMinter, SomeSpender),
   getContext,
@@ -113,18 +151,23 @@ import Test.Tasty.Plutus.Options (
  )
 import Test.Tasty.Plutus.TestData (
   Outcome (Fail, Pass),
+  SomeMintingPolicy (SomeMintingPolicy),
   TestData (MintingTest, SpendingTest),
   TestItems (ItemsForMinting, ItemsForSpending),
  )
 import Test.Tasty.Providers (
   IsTest (run, testOptions),
   Result,
+  TestTree,
   singleTest,
   testFailed,
   testPassed,
  )
 import Text.PrettyPrint (Doc)
 import Type.Reflection (Typeable)
+
+import PlutusTx.Prelude ((-))
+import Prelude hiding ((-))
 
 {- | Specify that, given this test data and context, the validation should
  succeed.
@@ -157,6 +200,82 @@ shouldValidateTracing ::
   ContextBuilder p n ->
   WithScript p ()
 shouldValidateTracing name f = addUnitTest Pass (Just f) name
+
+{- | Specify that, given these minting policies and context, the whole
+   transaction should succeed. Note that, if the transaction mints a currency
+   whose minting policy is /not/ provided by the @mintingPolicies@ map, it is
+   assumed to be passing.
+
+ @since 9.1.1
+-}
+shouldValidateTransaction ::
+  forall (n :: Naming).
+  Typeable n =>
+  String ->
+  Map CurrencySymbol SomeMintingPolicy ->
+  ContextBuilder 'ForTransaction n ->
+  TestTree
+shouldValidateTransaction name mintingPolicies cb =
+  singleTest name (TransactionTester Pass Nothing mintingPolicies cb)
+
+{- | Specify that, given these minting policies and context, the whole
+   transaction should /not/ succeed. Note that, if the transaction mints a
+   currency whose minting policy is /not/ provided by the @mintingPolicies@
+   map, the policy is assumed to be passing.
+
+ @since 9.1.1
+-}
+shouldn'tValidateTransaction ::
+  forall (n :: Naming).
+  Typeable n =>
+  String ->
+  Map CurrencySymbol SomeMintingPolicy ->
+  ContextBuilder 'ForTransaction n ->
+  TestTree
+shouldn'tValidateTransaction name mintingPolicies cb =
+  singleTest name (TransactionTester Fail Nothing mintingPolicies cb)
+
+{- | Specify that, given these minting policies and context, as well as a
+ predicate on the entire trace:
+
+ * validation of every consumed input should succeed;
+ * every policy specified in @mintingPolicies@ whose currency was minted or
+   burned by the transaction should succeed; and
+ * the trace that results should satisfy the predicate.
+
+ @since 9.1.1
+-}
+shouldValidateTransactionTracing ::
+  forall (n :: Naming).
+  Typeable n =>
+  String ->
+  (Vector Text -> Bool) ->
+  Map CurrencySymbol SomeMintingPolicy ->
+  ContextBuilder 'ForTransaction n ->
+  TestTree
+shouldValidateTransactionTracing name f mintingPolicies cb =
+  singleTest name (TransactionTester Pass (Just f) mintingPolicies cb)
+
+{- | Specify that, given these minting policies and context, as well as a
+ predicate on the entire trace, at least one of these criteria fails:
+
+ * validation of an input consumed by the transaction;
+ * a policy specified in @mintingPolicies@ whose currency was minted or
+   burned by the transaction; or
+ * the trace predicate.
+
+ @since 9.1.1
+-}
+shouldn'tValidateTransactionTracing ::
+  forall (n :: Naming).
+  Typeable n =>
+  String ->
+  (Vector Text -> Bool) ->
+  Map CurrencySymbol SomeMintingPolicy ->
+  ContextBuilder 'ForTransaction n ->
+  TestTree
+shouldn'tValidateTransactionTracing name f mintingPolicies cb =
+  singleTest name (TransactionTester Fail (Just f) mintingPolicies cb)
 
 {- | Specify that, given this test data and context, the validation should fail.
 
@@ -225,6 +344,13 @@ data ScriptTest (p :: Purpose) (n :: Naming) where
     ContextBuilder ( 'ForMinting r) n ->
     TestScript ( 'ForMinting r) ->
     ScriptTest ( 'ForMinting r) n
+  TransactionTester ::
+    forall (n :: Naming).
+    Outcome ->
+    Maybe (Vector Text -> Bool) ->
+    Map CurrencySymbol SomeMintingPolicy ->
+    ContextBuilder 'ForTransaction n ->
+    ScriptTest 'ForTransaction n
 
 getOutcome ::
   forall (p :: Purpose) (n :: Naming).
@@ -233,6 +359,7 @@ getOutcome ::
 getOutcome = \case
   Spender out _ _ _ _ -> out
   Minter out _ _ _ _ -> out
+  TransactionTester out _ _ _ -> out
 
 data UnitEnv (p :: Purpose) (n :: Naming) = UnitEnv
   { envOpts :: OptionSet
@@ -259,6 +386,7 @@ getCB =
   envScriptTest >>> \case
     Spender _ _ _ cb _ -> cb
     Minter _ _ _ cb _ -> cb
+    TransactionTester _ _ _ cb -> cb
 
 getTestData ::
   forall (p :: Purpose) (n :: Naming).
@@ -268,6 +396,7 @@ getTestData =
   envScriptTest >>> \case
     Spender _ _ td _ _ -> td
     Minter _ _ td _ _ -> td
+    TransactionTester {} -> error "There's no test data in TransactionTester"
 
 getScript ::
   forall (p :: Purpose) (n :: Naming).
@@ -277,6 +406,7 @@ getScript =
   envScriptTest >>> \case
     Spender _ _ _ _ val -> SomeSpender . getTestValidator $ val
     Minter _ _ _ _ mp -> SomeMinter . getTestMintingPolicy $ mp
+    TransactionTester {} -> error "There's more than one script in TransactionTester"
 
 getMPred ::
   forall (p :: Purpose) (n :: Naming).
@@ -286,15 +416,14 @@ getMPred =
   envScriptTest >>> \case
     Spender _ mPred _ _ _ -> mPred
     Minter _ mPred _ _ _ -> mPred
+    TransactionTester _ mPred _ _ -> mPred
 
 getExpected ::
   forall (p :: Purpose) (n :: Naming).
   UnitEnv p n ->
   Outcome
 getExpected =
-  envScriptTest >>> \case
-    Spender expected _ _ _ _ -> expected
-    Minter expected _ _ _ _ -> expected
+  envScriptTest >>> getOutcome
 
 getSC ::
   forall (p :: Purpose) (n :: Naming).
@@ -310,6 +439,8 @@ getDumpedState ::
 getDumpedState = dumpState getConf getCB getTestData
 
 instance (Typeable p, Typeable n) => IsTest (ScriptTest p n) where
+  run opts tt@TransactionTester {} x =
+    getResultJoin <$> getAp (foldTransactionTests (\t -> Ap $ ResultJoin <$> run opts t x) tt)
   run opts vt _ = pure $ case lookupOption opts of
     EstimateOnly -> case getOutcome vt of
       Fail -> testPassed explainFailureEstimation
@@ -332,6 +463,7 @@ instance (Typeable p, Typeable n) => IsTest (ScriptTest p n) where
           MintingTest red tasks ->
             let ti = ItemsForMinting red tasks cb out
              in minterEstimate opts ts ti
+        TransactionTester {} -> error "Should have been eliminated above"
       go :: Reader (UnitEnv p n) Result
       go = case getScriptResult getScript getTestData (getContext getSC) env of
         Left err -> handleError err
@@ -353,6 +485,59 @@ instance (Typeable p, Typeable n) => IsTest (ScriptTest p n) where
       , Option @ScriptInputPosition Proxy
       , Option @PlutusEstimate Proxy
       ]
+
+foldTransactionTests ::
+  forall a (n :: Naming).
+  Monoid a =>
+  (forall (p :: Purpose). Typeable p => ScriptTest p n -> a) ->
+  ScriptTest 'ForTransaction n ->
+  a
+foldTransactionTests test (TransactionTester outcome mPred mintScripts cb) =
+  foldMap testSpending validatedInputs
+    <> foldMap testMinting (AssocMap.toList $ getValue valueDifference)
+  where
+    context :: ContextFragment 'ForTransaction
+    context = foldBuilt cb
+    valueDifference :: Value
+    valueDifference = utxosTotalValue (cfValidatorOutputs context) - utxosTotalValue (cfValidatorInputs context)
+    testMinting :: (CurrencySymbol, AssocMap.Map TokenName Integer) -> a
+    testMinting (symbol, tokenAmounts) =
+      case Map.lookup symbol mintScripts of
+        Nothing -> mempty
+        Just (SomeMintingPolicy mp redeemer)
+          | let testPair (name, amount)
+                  | amount < 0 = testPositive BurnAction name (toPositive $ negate amount)
+                  | amount > 0 = testPositive MintAction name (toPositive amount)
+                  | otherwise = mempty
+                testPositive action name amount =
+                  test $
+                    Minter
+                      outcome
+                      mPred
+                      (MintingTest redeemer $ pure $ MPTask action $ Tokens name amount)
+                      (transactionMinting mp cb)
+                      mp
+                toPositive :: Integer -> Positive
+                toPositive = unsafeFromBuiltinData . toBuiltinData ->
+            foldMap testPair (AssocMap.toList tokenAmounts)
+    testSpending :: SomeValidatedUTXO -> a
+    testSpending SomeValidatedUTXO {someUTxO, someRedeemer, someSpendingScript} =
+      test $
+        Spender
+          outcome
+          mPred
+          (SpendingTest (vUtxoDatum someUTxO) someRedeemer (vUtxoValue someUTxO))
+          (transactionSpending someSpendingScript someUTxO cb)
+          someSpendingScript
+    validatedInputs :: Map Text SomeValidatedUTXO
+    validatedInputs = case cfValidatorInputs context of
+      MultiValidatorUTXOs inputs -> inputs
+      NoValidatorUTXOs -> mempty
+    utxosTotalValue :: ValidatorUTXOs 'ForTransaction -> Value
+    utxosTotalValue NoValidatorUTXOs = mempty
+    utxosTotalValue (MultiValidatorUTXOs utxos) = foldMap theValue utxos
+      where
+        theValue SomeValidatedUTXO {someUTxO = x} = vUtxoValue x
 
 handleError ::
   forall (p :: Purpose) (n :: Naming).

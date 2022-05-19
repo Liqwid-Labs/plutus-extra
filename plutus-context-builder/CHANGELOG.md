@@ -4,6 +4,15 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 2.0.1 -- 2022-05-17
+
+### Added
+
+* module `Test.Plutus.ContextBuilder.Internal`, not recommended for end users,
+* the `foldBuilt` utility function, and
+* `transactionSpending` and `transactionMinting` for testing of whole
+  transactions.
+
 ## 2.0 -- 2022-03-09
 
 ### Added

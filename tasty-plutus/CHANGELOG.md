@@ -4,6 +4,17 @@ This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Unreleased
 
+## 9.1.1 - 2022-05-19
+
+### Added
+
+Whoole transaction test functions, namely:
+
+* `shouldValidateTransaction`,
+* `shouldValidateTransactionTracing`,
+* `shouldn'tValidateTransaction`, and
+* `shouldn'tValidateTransactionTracing`.
+
 ## 9.1 - 2022-03-22
 
 ### Added

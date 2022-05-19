@@ -54,6 +54,7 @@ library
     Test.Tasty.Plutus.WithScript
 
   other-modules:
+    Test.Tasty.Plutus.Instances
     Test.Tasty.Plutus.Internal.DumpScript
     Test.Tasty.Plutus.Internal.Env
     Test.Tasty.Plutus.Internal.Estimate
