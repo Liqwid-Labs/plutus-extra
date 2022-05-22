@@ -70,6 +70,7 @@ library
     Plutus.V1.Ledger.Interval.Extra
     Plutus.V1.Ledger.Time.Extra
     Plutus.V1.Ledger.Value.Extra
+    Plutus.V1.Ledger.Value.Norm
     PlutusTx.AssocMap.Extra
     PlutusTx.Bifunctor
     PlutusTx.Bimap
