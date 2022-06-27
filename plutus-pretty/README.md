@@ -72,3 +72,10 @@ into the limits of Plutus, and tries to be minimally intrusive.
 ## What can I do with this?
 
 The code is licensed under Apache 2.0; check the LICENSE.md file for details.
+
+### Available support channels info
+
+You can find help, more information and ongoing discusion about the project here:
+- [link] - short description
+- [link] - short description
+
