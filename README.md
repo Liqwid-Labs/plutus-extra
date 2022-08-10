@@ -1,5 +1,12 @@
 # `plutus-extra`
 
+## Important note
+
+This collection of libraries is now sunset, and is unlikely to receive future
+updates. We recommend that you use
+[`liqwid-plutarch-extra`](https://github.com/Liqwid-Labs/liqwid-plutarch-extra)
+instead, as it is actively maintained.
+
 ## What is this?
 
 A collection of Plutus-related helper libraries. Currently, we have:
